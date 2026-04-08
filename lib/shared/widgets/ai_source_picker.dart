@@ -2385,6 +2385,7 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                     format        : 'gguf',
                     quantization  : QuantizationType.unknown,
                     estimatedRamMb: 0,
+                    contextLength : _cfg.contextSize,
                     isDownloaded  : true,
                   );
                   final config = LlamaModelConfig(
@@ -2439,6 +2440,7 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                     format        : 'gguf',
                     quantization  : QuantizationType.unknown,
                     estimatedRamMb: (model.sizeBytes / (1024 * 1024) * 1.2).toInt(),
+                    contextLength : _cfg.contextSize,
                     isDownloaded  : true,
                   );
                   final config = LlamaModelConfig(

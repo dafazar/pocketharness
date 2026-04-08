@@ -1257,7 +1257,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             'toml', 'ini', 'log', 'sql', 'sh', 'bat',
           };
           final textPayloads = payloads
-              .where((pl) => pl.extractedText != null && pl.extractedText!.isNotEmpty)
+              .where((pl) => pl.textContent != null && pl.textContent!.isNotEmpty)
               .toList();
           if (textPayloads.isNotEmpty) {
             final first = textPayloads.first;
@@ -2607,11 +2607,6 @@ class _MessageBubble extends StatelessWidget {
                     else
                       _MarkdownContent(
                           text: message.content, kfc: kfc,
-                          artifactCtrl: artifactCtrl),
-                    // FileEditResponseWidget — tampil jika ada diff/replace pattern
-                    if (!isUser && message.content.isNotEmpty)
-                      FileEditResponseWidget(
-                          aiResponse: message.content,
                           artifactCtrl: artifactCtrl),
                     const SizedBox(height: 5),
                     // Timestamp
