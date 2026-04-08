@@ -122,7 +122,7 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final c = KMColors.of(context);
+    final c = KmColors.of(context);
     return switch (_state) {
       _SaveState.saved  => _buildSaved(c),
       _SaveState.error  => _buildError(c),
@@ -131,7 +131,7 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
     };
   }
 
-  Widget _buildIdle(KMColors c) => Padding(
+  Widget _buildIdle(KmColors c) => Padding(
     padding: const EdgeInsets.only(top: 6, bottom: 2),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,13 +172,13 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
         Padding(
           padding: const EdgeInsets.only(left: 2, top: 4),
           child: Text(widget.result.description,
-              style: TextStyle(color: c.textSecondary, fontSize: 11)),
+              style: TextStyle(color: c.textSub, fontSize: 11)),
         ),
       ],
     ),
   );
 
-  Widget _buildSaving(KMColors c) => Padding(
+  Widget _buildSaving(KmColors c) => Padding(
     padding: const EdgeInsets.only(top: 6, bottom: 2),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -186,12 +186,12 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
         SizedBox(width: 14, height: 14,
             child: CircularProgressIndicator(strokeWidth: 2, color: c.accent)),
         const SizedBox(width: 8),
-        Text('Menyimpan...', style: TextStyle(color: c.textSecondary, fontSize: 13)),
+        Text('Menyimpan...', style: TextStyle(color: c.textSub, fontSize: 13)),
       ],
     ),
   );
 
-  Widget _buildSaved(KMColors c) => Container(
+  Widget _buildSaved(KmColors c) => Container(
     margin: const EdgeInsets.only(top: 6, bottom: 2),
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     decoration: BoxDecoration(
@@ -224,7 +224,7 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
     ),
   );
 
-  Widget _buildError(KMColors c) => Padding(
+  Widget _buildError(KmColors c) => Padding(
     padding: const EdgeInsets.only(top: 6, bottom: 2),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
