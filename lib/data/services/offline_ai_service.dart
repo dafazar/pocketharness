@@ -47,7 +47,10 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kanmongo/core/ai/native_event_dispatcher.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:kanmongo/core/ai/llama_context.dart';
 
 class OfflineAiService {
   OfflineAiService._() {
@@ -56,7 +59,7 @@ class OfflineAiService {
   static final OfflineAiService instance = OfflineAiService._();
 
   static const _methodCh = MethodChannel('com.kanmongo.llama/engine');
-  static const _eventCh  = EventChannel('com.kanmongo.llama/stream');
+  // EventChannel sekarang dikelola oleh NativeEventDispatcher (shared singleton)
 
   static const _keyForceOffline = 'offline_ai_force_offline';
   static const _keyGpuLayers    = 'offline_ai_gpu_layers';
@@ -71,13 +74,16 @@ class OfflineAiService {
   int     _contextSize     = 2048;
   String? _loadedModelPath;
 
-  bool    get isReady          => _isReady;
-  bool    get isLoading        => _isLoading;
+  /// isReady mirrors LlamaService.isModelLoaded as the canonical source of truth.
+  bool get isReady => LlamaService.instance.isModelLoaded || _isReady;
+  /// isLoading mirrors LlamaService loading state.
+  bool get isLoading => _isLoading || LlamaService.instance.status == ModelStatus.loading;
   String? get error            => _error;
   bool    get forceOfflineMode => _forceOffline;
   int     get gpuLayers        => _gpuLayers;
   int     get contextSize      => _contextSize;
-  String? get loadedModelPath  => _loadedModelPath;
+  /// loadedModelPath mirrors LlamaService.currentModel.path as canonical source.
+  String? get loadedModelPath => LlamaService.instance.currentModel?.path ?? _loadedModelPath;
 
   // ── FIX v7: Single global active StreamController ─────────────────────────
   StreamController<String>? _activeGenCtrl;
@@ -88,62 +94,109 @@ class OfflineAiService {
   Timer? _firstTokenTimer;
   bool   _gotFirstToken = false;
 
-  // ── EventChannel: single persistent subscription ──────────────────────────
-  StreamSubscription<dynamic>? _eventChannelSub;
-
+  // ── EventChannel: delegasi ke NativeEventDispatcher (shared singleton) ──────
   void _initEventChannel() {
-    _eventChannelSub?.cancel();
-    _eventChannelSub = _eventCh.receiveBroadcastStream().listen(
-      (dynamic event) {
-        if (event is! Map) return;
-        _onNativeEvent(Map<dynamic, dynamic>.from(event));
-      },
-      onError: (Object e) {
-        debugPrint('[OfflineAI] EventChannel error: $e — re-init 200ms');
-        Future.delayed(const Duration(milliseconds: 200), _initEventChannel);
-      },
-      cancelOnError: false,
-    );
-    debugPrint('[OfflineAI] EventChannel subscribed v7');
+    NativeEventDispatcher.instance.registerOfflineAi(_onNativeEvent);
+    debugPrint('[OfflineAI] registered to NativeEventDispatcher');
   }
 
   void _onNativeEvent(Map<dynamic, dynamic> event) {
+    final type   = (event['type']  as String?) ?? '';
     final seq    = (event['seq']   as int?)    ?? -1;
-    final token  = (event['token'] as String?) ?? '';
-    final isDone = (event['done']  as bool?)   ?? false;
 
+    // ── Ignore events that are not for the active generation ─────────────────
     final ctrl = _activeGenCtrl;
-    if (ctrl == null || ctrl.isClosed) {
-      // Tidak ada generate aktif — abaikan
-      return;
-    }
+    if (ctrl == null || ctrl.isClosed) return;
 
-    // Filter token dari session yang sudah tidak aktif
-    // Hanya filter jika native mengirim field 'seq' (backward compat)
+    // Filter stale session tokens
     if (seq >= 0 && seq != _currentActiveSeq) {
-      debugPrint('[OfflineAI] stale event seq=$seq (active=$_currentActiveSeq) skip');
+      debugPrint('[OfflineAI] stale event seq=$seq (active=$_currentActiveSeq) type=$type skip');
       return;
     }
 
-    // Batalkan first-token timeout jika sudah dapat token
-    if (!_gotFirstToken && token.isNotEmpty) {
-      _gotFirstToken = true;
-      _firstTokenTimer?.cancel();
-      _firstTokenTimer = null;
-      debugPrint('[OfflineAI] first token ✓ seq=$_currentActiveSeq');
-    }
+    switch (type) {
+      case 'token': {
+        final token = (event['token'] as String?) ?? '';
+        if (token.isEmpty) break;
 
-    if (token.isNotEmpty) {
-      try { ctrl.add(token); } catch (e) {
-        debugPrint('[OfflineAI] ctrl.add error (ctrl closed?): $e');
+        // Cancel first-token timeout on receiving real token
+        if (!_gotFirstToken) {
+          _gotFirstToken = true;
+          _firstTokenTimer?.cancel();
+          _firstTokenTimer = null;
+          debugPrint('[OfflineAI] first token ✓ seq=$_currentActiveSeq');
+        }
+
+        try { ctrl.add(token); } catch (e) {
+          debugPrint('[OfflineAI] ctrl.add error: $e');
+        }
+        break;
       }
-    }
 
-    if (isDone) {
-      debugPrint('[OfflineAI] done seq=$_currentActiveSeq');
-      _firstTokenTimer?.cancel();
-      _firstTokenTimer = null;
-      _closeActiveCtrl();
+      case 'done': {
+        debugPrint('[OfflineAI] done seq=$_currentActiveSeq '
+            'evalTokens=${event['evalTokens']} '
+            'tokensPerSec=${event['tokensPerSec']}');
+        _firstTokenTimer?.cancel();
+        _firstTokenTimer = null;
+        _closeActiveCtrl();
+        break;
+      }
+
+      case 'error': {
+        final msg = (event['message'] as String?) ?? 'Native error';
+        debugPrint('[OfflineAI] native error seq=$_currentActiveSeq: $msg');
+        _firstTokenTimer?.cancel();
+        _firstTokenTimer = null;
+        try { ctrl.add('\n\n❌ Error: $msg'); } catch (_) {}
+        _closeActiveCtrl();
+        break;
+      }
+
+      case 'memory_warning': {
+        final availMb = (event['availableMb'] as int?) ?? 0;
+        debugPrint('[OfflineAI] memory_warning availMb=$availMb');
+        if (availMb > 0 && availMb < 200) {
+          try {
+            ctrl.add('\n\n⚠️ RAM kritis (${availMb}MB tersisa). Generasi mungkin gagal.');
+          } catch (_) {}
+        }
+        break;
+      }
+
+      case 'loading_progress': {
+        // Ignore — UI handles loading state separately
+        break;
+      }
+
+      case 'model_loaded': {
+        debugPrint('[OfflineAI] model_loaded event received from native');
+        break;
+      }
+
+      default: {
+        // Backward-compat: old format without 'type' field
+        // Some older native builds emit { token: '...', done: false }
+        final legacyToken  = event['token']  as String?;
+        final legacyDone   = event['done']   as bool?;
+
+        if (legacyToken != null && legacyToken.isNotEmpty) {
+          if (!_gotFirstToken) {
+            _gotFirstToken = true;
+            _firstTokenTimer?.cancel();
+            _firstTokenTimer = null;
+            debugPrint('[OfflineAI] first token (legacy) ✓ seq=$_currentActiveSeq');
+          }
+          try { ctrl.add(legacyToken); } catch (_) {}
+        }
+        if (legacyDone == true) {
+          debugPrint('[OfflineAI] done (legacy) seq=$_currentActiveSeq');
+          _firstTokenTimer?.cancel();
+          _firstTokenTimer = null;
+          _closeActiveCtrl();
+        }
+        break;
+      }
     }
   }
 
@@ -259,66 +312,35 @@ class OfflineAiService {
     if (modelMb > 2000) '- Model ${modelMb}MB butuh HP dengan RAM 8GB+',
   ].join('\n');
 
+  /// Load the currently active model.
+  /// Delegates to LlamaService (the canonical owner of the native bridge).
   Future<void> loadActiveModel() async {
-    if (_isLoading) return;
-
-    final activeRaw = ModelManagerService.instance.activeModelRaw;
-    AiModel? active = ModelManagerService.instance.activeModel;
-
-    if (activeRaw == null) {
-      _error = 'Tidak ada model aktif.\n\nBuka Settings > Model Manager lalu pilih model GGUF.';
-      return;
-    }
-
+    final active = ModelManagerService.instance.activeModel;
     if (active == null) {
-      debugPrint('[OfflineAI] path healing...');
-      await ModelManagerService.instance.load();
-      active = ModelManagerService.instance.activeModel;
-      if (active == null) {
+      final activeRaw = ModelManagerService.instance.activeModelRaw;
+      if (activeRaw == null) {
+        _error = 'Tidak ada model aktif.\n\nBuka Settings > Model Manager lalu pilih model GGUF.';
+      } else {
         _error = 'File model tidak ditemukan.\n\nModel: ${activeRaw.name}\n\n'
             'Buka Settings > Model Manager > hapus entri lama > import ulang .gguf';
-        return;
       }
+      return;
     }
+    if (_isLoading) return;
+    _isLoading = true;
+    _isReady   = false;
+    _error     = null;
 
-    _isLoading = true; _isReady = false; _error = null;
-
-    try {
-      final modelSizeMb = File(active.path).lengthSync() ~/ (1024 * 1024);
-      final availRamMb  = await _getAvailableRamMb();
-      final kvMb        = (_contextSize / 1024.0 * 200).toInt();
-      const scratchMb   = 384;
-      final requiredMb  = (modelSizeMb * 0.35).toInt() + kvMb + scratchMb;
-
-      if (availRamMb > 0 && availRamMb < requiredMb) {
-        _error = _buildRamWarning(modelSizeMb, availRamMb, requiredMb);
-        _isLoading = false; return;
-      }
-
-      try { await _methodCh.invokeMethod('releaseModel'); } catch (_) {}
-
-      final isLargeModel = modelSizeMb >= 3500;
-      final safeCtx = isLargeModel
-          ? _contextSize.clamp(512, 1024) : _contextSize.clamp(512, 4096);
-
-      debugPrint('[OfflineAI] loadModel: ${active.path} ctx=$safeCtx gpu=$_gpuLayers');
-
-      final ok = await _methodCh.invokeMethod<bool>('loadModel', {
-        'path': active.path, 'contextSize': safeCtx, 'gpuLayers': _gpuLayers,
-      });
-
-      if (ok == true) {
-        _isReady = true; _isLoading = false; _loadedModelPath = active.path;
-        debugPrint('[OfflineAI] Model ready: ${active.path}');
-      } else {
-        _error = 'Gagal memuat model.\n\n- File GGUF mungkin corrupt\n- RAM tidak cukup\n- Gunakan model Q4_K_M 1B-3B';
-        _isLoading = false;
-      }
-    } on PlatformException catch (e) {
-      _error = _friendlyLoadError(e.message ?? e.toString()); _isReady = false; _isLoading = false;
-    } catch (e) {
-      _error = _friendlyLoadError(e.toString()); _isReady = false; _isLoading = false;
+    debugPrint('[OfflineAI] loadActiveModel() → delegate to LlamaService');
+    final ok = await LlamaService.instance.loadModel(active);
+    if (ok) {
+      _isReady         = true;
+      _loadedModelPath = active.path;
+      debugPrint('[OfflineAI] loadActiveModel: LlamaService OK');
+    } else {
+      _error = 'Gagal memuat model.\n\n- File GGUF mungkin corrupt\n- RAM tidak cukup\n- Gunakan model Q4_K_M 1B-3B';
     }
+    _isLoading = false;
   }
 
   String _friendlyLoadError(String raw) {
@@ -429,15 +451,22 @@ class OfflineAiService {
       }
     });
 
-    // [STEP 6] Invoke startGeneration native
+    // [STEP 6] Invoke generateTokens native
     try {
-      await _methodCh.invokeMethod('startGeneration', {
+      await _methodCh.invokeMethod<void>('generateTokens', {
         'prompt'       : prompt,
         'maxTokens'    : maxTokens,
         'temperature'  : temperature,
         'topP'         : topP,
+        'topK'         : _topK,
         'repeatPenalty': repeatPenalty,
-        'seq'          : mySeq,  // dikirim agar native bisa filter jika didukung
+        'seq'          : mySeq,
+        'seed'         : -1,
+        'mirostatMode' : 0,
+        'mirostatTau'  : 5.0,
+        'mirostatEta'  : 0.1,
+        'minP'         : 0.05,
+        'penalizeNl'   : false,
       });
 
       // [STEP 7] yield tokens dari ctrl.stream
@@ -491,8 +520,9 @@ class OfflineAiService {
     _isReady = false; _loadedModelPath = null;
   }
 
-  /// Load model dari path tertentu dengan contextSize dan gpuLayers override.
-  /// Digunakan oleh AiSourcePicker untuk memuat model langsung dari UI.
+  /// Load a model from the given path.
+  /// Delegates to LlamaService (the canonical owner of the native bridge).
+  /// contextSize and gpuLayers overrides are applied to LlamaService config before loading.
   Future<void> loadModel(
     String path, {
     int? contextSize,
@@ -510,48 +540,42 @@ class OfflineAiService {
       return;
     }
 
-    _isLoading = true; _isReady = false; _error = null;
+    _isLoading = true;
+    _isReady   = false;
+    _error     = null;
 
-    // Gunakan override jika diberikan, fallback ke setting tersimpan
-    final ctxSize  = (contextSize ?? _contextSize).clamp(512, 8192);
-    final gpuL     = gpuLayers   ?? _gpuLayers;
+    // Find or construct LlamaModelInfo for this path
+    LlamaModelInfo? modelInfo = ModelManagerService.instance.localModels
+        .cast<LlamaModelInfo?>()
+        .firstWhere((m) => m?.path == path, orElse: () => null);
+    modelInfo ??= LlamaModelInfo.fromPath(path);
 
-    try {
-      final modelSizeMb = file.lengthSync() ~/ (1024 * 1024);
-      final availRamMb  = await _getAvailableRamMb();
-      final kvMb        = (ctxSize / 1024.0 * 200).toInt();
-      const scratchMb   = 384;
-      final requiredMb  = (modelSizeMb * 0.35).toInt() + kvMb + scratchMb;
-
-      if (availRamMb > 0 && availRamMb < requiredMb) {
-        _error = _buildRamWarning(modelSizeMb, availRamMb, requiredMb);
-        _isLoading = false; return;
-      }
-
-      try { await _methodCh.invokeMethod('releaseModel'); } catch (_) {}
-
-      final isLargeModel = modelSizeMb >= 3500;
-      final safeCtx = isLargeModel
-          ? ctxSize.clamp(512, 1024) : ctxSize.clamp(512, 4096);
-
-      debugPrint('[OfflineAI] loadModel(path): $path ctx=$safeCtx gpu=$gpuL');
-
-      final ok = await _methodCh.invokeMethod<bool>('loadModel', {
-        'path': path, 'contextSize': safeCtx, 'gpuLayers': gpuL,
-      });
-
-      if (ok == true) {
-        _isReady = true; _isLoading = false; _loadedModelPath = path;
-        debugPrint('[OfflineAI] Model ready (path override): $path');
-      } else {
-        _error = 'Gagal memuat model.\n\n- File GGUF mungkin corrupt\n- RAM tidak cukup\n- Gunakan model Q4_K_M 1B-3B';
-        _isLoading = false;
-      }
-    } on PlatformException catch (e) {
-      _error = _friendlyLoadError(e.message ?? e.toString()); _isReady = false; _isLoading = false;
-    } catch (e) {
-      _error = _friendlyLoadError(e.toString()); _isReady = false; _isLoading = false;
+    // Build config with overrides if provided
+    LlamaModelConfig? config;
+    if (contextSize != null || gpuLayers != null) {
+      config = LlamaModelConfig(
+        contextSize      : contextSize ?? _contextSize,
+        gpuLayers        : gpuLayers ?? _gpuLayers,
+        nBatch           : 512,
+        nThreads         : 4,
+        useFlashAttention: false,
+        useMemoryLock    : false,
+        ropeFreqBase     : 0.0,
+        ropeFreqScale    : 0.0,
+        chatTemplate     : ChatTemplate.auto,
+      );
     }
+
+    debugPrint('[OfflineAI] loadModel($path) → delegate to LlamaService');
+    final ok = await LlamaService.instance.loadModel(modelInfo, config: config);
+    if (ok) {
+      _isReady         = true;
+      _loadedModelPath = path;
+      debugPrint('[OfflineAI] loadModel: LlamaService OK → $path');
+    } else {
+      _error = 'Gagal memuat model.\n\n- File GGUF mungkin corrupt\n- RAM tidak cukup\n- Gunakan model Q4_K_M 1B-3B';
+    }
+    _isLoading = false;
   }
 
   Future<void> reset() async { await unloadModel(); _error = null; }
@@ -562,8 +586,13 @@ class OfflineAiService {
   }
   Future<int>    getAvailableRamMb() async => _getAvailableRamMb();
   Future<String> getModelInfo() async {
-    try { return await _methodCh.invokeMethod<String>('getModelInfo') ?? '{"loaded":false}'; }
-    catch (_) { return '{"loaded":false}'; }
+    try {
+      final path = _loadedModelPath ?? '';
+      if (path.isEmpty) return '{"loaded":false}';
+      final result = await _methodCh.invokeMethod<Map>('getModelInfo', {'path': path});
+      if (result == null) return '{"loaded":false}';
+      return jsonEncode(Map<String, dynamic>.from(result));
+    } catch (_) { return '{"loaded":false}'; }
   }
 
   Future<String> generate(String userMessage, {
@@ -640,6 +669,27 @@ class OfflineAiService {
       if (File(active.path).existsSync()) await File(active.path).delete();
       await ModelManagerService.instance.deleteModel(active.id);
     } catch (e) { _error = 'Gagal hapus model: $e'; }
+  }
+
+  // ── LlamaService sync helpers ─────────────────────────────────────────────
+  /// Called by AiSourcePicker after a successful LlamaService.loadModel().
+  /// Mirrors the loaded state back to OfflineAiService so UI indicators work.
+  void syncFromLlamaService(String modelPath) {
+    _isReady = true;
+    _isLoading = false;
+    _error = null;
+    _loadedModelPath = modelPath;
+    debugPrint('[OfflineAI] syncFromLlamaService: path=$modelPath');
+  }
+
+  /// Called by AiSourcePicker after LlamaService.releaseModel().
+  /// Clears OfflineAiService's mirrored state.
+  void syncUnload() {
+    _isReady = false;
+    _isLoading = false;
+    _loadedModelPath = null;
+    _error = null;
+    debugPrint('[OfflineAI] syncUnload');
   }
 
   // ── Compatibility stubs ────────────────────────────────────────────────────

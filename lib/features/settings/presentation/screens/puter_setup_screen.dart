@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/services/puter_ai_service.dart';
 import 'package:kanmongo/data/services/bulk_api_service.dart';
+import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 
 class PuterSetupScreen extends StatefulWidget {
   const PuterSetupScreen({super.key});
@@ -83,6 +84,8 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
       temperature:   _temperature,
       streamMode:    _streamMode,
     );
+    // Sinkronisasi balik ke AiSourceSettingsService agar picker ikut update
+    await AiSourceSettingsService.instance.pullOnlineFromService();
     setState(() => _saving = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

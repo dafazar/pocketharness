@@ -161,6 +161,13 @@ class LlamaPlugin(
 
     external fun nativeGetAvailableMemoryMb(): Int
 
+    /// Registers this LlamaPlugin instance with the native C++ layer so that
+    /// JNI callbacks (token emission) can reach back into Kotlin/Flutter.
+    /// MUST be called once in init, after EventChannel is set up.
+    /// Without this call, g_plugin_obj in llama_jni.cpp remains null and
+    /// ALL token events are silently dropped — AI produces zero output.
+    external fun registerPlugin()
+
     // ── Initializer ──────────────────────────────────────────────────────────
     init {
         context.registerComponentCallbacks(this)
@@ -175,12 +182,19 @@ class LlamaPlugin(
                     "loadModel"            -> handleLoadModel(call, result)
                     "releaseModel"         -> handleReleaseModel(result)
                     "isModelLoaded"        -> handleIsModelLoaded(result)
-                    "generateTokens"       -> handleGenerateTokens(call, result)
+                    // Both "generateTokens" (LlamaService) and "startGeneration" (OfflineAiService legacy)
+                    // are routed to the same handler.
+                    "generateTokens",
+                    "startGeneration"      -> handleGenerateTokens(call, result)
                     "stopGeneration"       -> handleStopGeneration(result)
                     "getModelInfo"         -> handleGetModelInfo(call, result)
                     "getAvailableMemoryMb" -> handleGetAvailableMemory(result)
                     "getSystemInfo"        -> handleGetSystemInfo(result)
-                    else                   -> result.notImplemented()
+                    // Soft no-op for unrecognised calls — avoids MissingPluginException in Dart
+                    else                   -> {
+                        Log.w(TAG, "Unhandled method: ${call.method}")
+                        result.success(null)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "MethodChannel error on ${call.method}: ${e.message}", e)
@@ -198,6 +212,17 @@ class LlamaPlugin(
                 synchronized(sinkLock) { eventSink = null }
             }
         })
+
+        // Register this plugin instance with the native C++ layer.
+        // This sets g_plugin_obj and g_emit_method in llama_jni.cpp so that
+        // nativeGenerateTokens() can emit token events back to Kotlin/Flutter.
+        // Without this, ALL tokens are silently dropped and AI sends nothing.
+        try {
+            registerPlugin()
+            Log.i(TAG, "registerPlugin() OK — native callbacks wired")
+        } catch (e: Exception) {
+            Log.e(TAG, "registerPlugin() FAILED: ${e.message}", e)
+        }
     }
 
     // ── Thread-safe event emitter (called from JNI callbacks too) ─────────────
@@ -393,8 +418,15 @@ class LlamaPlugin(
     }
 
     private fun handleGetModelInfo(call: MethodCall, result: MethodChannel.Result) {
-        val path = call.argument<String>("path") ?: run {
-            result.error("LLAMA_ERROR", "path is required", null)
+        // Support both Map argument {"path": "..."} and bare String argument "..."
+        // LlamaService sends Map; legacy code might send a bare String.
+        val path: String? = when (val args = call.arguments) {
+            is String -> args
+            is Map<*, *> -> args["path"] as? String
+            else -> null
+        }
+        if (path.isNullOrBlank()) {
+            result.error("LLAMA_ERROR", "path is required (String or Map{path:String})", null)
             return
         }
         pluginScope.launch {

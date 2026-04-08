@@ -1,364 +1,273 @@
 // lib/features/chat/widgets/file_edit_response_widget.dart
-// KanMon GO — File Edit Response Widget (Sesi 4)
+// KanMon GO — File Edit Response Widget (Session 06)
 //
-// Deteksi pola diff / REPLACE-WITH dalam respons AI dan render:
-//   • Diff view berwarna merah/hijau
-//   • Tombol: Salin Kode / Terapkan ke File / Buat File Baru
-// =============================================================================
+// Two widgets in one file:
+//   1. FileEditResult      — data class holding the AI-produced content to save
+//   2. FileEditResponseWidget — UI button shown below the last AI message bubble
+//      when the AI has produced text that can be saved back as a file.
 
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/features/chat/widgets/artifact_panel.dart';
 
-// ── Satu baris diff ───────────────────────────────────────────────────────────
-class _DiffLine {
-  final String text;
-  final int    type; // -1 hapus, 0 konteks, 1 tambah
-  const _DiffLine(this.text, this.type);
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA CLASS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Holds the result of an AI file-edit operation that can be saved to disk.
+class FileEditResult {
+  final String originalFilename;
+  final String? textContent;
+  final Uint8List? binaryContent;
+  final String outputExtension;
+  final String description;
+
+  const FileEditResult({
+    required this.originalFilename,
+    this.textContent,
+    this.binaryContent,
+    required this.outputExtension,
+    required this.description,
+  }) : assert(
+          textContent != null || binaryContent != null,
+          'Either textContent or binaryContent must be provided',
+        );
 }
 
-// ── Widget utama ──────────────────────────────────────────────────────────────
-class FileEditResponseWidget extends StatelessWidget {
-  final String aiResponse;
-  final ArtifactPanelController? artifactCtrl;
+// ─────────────────────────────────────────────────────────────────────────────
+// WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const FileEditResponseWidget({
-    super.key,
-    required this.aiResponse,
-    this.artifactCtrl,
-  });
+class FileEditResponseWidget extends StatefulWidget {
+  final FileEditResult result;
+  const FileEditResponseWidget({super.key, required this.result});
 
-  static final _diffRegex    = RegExp(r'```diff\n([\s\S]+?)```',     multiLine: true);
-  static final _fileRegex    = RegExp(r'(?:\/\/|#)\s*File:\s*(.+)\n', multiLine: true);
-  static final _replaceRegex = RegExp(
-    r'REPLACE:\n([\s\S]+?)\nWITH:\n([\s\S]+?)(?:\n---|$)',
-    multiLine: true,
-  );
+  @override
+  State<FileEditResponseWidget> createState() => _FileEditResponseWidgetState();
+}
 
-  // ── Parse diff ────────────────────────────────────────────────────────────
-  static List<_DiffLine> _parseDiff(String diffContent) {
-    return diffContent.split('\n').map((line) {
-      if (line.startsWith('+')) return _DiffLine(line, 1);
-      if (line.startsWith('-')) return _DiffLine(line, -1);
-      return _DiffLine(line, 0);
-    }).toList();
-  }
+class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
+  _SaveState _state = _SaveState.idle;
+  String? _savedPath;
+  String? _errorMsg;
 
-  // ── Extract code to apply ─────────────────────────────────────────────────
-  // Returns the "new" content: lines from diff with '+', or 'WITH' block.
-  static String _extractNewContent(String response) {
-    // Try diff first
-    final diffMatch = _diffRegex.firstMatch(response);
-    if (diffMatch != null) {
-      final lines = diffMatch.group(1)!.split('\n');
-      return lines
-          .where((l) => !l.startsWith('-') && !l.startsWith('@@'))
-          .map((l) => l.startsWith('+') ? l.substring(1) : l)
-          .join('\n');
-    }
-    // Try REPLACE/WITH
-    final replMatch = _replaceRegex.firstMatch(response);
-    if (replMatch != null) {
-      return replMatch.group(2) ?? '';
-    }
-    // Fallback: return entire response
-    return response;
-  }
-
-  // ── Apply to file ─────────────────────────────────────────────────────────
-  Future<void> _applyToFile(BuildContext context) async {
+  Future<void> _saveFile() async {
+    if (_state == _SaveState.saving) return;
+    setState(() { _state = _SaveState.saving; _errorMsg = null; });
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.any);
-      if (result == null || result.files.single.path == null) return;
-      final path    = result.files.single.path!;
-      final oldText = await File(path).readAsString();
-      final newText = _extractNewContent(aiResponse);
-
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Terapkan Perubahan'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('File: $path', style: const TextStyle(fontSize: 12)),
-                const SizedBox(height: 8),
-                const Text('Sebelum:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 120),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      oldText.length > 500 ? '${oldText.substring(0, 500)}...' : oldText,
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text('Sesudah:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 120),
-                  child: SingleChildScrollView(
-                    child: Text(
-                      newText.length > 500 ? '${newText.substring(0, 500)}...' : newText,
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Terapkan'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmed != true) return;
-
-      await File(path).writeAsString(newText);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('✅ Berhasil diterapkan ke $path')),
-        );
+      final outDir = await _resolveOutputDirectory();
+      final base   = p.basenameWithoutExtension(widget.result.originalFilename);
+      final ts     = DateTime.now().millisecondsSinceEpoch;
+      final name   = '${base}_edited_$ts.${widget.result.outputExtension}';
+      final path   = p.join(outDir.path, name);
+      final file   = File(path);
+      if (widget.result.binaryContent != null) {
+        await file.writeAsBytes(widget.result.binaryContent!);
+      } else {
+        await file.writeAsString(widget.result.textContent!, flush: true);
       }
+      if (mounted) setState(() { _state = _SaveState.saved; _savedPath = path; });
     } catch (e) {
-      debugPrint('[FileEditWidget] _applyToFile error: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Gagal: $e')),
-        );
-      }
+      if (mounted) setState(() { _state = _SaveState.error; _errorMsg = e.toString(); });
     }
   }
 
-  // ── Save as new file ──────────────────────────────────────────────────────
-  Future<void> _saveAsNewFile(BuildContext context) async {
+  Future<Directory> _resolveOutputDirectory() async {
     try {
-      final newText = _extractNewContent(aiResponse);
-      final path    = await FilePicker.platform.saveFile(
-        dialogTitle: 'Simpan sebagai file baru',
-        fileName: 'edited_file.txt',
-      );
-      if (path == null) return;
-      await File(path).writeAsString(newText);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('✅ Disimpan ke $path')),
-        );
-      }
+      final dir = Directory('/storage/emulated/0/Download/KanMonAI');
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final t = File(p.join(dir.path, '.wtest'));
+      t.writeAsStringSync('ok');
+      t.deleteSync();
+      return dir;
+    } catch (_) {
+      final docs = await getApplicationDocumentsDirectory();
+      final dir  = Directory(p.join(docs.path, 'exports'));
+      if (!dir.existsSync()) dir.createSync(recursive: true);
+      return dir;
+    }
+  }
+
+  Future<void> _shareFile() async {
+    final path = _savedPath;
+    if (path == null) return;
+    try {
+      await Share.shareXFiles([XFile(path)], subject: widget.result.description);
     } catch (e) {
-      debugPrint('[FileEditWidget] _saveAsNewFile error: $e');
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Gagal: $e')),
+          SnackBar(content: Text('Gagal membagikan: $e')),
         );
       }
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  Future<void> _copyContent() async {
+    final text = widget.result.textContent;
+    if (text == null) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Konten disalin ke clipboard')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final c = KmColors.of(context);
-
-    // Deteksi apakah ada diff atau replace pattern
-    final hasDiff    = _diffRegex.hasMatch(aiResponse);
-    final hasReplace = _replaceRegex.hasMatch(aiResponse);
-
-    if (!hasDiff && !hasReplace) return const SizedBox.shrink();
-
-    // Ambil nama file dari komentar jika ada
-    final fileMatch = _fileRegex.firstMatch(aiResponse);
-    final fileName  = fileMatch?.group(1)?.trim();
-
-    // Parse diff lines jika ada
-    List<_DiffLine> diffLines = [];
-    if (hasDiff) {
-      final dm = _diffRegex.firstMatch(aiResponse);
-      if (dm != null) diffLines = _parseDiff(dm.group(1)!);
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.accent.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Header ────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-            child: Row(
-              children: [
-                Icon(Icons.edit_document, color: c.accent, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  '📝 Perubahan Disarankan',
-                  style: TextStyle(
-                    color: c.onSurface,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                const Spacer(),
-                if (fileName != null)
-                  Text(
-                    fileName,
-                    style: TextStyle(
-                      color: c.accent,
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-
-          // ── Diff view ─────────────────────────────────────────────────
-          if (diffLines.isNotEmpty)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 300),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: diffLines.map((dl) {
-                    Color bg;
-                    Color fg;
-                    switch (dl.type) {
-                      case 1:
-                        bg = Colors.green.withOpacity(0.15);
-                        fg = const Color(0xFF6EBF8B);
-                        break;
-                      case -1:
-                        bg = Colors.red.withOpacity(0.15);
-                        fg = const Color(0xFFFF7070);
-                        break;
-                      default:
-                        bg = Colors.transparent;
-                        fg = c.onSurface.withOpacity(0.75);
-                    }
-                    return Container(
-                      color: bg,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 1),
-                      child: Text(
-                        dl.text,
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                          color: fg,
-                          height: 1.5,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            )
-          else if (hasReplace)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-              child: Text(
-                'Pola REPLACE/WITH terdeteksi.',
-                style: TextStyle(color: c.onSurface.withOpacity(0.6), fontSize: 12),
-              ),
-            ),
-
-          const Divider(height: 1),
-
-          // ── Footer buttons ────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Clipboard.setData(
-                        ClipboardData(text: _extractNewContent(aiResponse)));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Kode disalin!'),
-                          duration: Duration(seconds: 2)),
-                    );
-                  },
-                  icon: const Icon(Icons.copy_rounded, size: 14),
-                  label: const Text('Salin Kode'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: c.onSurface,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => _applyToFile(context),
-                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
-                  label: const Text('Terapkan ke File'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: c.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _saveAsNewFile(context),
-                  icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
-                  label: const Text('Buat File Baru'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: c.accent,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    textStyle: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                if (artifactCtrl != null)
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.open_in_new_rounded, size: 14),
-                    label: const Text('Buka di Panel'),
-                    onPressed: () {
-                      final isDiff = _diffRegex.hasMatch(aiResponse);
-                      final content = isDiff
-                          ? (_diffRegex.firstMatch(aiResponse)?.group(1) ?? aiResponse)
-                          : aiResponse;
-                      final filename = _fileRegex.firstMatch(aiResponse)?.group(1)?.trim()
-                          ?? 'patch_${DateTime.now().millisecondsSinceEpoch}.diff';
-                      artifactCtrl!.push(ArtifactItem(
-                        mode:     ArtifactMode.file,
-                        title:    filename.split('/').last,
-                        language: 'diff',
-                        content:  content,
-                      ));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      textStyle: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    final c = KMColors.of(context);
+    return switch (_state) {
+      _SaveState.saved  => _buildSaved(c),
+      _SaveState.error  => _buildError(c),
+      _SaveState.saving => _buildSaving(c),
+      _SaveState.idle   => _buildIdle(c),
+    };
   }
+
+  Widget _buildIdle(KMColors c) => Padding(
+    padding: const EdgeInsets.only(top: 6, bottom: 2),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FilledButton.icon(
+              onPressed: _saveFile,
+              icon: const Icon(Icons.save_alt_rounded, size: 16),
+              label: const Text('💾 Simpan Hasil Edit', style: TextStyle(fontSize: 13)),
+              style: FilledButton.styleFrom(
+                backgroundColor: c.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            if (widget.result.textContent != null) ...[
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: _copyContent,
+                icon: Icon(Icons.copy_rounded, size: 14, color: c.accent),
+                label: Text('Salin', style: TextStyle(fontSize: 12, color: c.accent)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.accent,
+                  side: BorderSide(color: c.accent.withOpacity(0.4)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 2, top: 4),
+          child: Text(widget.result.description,
+              style: TextStyle(color: c.textSecondary, fontSize: 11)),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildSaving(KMColors c) => Padding(
+    padding: const EdgeInsets.only(top: 6, bottom: 2),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(width: 14, height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2, color: c.accent)),
+        const SizedBox(width: 8),
+        Text('Menyimpan...', style: TextStyle(color: c.textSecondary, fontSize: 13)),
+      ],
+    ),
+  );
+
+  Widget _buildSaved(KMColors c) => Container(
+    margin: const EdgeInsets.only(top: 6, bottom: 2),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: c.correct.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: c.correct.withOpacity(0.3)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.check_circle_outline_rounded, color: c.correct, size: 18),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(p.basename(_savedPath ?? ''),
+              style: TextStyle(color: c.correct, fontSize: 12),
+              overflow: TextOverflow.ellipsis),
+        ),
+        const SizedBox(width: 10),
+        TextButton.icon(
+          onPressed: _shareFile,
+          icon: Icon(Icons.share_rounded, size: 15, color: c.accent),
+          label: Text('Bagikan', style: TextStyle(color: c.accent, fontSize: 12)),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildError(KMColors c) => Padding(
+    padding: const EdgeInsets.only(top: 6, bottom: 2),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('⚠️ Gagal menyimpan: ${_errorMsg ?? "unknown"}',
+            style: TextStyle(color: c.wrong, fontSize: 12)),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FilledButton.icon(
+              onPressed: _saveFile,
+              icon: const Icon(Icons.refresh_rounded, size: 15),
+              label: const Text('Coba Lagi', style: TextStyle(fontSize: 12)),
+              style: FilledButton.styleFrom(
+                backgroundColor: c.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            if (widget.result.textContent != null) ...[
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: _copyContent,
+                icon: Icon(Icons.copy_rounded, size: 14, color: c.accent),
+                label: Text('Salin', style: TextStyle(fontSize: 12, color: c.accent)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.accent,
+                  side: BorderSide(color: c.accent.withOpacity(0.4)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    ),
+  );
 }
+
+enum _SaveState { idle, saving, saved, error }

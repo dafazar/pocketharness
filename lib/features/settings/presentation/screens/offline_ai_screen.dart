@@ -20,6 +20,8 @@ import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/core/router/app_router.dart';
 import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/offline_ai_service.dart';
+import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 import 'package:kanmongo/shared/widgets/back_handler.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,6 +151,12 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
 
     // 3. Simpan system prompt ke provider
     ref.read(systemPromptProvider.notifier).setPrompt(_systemPromptController.text);
+
+    // 4. Sync parameter inferensi ke OfflineAiService lalu ke AiSourceSettingsService
+    await OfflineAiService.instance.setTemperature(_localInference.temperature);
+    await OfflineAiService.instance.setTopP(_localInference.topP);
+    await OfflineAiService.instance.setTopK(_localInference.topK);
+    await AiSourceSettingsService.instance.pullOfflineFromService();
 
     // 4. Jika konfigurasi model berubah dan model sedang di-load → reload model
     if (_modelConfigChanged) {

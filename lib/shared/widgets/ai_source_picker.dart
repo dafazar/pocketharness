@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:kanmongo/data/services/offline_ai_service.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
+import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/models/chat_models.dart' show AiSourceChoice;
 import 'package:kanmongo/data/services/ai_service.dart' show AiMode;
 import 'package:kanmongo/features/chat/providers/chat_session_provider.dart'
@@ -49,6 +50,15 @@ class _AiSourcePickerState extends State<AiSourcePicker>
             ? 1
             : 2;
     _tabController = TabController(length: 3, vsync: this, initialIndex: initialIndex);
+    // Pull state terbaru dari masing-masing service agar picker selalu sinkron
+    _refreshFromServices();
+  }
+
+  Future<void> _refreshFromServices() async {
+    await _svc.pullOnlineFromService();
+    await _svc.pullBulkFromService();
+    await _svc.pullOfflineFromService();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -271,24 +281,33 @@ class _AiSourcePickerState extends State<AiSourcePicker>
         ]),
       );
 
-  void _showOnlineSettings(BuildContext context) =>
-      showDialog(context: context, builder: (ctx) => _OnlineSettingsDialog(svc: _svc));
+  Future<void> _showOnlineSettings(BuildContext context) async {
+    await showDialog(context: context, builder: (ctx) => _OnlineSettingsDialog(svc: _svc));
+    await _svc.pullOnlineFromService();
+    if (mounted) setState(() {});
+  }
 
-  void _showBulkSettings(BuildContext context) =>
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (ctx) => _BulkSettingsDialog(svc: _svc),
-      );
+  Future<void> _showBulkSettings(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _BulkSettingsDialog(svc: _svc),
+    );
+    await _svc.pullBulkFromService();
+    if (mounted) setState(() {});
+  }
 
-  void _showOfflineSettings(BuildContext context) =>
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (ctx) => _OfflineSettingsDialog(svc: _svc),
-      );
+  Future<void> _showOfflineSettings(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _OfflineSettingsDialog(svc: _svc),
+    );
+    await _svc.pullOfflineFromService();
+    if (mounted) setState(() {});
+  }
 }
 
 // ── Stub Dialogs (Bulk & Offline remain stubs until Sessions 3 & 4) ───────────
@@ -2314,9 +2333,9 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
 
     return StatefulBuilder(
       builder: (ctx, setLocal) {
-        final loadedPath  = offlineSvc.loadedModelPath;
-        final isReady     = offlineSvc.isReady;
-        final isLoading   = offlineSvc.isLoading || _isLoadingModel;
+        final loadedPath  = LlamaService.instance.currentModel?.path ?? offlineSvc.loadedModelPath;
+        final isReady     = LlamaService.instance.isModelLoaded;
+        final isLoading   = LlamaService.instance.status == ModelStatus.loading || _isLoadingModel;
         final localModels = modelMgr.localModels;
 
         return ListView(
@@ -2342,7 +2361,8 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                 ),
                 onPressed: isLoading ? null : () async {
                   setLocal(() => _isLoadingModel = true);
-                  await offlineSvc.unloadModel();
+                  await LlamaService.instance.releaseModel();
+                  offlineSvc.syncUnload();
                   setLocal(() => _isLoadingModel = false);
                   setState(() {});
                 },
@@ -2357,10 +2377,32 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                 label: Text(isLoading ? 'Memuat...' : 'Load Model Aktif'),
                 onPressed: isLoading || _cfg.activeModelPath.isEmpty ? null : () async {
                   setLocal(() => _isLoadingModel = true);
-                  await offlineSvc.loadModel(_cfg.activeModelPath,
-                    contextSize: _cfg.contextSize,
-                    gpuLayers:   _cfg.gpuLayers,
+                  final modelInfo = LlamaModelInfo(
+                    id            : _cfg.activeModelPath.hashCode.toString(),
+                    name          : _cfg.activeModelPath.split('/').last,
+                    path          : _cfg.activeModelPath,
+                    sizeBytes     : 0,
+                    format        : 'gguf',
+                    quantization  : QuantizationType.unknown,
+                    estimatedRamMb: 0,
+                    isDownloaded  : true,
                   );
+                  final config = LlamaModelConfig(
+                    contextSize      : _cfg.contextSize,
+                    gpuLayers        : _cfg.gpuLayers,
+                    nBatch           : 512,
+                    nThreads         : 4,
+                    useFlashAttention: false,
+                    useMemoryLock    : false,
+                    ropeFreqBase     : 0.0,
+                    ropeFreqScale    : 0.0,
+                    chatTemplate     : ChatTemplate.auto,
+                  );
+                  await LlamaService.instance.loadModel(modelInfo, config: config);
+                  // Mirror state back to OfflineAiService for UI indicators
+                  if (LlamaService.instance.isModelLoaded) {
+                    offlineSvc.syncFromLlamaService(_cfg.activeModelPath);
+                  }
                   setLocal(() => _isLoadingModel = false);
                   setState(() {});
                 },
@@ -2389,10 +2431,31 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                 onLoad: isLoading ? null : () async {
                   setLocal(() => _isLoadingModel = true);
                   _saveField(_cfg.copyWith(activeModelPath: model.path));
-                  await offlineSvc.loadModel(model.path,
-                    contextSize: _cfg.contextSize,
-                    gpuLayers:   _cfg.gpuLayers,
+                  final modelInfo = LlamaModelInfo(
+                    id            : model.path.hashCode.toString(),
+                    name          : model.name,
+                    path          : model.path,
+                    sizeBytes     : model.sizeBytes,
+                    format        : 'gguf',
+                    quantization  : QuantizationType.unknown,
+                    estimatedRamMb: (model.sizeBytes / (1024 * 1024) * 1.2).toInt(),
+                    isDownloaded  : true,
                   );
+                  final config = LlamaModelConfig(
+                    contextSize      : _cfg.contextSize,
+                    gpuLayers        : _cfg.gpuLayers,
+                    nBatch           : 512,
+                    nThreads         : 4,
+                    useFlashAttention: false,
+                    useMemoryLock    : false,
+                    ropeFreqBase     : 0.0,
+                    ropeFreqScale    : 0.0,
+                    chatTemplate     : ChatTemplate.auto,
+                  );
+                  await LlamaService.instance.loadModel(modelInfo, config: config);
+                  if (LlamaService.instance.isModelLoaded) {
+                    offlineSvc.syncFromLlamaService(model.path);
+                  }
                   setLocal(() => _isLoadingModel = false);
                   setState(() {});
                 },

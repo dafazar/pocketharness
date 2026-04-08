@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
+import 'package:kanmongo/core/ai/native_event_dispatcher.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KUNCI SharedPreferences
@@ -49,9 +50,7 @@ class LlamaService {
   // ── Native Channels ────────────────────────────────────────────────────────
   /// MethodChannel untuk memanggil fungsi llama.cpp di native layer (Kotlin/JNI)
   static const _methodCh = MethodChannel('com.kanmongo.llama/engine');
-
-  /// EventChannel untuk menerima token streaming dari native layer
-  static const _eventCh  = EventChannel('com.kanmongo.llama/stream');
+  // EventChannel dikelola oleh NativeEventDispatcher singleton
 
   // ── State Variables ────────────────────────────────────────────────────────
   ModelStatus _status              = ModelStatus.notLoaded;
@@ -88,9 +87,6 @@ class LlamaService {
   /// Broadcast stream untuk progres pemuatan model (0.0 – 1.0)
   final StreamController<double> _loadProgressCtrl =
       StreamController<double>.broadcast();
-
-  /// Subscription ke EventChannel native (persisten, tidak dibuat ulang per-generate)
-  StreamSubscription<dynamic>? _eventChannelSub;
 
   /// Prompt sistem yang sedang aktif
   String? _systemPrompt;
@@ -132,18 +128,15 @@ class LlamaService {
   /// Inisialisasi service: muat settings, pastikan stream aktif
   Future<void> initialize() async {
     await loadSettings();
-    // Pastikan event channel terdaftar
-    if (_eventChannelSub == null) {
-      _initEventChannel();
-    }
+    // Pastikan event channel terdaftar ke dispatcher
+    NativeEventDispatcher.instance.registerLlamaService(_onNativeEvent);
     debugPrint('[LlamaService] initialize() selesai');
   }
 
   /// Bersihkan semua resource saat app ditutup
   Future<void> dispose() async {
     await stopGeneration();
-    await _eventChannelSub?.cancel();
-    _eventChannelSub = null;
+    NativeEventDispatcher.instance.unregisterLlamaService();
     if (!_statusCtrl.isClosed) await _statusCtrl.close();
     if (!_loadProgressCtrl.isClosed) await _loadProgressCtrl.close();
     _closeActiveCtrl();
@@ -239,7 +232,9 @@ class LlamaService {
   /// Ambil informasi model dari path file tanpa memuatnya
   Future<LlamaModelInfo?> getModelInfoFromPath(String path) async {
     try {
-      final result = await _methodCh.invokeMethod<Map>('getModelInfo', path);
+      // FIX: pass path as a Map key, not a bare String.
+      // LlamaPlugin.kt reads call.argument<String>("path") which requires a Map argument.
+      final result = await _methodCh.invokeMethod<Map>('getModelInfo', <String, dynamic>{'path': path});
       if (result == null) return null;
 
       final map = Map<String, dynamic>.from(result);
@@ -343,7 +338,11 @@ class LlamaService {
     _currentActiveSeq = _sessionSeq;
     final mySeq = _currentActiveSeq;
 
-    final ctrl = StreamController<String>.broadcast();
+    // Use a regular (non-broadcast) StreamController.
+    // broadcast() does NOT buffer events — if any token arrives between
+    // invokeMethod returning and "await for" starting, it is silently dropped.
+    // A regular StreamController buffers until the single listener subscribes.
+    final ctrl = StreamController<String>();
     _activeGenCtrl = ctrl;
     _genRunning    = true;
     _genCompleter  = Completer<void>();
@@ -683,6 +682,26 @@ class LlamaService {
     return [...sysMessages, ...kept];
   }
 
+  // ── Config Update ──────────────────────────────────────────────────────────
+
+  /// Replace the entire model configuration before calling loadModel().
+  /// Used by AiSourcePicker / Settings screens to apply UI settings.
+  void updateConfig(LlamaModelConfig config) {
+    _modelConfig = config;
+    debugPrint('[LlamaService] updateConfig: ctx=${config.contextSize} gpu=${config.gpuLayers}');
+  }
+
+  /// Partially update model configuration — only override provided fields.
+  void updateConfigPartial({int? contextSize, int? gpuLayers, int? nThreads, int? nBatch}) {
+    _modelConfig = _modelConfig.copyWith(
+      contextSize: contextSize,
+      gpuLayers:   gpuLayers,
+      nThreads:    nThreads,
+      nBatch:      nBatch,
+    );
+    debugPrint('[LlamaService] updateConfigPartial applied');
+  }
+
   // ── Settings ───────────────────────────────────────────────────────────────
 
   /// Simpan konfigurasi service ke SharedPreferences
@@ -737,26 +756,15 @@ class LlamaService {
 
   // ── Internal Methods ───────────────────────────────────────────────────────
 
-  /// Inisialisasi subscription ke EventChannel native (single persistent subscription)
+  /// Inisialisasi subscription ke EventChannel native via NativeEventDispatcher (shared singleton)
   void _initEventChannel() {
-    _eventChannelSub?.cancel();
-    _eventChannelSub = _eventCh.receiveBroadcastStream().listen(
-      (dynamic event) {
-        if (event is! Map) return;
-        _onNativeEvent(Map<dynamic, dynamic>.from(event));
-      },
-      onError: (Object e) {
-        debugPrint('[LlamaService] EventChannel error: $e — re-init 300ms');
-        Future<void>.delayed(const Duration(milliseconds: 300), _initEventChannel);
-      },
-      cancelOnError: false,
-    );
-    debugPrint('[LlamaService] EventChannel subscribed');
+    NativeEventDispatcher.instance.registerLlamaService(_onNativeEvent);
+    debugPrint('[LlamaService] registered to NativeEventDispatcher');
   }
 
   /// Handler untuk setiap event yang diterima dari native layer
   void _onNativeEvent(Map<dynamic, dynamic> event) {
-    final type = event['type'] as String? ?? '';
+    final type = event['type']?.toString() ?? '';
 
     switch (type) {
       // ── Token streaming ───────────────────────────────────────────────────

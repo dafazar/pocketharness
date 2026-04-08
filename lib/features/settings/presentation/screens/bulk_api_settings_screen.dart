@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/services/bulk_api_service.dart';
+import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class BulkApiSettingsScreen extends StatefulWidget {
@@ -36,6 +37,8 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
   @override
   void dispose() {
     _tab.dispose();
+    // Sinkronisasi ke AiSourceSettingsService saat screen ditutup
+    AiSourceSettingsService.instance.pullBulkFromService();
     super.dispose();
   }
 
@@ -1591,6 +1594,8 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
               activeColor: kfc.accent,
               onChanged: (v) async {
                 await _svc.setEnabled(v);
+                // Sinkronisasi ke AiSourceSettingsService agar picker ikut update
+                await AiSourceSettingsService.instance.pullBulkFromService();
                 setState(() {});
               },
             ),

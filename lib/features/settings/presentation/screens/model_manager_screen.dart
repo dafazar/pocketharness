@@ -403,14 +403,12 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
         allowedExtensions: ['gguf', 'ggml'],
         withData         : false,
       );
-    } on PlatformException catch (e) {
-      debugPrint('[Import] custom filter failed ($e), falling back to FileType.any');
-      usedFallbackAny = true;
+    } catch (_) {
+      // Custom filter failed (PlatformException or plain Exception on some OEMs)
+      // Always fall back to FileType.any — do NOT show error here.
+      debugPrint('[Import] custom filter failed ($_), falling back to FileType.any');
       result = null;
-    } catch (e) {
-      debugPrint('[Import] pickFiles error: $e');
-      _showSnackbar('Gagal membuka file picker: $e', color: c.wrong);
-      return;
+      usedFallbackAny = true;
     }
 
     // Fallback: FileType.any when custom filter is unsupported by OEM

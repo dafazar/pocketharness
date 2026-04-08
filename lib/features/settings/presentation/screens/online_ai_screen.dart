@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/services/puter_ai_service.dart';
+import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 
 class OnlineAiScreen extends StatefulWidget {
   const OnlineAiScreen({super.key});
@@ -53,6 +54,8 @@ class _OnlineAiScreenState extends State<OnlineAiScreen>
 
   Future<void> _selectModel(PuterAiModel model) async {
     await _svc.saveSettings(selectedModel: model.id);
+    // Sinkronisasi ke AiSourceSettingsService agar picker ikut update
+    await AiSourceSettingsService.instance.pullOnlineFromService();
     if (mounted) {
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
@@ -159,6 +162,8 @@ class _OnlineAiScreenState extends State<OnlineAiScreen>
                 value: _svc.isEnabled,
                 onChanged: (v) async {
                   await _svc.saveSettings(enabled: v);
+                  // Sinkronisasi ke AiSourceSettingsService agar picker ikut update
+                  await AiSourceSettingsService.instance.pullOnlineFromService();
                   setState(() {});
                 },
                 activeColor: const Color(0xFF6C5CE7),

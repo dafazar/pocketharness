@@ -133,18 +133,23 @@ void main() async {
         debugPrint('[main] LlamaService.initialize() gagal (lanjut): $e');
       }
 
-      // ── AUTO-LOAD model aktif ke LlamaService (via OfflineAiService alias) ─
-      // Harus dipanggil SETELAH LlamaService.initialize() agar state siap.
-      // Dijalankan async (ignore) agar tidak blokir startup.
-      OfflineAiService.instance.loadSettings().then((_) {
-        // activeModel = file EXIST; activeModelRaw = terdaftar tapi file mungkin hilang
+      // ── AUTO-LOAD active model via LlamaService (single authority) ──────────
+      // LlamaService is the canonical owner of the native bridge.
+      // OfflineAiService settings are loaded for UI state (forceOffline, etc.)
+      // but model loading itself is delegated to LlamaService.loadModel().
+      OfflineAiService.instance.loadSettings().then((_) async {
         final active    = ModelManagerService.instance.activeModel;
         final activeRaw = ModelManagerService.instance.activeModelRaw;
         if (active != null) {
-          OfflineAiService.instance.initActiveModel().ignore();
-          debugPrint('[main] Auto-loading active model: ${active.name}');
+          debugPrint('[main] Auto-loading active model via LlamaService: ${active.name}');
+          final ok = await LlamaService.instance.loadModel(active);
+          if (ok) {
+            debugPrint('[main] Auto-load success: ${active.name}');
+          } else {
+            debugPrint('[main] Auto-load failed: ${active.name}');
+          }
         } else if (activeRaw != null) {
-          debugPrint('[main] Model terdaftar tapi file hilang: ${activeRaw.path}');
+          debugPrint('[main] Model registered but file missing: ${activeRaw.path}');
         }
       }).ignore();
 

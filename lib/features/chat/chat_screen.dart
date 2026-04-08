@@ -91,6 +91,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   bool   _showRawText             = false; // toggle markdown/raw
   StreamSubscription<String>? _genSub;
 
+  // ── File edit result (shown below last AI message after offline generation) ─
+  FileEditResult? _pendingFileEditResult;
+
   // ── OCR ───────────────────────────────────────────────────────────────────
   bool _isProcessingOcr = false;
 
@@ -160,13 +163,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   void dispose() {
+    _genSub?.cancel();
+    _genSub = null;
     _scrollCtrl.dispose();
     _inputCtrl.dispose();
     _focusNode.dispose();
     _typingAnimCtrl.dispose();
     _renameCtrl.dispose();
     _artifactCtrl.dispose();
-    _genSub?.cancel();
     super.dispose();
   }
 
@@ -375,14 +379,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           );
         }
         final msg = messages[index];
-        return _MessageBubble(
+        final isLastAssistant = msg.role == ChatRole.assistant &&
+            messages.where((m) => m.role == ChatRole.assistant).last.id == msg.id;
+
+        final bubble = _MessageBubble(
           message:        msg,
           showRawText:    _showRawText,
           attachments:    _messageAttachments[msg.id] ?? const [],
           isLastUser:     msg.role == ChatRole.user &&
               messages.where((m) => m.role == ChatRole.user).last.id == msg.id,
-          isLastAssistant: msg.role == ChatRole.assistant &&
-              messages.where((m) => m.role == ChatRole.assistant).last.id == msg.id,
+          isLastAssistant: isLastAssistant,
           onDelete:       () => _deleteMessage(msg.id),
           onResend:       () => _resendMessage(msg),
           onRegenerate:   () => _regenerateLast(),
@@ -391,6 +397,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           webResearchQuery: _getPreviousUserMessage(index),
           artifactCtrl:   _artifactCtrl,
         );
+
+        // Show FileEditResponseWidget below the last AI message when pending
+        if (isLastAssistant && _pendingFileEditResult != null && !_isGenerating) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              bubble,
+              Padding(
+                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+                child: FileEditResponseWidget(result: _pendingFileEditResult!),
+              ),
+            ],
+          );
+        }
+
+        return bubble;
       },
     );
   }
@@ -752,6 +775,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     if (rawInputText.isEmpty && attachmentsSnapshot.isEmpty) return;
     if (_isGenerating) return;
+
+    // Clear previous file edit result when user sends a new message
+    if (_pendingFileEditResult != null) {
+      setState(() { _pendingFileEditResult = null; });
+    }
 
     // ── Adaptive Edit Mode: full pipeline — B3 ──────────────────────────────
     if (_editMode == ChatEditMode.adaptive && attachmentsSnapshot.isNotEmpty) {
@@ -1152,17 +1180,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _generateOffline({List<ChatAttachmentPayload> payloads = const []}) async {
+    // ── Guard: model must be loaded ───────────────────────────────────────────
+    // If model is still loading (e.g., auto-load in progress at startup),
+    // wait up to 30 seconds for it to finish before giving up.
     if (!LlamaService.instance.isModelLoaded) {
-      ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-        '⚠️ Model AI belum dimuat.\n\nBuka Settings → Model Manager untuk memilih dan memuat model.',
-        stopReason: StopReason.error,
-      );
-      setState(() { _isGenerating = false; });
-      return;
+      if (LlamaService.instance.status == ModelStatus.loading) {
+        debugPrint('[ChatScreen] _generateOffline: model is loading — waiting up to 30s');
+        bool didLoad = false;
+        for (int i = 0; i < 60; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          if (!mounted) return;
+          if (LlamaService.instance.isModelLoaded) { didLoad = true; break; }
+          if (LlamaService.instance.status == ModelStatus.error) break;
+        }
+        if (!didLoad) {
+          if (mounted) {
+            ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
+              '⚠️ Model AI gagal dimuat.\n\nBuka Settings → Model Manager untuk memilih model .gguf.',
+              stopReason: StopReason.error,
+            );
+            setState(() { _isGenerating = false; });
+          }
+          return;
+        }
+      } else {
+        ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
+          '⚠️ Model AI belum dimuat.\n\nBuka Settings → Model Manager untuk memilih dan memuat model.',
+          stopReason: StopReason.error,
+        );
+        setState(() { _isGenerating = false; });
+        return;
+      }
     }
 
-    final messages    = ref.read(chatSessionProvider);
-    final config      = ref.read(inferenceConfigProvider);
+    final messages     = ref.read(chatSessionProvider);
+    final config       = ref.read(inferenceConfigProvider);
     final systemPrompt = ref.read(systemPromptProvider);
 
     // Inject file context into the last user message if payloads present
@@ -1172,7 +1224,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     if (payloads.isNotEmpty) {
       final fileContext = _buildOfflineFileContext(payloads);
-      // Prepend file context to the last user message
       final lastUserIdx = msgToSend.lastIndexWhere((m) => m.role == ChatRole.user);
       if (lastUserIdx >= 0 && fileContext.isNotEmpty) {
         final orig = msgToSend[lastUserIdx];
@@ -1196,6 +1247,42 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         setState(() { _isGenerating = false; });
         _genSub = null;
         _autoSaveCurrentSession(ref.read(chatSessionProvider));
+
+        // ── File edit result detection ───────────────────────────────────────
+        // If text-based files were attached, offer to save the AI response as a file.
+        if (payloads.isNotEmpty) {
+          const textExts = {
+            'txt', 'md', 'dart', 'py', 'js', 'ts', 'html', 'css', 'json',
+            'xml', 'csv', 'kt', 'java', 'cpp', 'c', 'h', 'yaml', 'yml',
+            'toml', 'ini', 'log', 'sql', 'sh', 'bat',
+          };
+          final textPayloads = payloads
+              .where((pl) => pl.extractedText != null && pl.extractedText!.isNotEmpty)
+              .toList();
+          if (textPayloads.isNotEmpty) {
+            final first = textPayloads.first;
+            final ext = first.filename.contains('.')
+                ? first.filename.split('.').last.toLowerCase()
+                : 'txt';
+            if (textExts.contains(ext)) {
+              final currentMsgs = ref.read(chatSessionProvider);
+              final lastAi = currentMsgs.lastWhere(
+                (m) => m.role == ChatRole.assistant,
+                orElse: () => ChatMessage.assistant(''),
+              );
+              if (lastAi.content.isNotEmpty && mounted) {
+                setState(() {
+                  _pendingFileEditResult = FileEditResult(
+                    originalFilename: first.filename,
+                    textContent:      lastAi.content,
+                    outputExtension:  ext == 'md' ? 'md' : 'txt',
+                    description:      'Hasil edit AI untuk: ${first.filename}',
+                  );
+                });
+              }
+            }
+          }
+        }
       },
       onError: (Object e) {
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
