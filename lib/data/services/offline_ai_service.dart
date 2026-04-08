@@ -243,7 +243,7 @@ class OfflineAiService {
   }
 
   Future<int> _getAvailableRamMb() async {
-    try { return await _methodCh.invokeMethod<int>('getAvailableRam') ?? 0; }
+    try { return await _methodCh.invokeMethod<int>('getAvailableMemoryMb') ?? 0; }
     catch (_) { return 0; }
   }
 
@@ -295,7 +295,7 @@ class OfflineAiService {
         _isLoading = false; return;
       }
 
-      try { await _methodCh.invokeMethod('freeModel'); } catch (_) {}
+      try { await _methodCh.invokeMethod('releaseModel'); } catch (_) {}
 
       final isLargeModel = modelSizeMb >= 3500;
       final safeCtx = isLargeModel
@@ -304,7 +304,7 @@ class OfflineAiService {
       debugPrint('[OfflineAI] loadModel: ${active.path} ctx=$safeCtx gpu=$_gpuLayers');
 
       final ok = await _methodCh.invokeMethod<bool>('loadModel', {
-        'path': active.path, 'contextSize': safeCtx, 'numGpuLayers': _gpuLayers,
+        'path': active.path, 'contextSize': safeCtx, 'gpuLayers': _gpuLayers,
       });
 
       if (ok == true) {
@@ -487,7 +487,7 @@ class OfflineAiService {
 
   Future<void> unloadModel() async {
     await stopGeneration();
-    try { await _methodCh.invokeMethod('freeModel'); } catch (_) {}
+    try { await _methodCh.invokeMethod('releaseModel'); } catch (_) {}
     _isReady = false; _loadedModelPath = null;
   }
 
@@ -528,7 +528,7 @@ class OfflineAiService {
         _isLoading = false; return;
       }
 
-      try { await _methodCh.invokeMethod('freeModel'); } catch (_) {}
+      try { await _methodCh.invokeMethod('releaseModel'); } catch (_) {}
 
       final isLargeModel = modelSizeMb >= 3500;
       final safeCtx = isLargeModel
@@ -537,7 +537,7 @@ class OfflineAiService {
       debugPrint('[OfflineAI] loadModel(path): $path ctx=$safeCtx gpu=$gpuL');
 
       final ok = await _methodCh.invokeMethod<bool>('loadModel', {
-        'path': path, 'contextSize': safeCtx, 'numGpuLayers': gpuL,
+        'path': path, 'contextSize': safeCtx, 'gpuLayers': gpuL,
       });
 
       if (ok == true) {

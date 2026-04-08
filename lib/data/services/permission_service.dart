@@ -255,15 +255,14 @@ class StoragePermissionHelper {
 
     final sdk = await getSdkInt();
 
-    if (sdk >= 30) {
-      // Android 11+: MANAGE_EXTERNAL_STORAGE is the only way to get
-      // real file paths. Fall back to SAF (content://) if not granted.
-      return isManageExternalStorageGranted();
-    } else if (sdk >= 33) {
-      // This branch won't be reached (33 > 30) but kept for clarity:
-      // granular media permissions. Check photos as representative.
+    if (sdk >= 33) {
+      // Android 13+: Granular media permissions. Check photos as representative.
       final status = await Permission.photos.status;
       return status.isGranted || status.isLimited;
+    } else if (sdk >= 30) {
+      // Android 11-12: MANAGE_EXTERNAL_STORAGE is the only way to get
+      // real file paths. Fall back to SAF (content://) if not granted.
+      return isManageExternalStorageGranted();
     } else {
       // API 29 and below: READ_EXTERNAL_STORAGE
       final status = await Permission.storage.status;
