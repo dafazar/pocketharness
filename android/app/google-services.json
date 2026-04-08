@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "870739395964",
+    "project_id": "kanmon-5e624",
+    "storage_bucket": "kanmon-5e624.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:870739395964:android:5c9e635fe8c58f771010f9",
+        "android_client_info": {
+          "package_name": "com.kanmongo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "870739395964-o90n4vq3h6d3uee7nogquke92tppa940.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kanmongo.app",
+            "certificate_hash": "96d43c6ddd09b5a6faf78798e0ee71723527b9d5"
+          }
+        },
+        {
+          "client_id": "870739395964-h6nn3mq9ab0mohc9ahdtmiph3qf2ud5d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAR--wtaYDyHU4u6Hr7DQ3Anfewjz_m-oQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "870739395964-h6nn3mq9ab0mohc9ahdtmiph3qf2ud5d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

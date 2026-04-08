@@ -1,0 +1,140 @@
+// ════════════════════════════════════════════════════════════════════════════
+// android/app/build.gradle
+//
+// ARSITEKTUR NATIVE (llama.cpp):
+//   Custom JNI: llama_jni.cpp → libkanmongo_llama.so
+//   Dart side : OfflineAiService → MethodChannel → LlamaPlugin.kt → JNI
+//
+//   Jika llama.cpp/ belum ada → llama_stub.cpp (app tetap jalan, GGUF nonaktif)
+//   Setup: bash scripts/setup_llama.sh  atau otomatis via CI
+// ════════════════════════════════════════════════════════════════════════════
+
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
+def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0.0"
+
+def keystorePath   = System.getenv("KEYSTORE_PATH")
+def keystoreExists = keystorePath != null && new File(keystorePath).exists()
+
+android {
+
+    aaptOptions {
+        noCompress "tflite"
+        noCompress "lite"
+        noCompress "gguf"   // ← PENTING: file GGUF tidak boleh di-compress
+        noCompress "task"
+    }
+
+    namespace "com.kanmongo.app"
+    compileSdk 36
+
+    // ── NDK version — wajib untuk llama_cpp_dart + speech_to_text ────────────
+    // speech_to_text dan llama_cpp_dart keduanya membutuhkan NDK 28.
+    // NDK versi lebih tinggi backward-compatible dengan plugin yang butuh versi lebih rendah.
+    ndkVersion "28.2.13676358"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+    }
+
+    defaultConfig {
+        applicationId "com.kanmongo.app"
+        minSdk 23
+        targetSdk 36
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+
+        ndk {
+            // FIX: x86_64 doubles llama.cpp compile time (~10-15 min extra).
+            // For apk-release-arm64 we only need arm64-v8a.
+            // Split APK / AAB targets still build x86_64 via --split-per-abi.
+            abiFilters "arm64-v8a"
+        }
+
+        externalNativeBuild {
+            cmake {
+                // FIX: pass LLAMA_EXTERNAL_DIR ke CMake agar source di /tmp/llama_src
+                // digunakan oleh CI (bukan clone di dalam project tree → fix "Already watching path").
+                // Jika env var kosong (build lokal), CMakeLists fallback ke llama.cpp/ lokal.
+                def llamaExtDir = System.getenv("LLAMA_EXTERNAL_DIR") ?: ""
+                def cmakeArgsList = ["-DANDROID_STL=c++_static", "-DANDROID_PLATFORM=android-23"]
+                if (llamaExtDir) { cmakeArgsList += "-DLLAMA_EXTERNAL_DIR=${llamaExtDir}" }
+                // ccache: drastis percepat re-compile native (40 menit → ~3 menit warm)
+                def ccache = ["which", "ccache"].execute().text.trim()
+                if (ccache) {
+                    cmakeArgsList += "-DCMAKE_C_COMPILER_LAUNCHER=ccache"
+                    cmakeArgsList += "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+                }
+                arguments(*cmakeArgsList)
+                abiFilters "arm64-v8a"
+            }
+        }
+    }
+
+    // ── Native build via CMake ────────────────────────────────────────────────
+    externalNativeBuild {
+        cmake {
+            path    "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
+    signingConfigs {
+        release {
+            if (keystoreExists) {
+                storeFile     file(keystorePath)
+                storePassword System.getenv("KEY_STORE_PASSWORD") ?: ""
+                keyAlias      System.getenv("KEY_ALIAS")          ?: ""
+                keyPassword   System.getenv("KEY_PASSWORD")       ?: ""
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig keystoreExists ? signingConfigs.release : signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"),
+                          "proguard-rules.pro"
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+}
+
+flutter {
+    source "../.."
+}
+
+dependencies {
+    implementation "androidx.multidex:multidex:2.0.1"
+    implementation "androidx.core:core:1.13.1"
+    implementation "com.google.mlkit:text-recognition:16.0.0"
+}

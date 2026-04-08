@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User documents — hanya pemilik yang bisa akses
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+                          && request.auth.uid == userId;
+      match /progress/{docId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+      match /flashcards/{cardId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+      match /notes/{noteId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+    }
+
+    // Leaderboard — baca: semua user login, tulis: hanya server
+    match /leaderboard/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+
+    // App config — baca: semua user login, tulis: tidak ada
+    match /app_config/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+
+    // Server config (salt untuk derive DB key)
+    // Baca: hanya user yang sudah login (salt saja tidak cukup tanpa UID)
+    // Tulis: tidak ada — hanya admin via Firebase Console
+    match /_server_config/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+
+    // Rate limits — hanya server (tidak dipakai di free plan, tapi tetap aman)
+    match /_rate_limits/{uid} {
+      allow read, write: if false;
+    }
+  }
+}

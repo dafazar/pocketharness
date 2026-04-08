@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- App internal files — /data/user/0/com.kanmongo.app/files/ -->
+    <files-path name="internal_files" path="." />
+
+    <!-- App internal cache — /data/user/0/com.kanmongo.app/cache/ -->
+    <cache-path name="internal_cache" path="." />
+
+    <!-- App-specific external files — Android/data/com.kanmongo.app/files/ -->
+    <external-files-path name="external_app_files" path="." />
+
+    <!-- App-specific external cache — Android/data/com.kanmongo.app/cache/ -->
+    <external-cache-path name="external_app_cache" path="." />
+
+    <!-- Public external storage root — covers Downloads/, Documents/, etc.
+         Needed for GGUF model files the user downloads via browser -->
+    <external-path name="external_storage_root" path="." />
+
+    <!-- Root path fallback — covers /storage/emulated/0/ and SD card mounts
+         Required when file_picker returns an absolute path from MANAGE_EXTERNAL_STORAGE -->
+    <root-path name="root" path="/" />
+</paths>

@@ -1,0 +1,55 @@
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+# pubspec.lock HARUS di-commit untuk reproducible CI builds
+# pubspec.lock
+
+# Android
+android/.gradle
+android/captures/
+android/local.properties
+android/GeneratedPluginRegistrant.java
+android/key.properties
+*.jks
+*.keystore
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner/GeneratedPluginRegistrant.*
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+
+# Generated
+# *.g.dart - JANGAN di-ignore jika pakai riverpod_generator / json_serializable
+coverage/
+
+# ── Database (tidak perlu di-commit - tidak digunakan di AI App) ─────────────
+assets/database/km_content.db
+
+# Secrets
+*.env
+.env.*
+secrets/
+AUDIT_REPORT.md
+
+# Backup/data folders
+assets/data_ori/
+assets/data/
+
+# llama.cpp native source (di-clone otomatis saat build via setup_llama.sh atau CI)
+android/app/src/main/cpp/llama.cpp/

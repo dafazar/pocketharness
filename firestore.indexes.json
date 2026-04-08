@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "membership.tier",      "order": "ASCENDING" },
+        { "fieldPath": "membership.expiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "leaderboard",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "entries.xp",   "order": "DESCENDING" },
+        { "fieldPath": "entries.rank", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

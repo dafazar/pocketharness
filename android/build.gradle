@@ -1,0 +1,52 @@
+buildscript {
+    ext.kotlin_version = '2.1.0'
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.9.1'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.gms:google-services:4.4.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+// ── AGP 8.x Namespace Fix — cara yang benar tanpa afterEvaluate ──────────────
+// Dijalankan saat konfigurasi, bukan setelah evaluasi
+gradle.projectsEvaluated {
+    subprojects { sub ->
+        if (sub.plugins.hasPlugin('com.android.library') ||
+            sub.plugins.hasPlugin('com.android.application')) {
+            try {
+                def android = sub.extensions.findByName('android')
+                if (android != null && !android.namespace) {
+                    def mf = sub.file('src/main/AndroidManifest.xml')
+                    if (mf.exists()) {
+                        def ns = new XmlSlurper().parse(mf).@package?.toString()
+                        if (ns) android.namespace = ns
+                    }
+                }
+            } catch (ignored) {}
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
