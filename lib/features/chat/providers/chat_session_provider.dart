@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kanmongo/data/models/chat_models.dart';
+import 'package:kanmongo/data/services/ai_service.dart' show AiMode;
 import 'package:kanmongo/data/services/history_service.dart';
 
 // ── Provider pilihan sumber AI ─────────────────────────────────────────────────
