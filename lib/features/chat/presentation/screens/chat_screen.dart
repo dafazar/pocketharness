@@ -202,7 +202,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
-    final messages  = ref.watch(chatSessionProvider);
+    final messages  = ref.watch(chatSessionProvider).messages;
     final aiMode    = ref.watch(aiSourceProvider);
     final isOffline = (aiMode?.mode ?? AiService.instance.currentMode) == AiMode.offline;
     final modelLoaded = LlamaService.instance.isModelLoaded;
@@ -348,7 +348,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildContextUsageBar() {
-    final messages   = ref.watch(chatSessionProvider);
+    final messages   = ref.watch(chatSessionProvider).messages;
     final modelConfig = ref.watch(modelConfigProvider);
     final usage = ref
         .read(chatSessionProvider.notifier)
@@ -874,7 +874,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     // ── 3. Pilih mode & build history ────────────────────────────────────────
     final choice  = ref.read(aiSourceProvider);
-    final history = ref.read(chatSessionProvider)
+    final history = ref.read(chatSessionProvider).messages
         .where((m) => m.content.isNotEmpty && m.role != ChatRole.system)
         .toList()
         .reversed
@@ -933,7 +933,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       if (mounted) setState(() => _isGenerating = false);
 
       // ── Auto-generate title dari pesan pertama ───────────────────────────
-      final msgs = ref.read(chatSessionProvider);
+      final msgs = ref.read(chatSessionProvider).messages;
       if ((_currentSession.title == 'Chat Baru' || _currentSession.title.isEmpty) &&
           msgs.length >= 2) {
         final firstUser = msgs.firstWhere(
@@ -946,14 +946,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       }
 
       // ── Auto-save ────────────────────────────────────────────────────────
-      unawaited(_autoSaveCurrentSession(ref.read(chatSessionProvider)));
+      unawaited(_autoSaveCurrentSession(ref.read(chatSessionProvider).messages));
     }
   }
 
   // ─── Helper: build AI history from current session ────────────────────────
 
   List<Map<String, String>> _buildHistoryForAi() {
-    final messages = ref.read(chatSessionProvider);
+    final messages = ref.read(chatSessionProvider).messages;
     return messages
         .where((m) => m.role != ChatRole.system && m.content.isNotEmpty)
         .take(12)
@@ -1056,7 +1056,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       if (mounted && _isGenerating) {
         setState(() => _isGenerating = false);
       }
-      unawaited(_autoSaveCurrentSession(ref.read(chatSessionProvider)));
+      unawaited(_autoSaveCurrentSession(ref.read(chatSessionProvider).messages));
     }
   }
 
@@ -1068,7 +1068,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     dynamic sourceChoice,
   ) async {
     try {
-      final messages     = ref.read(chatSessionProvider);
+      final messages     = ref.read(chatSessionProvider).messages;
       final systemPrompt = ref.read(systemPromptProvider) ?? '';
       final history = messages
           .where((m) => m.content.isNotEmpty &&
@@ -1101,7 +1101,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           if (!mounted) return;
           setState(() { _isGenerating = false; });
           _genSub = null;
-          _autoSaveCurrentSession(ref.read(chatSessionProvider));
+          _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
         },
         onError: (Object e) {
           if (!mounted) return;
@@ -1133,7 +1133,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     List<ResearchSource> receivedSources = [];
 
     try {
-      final messages     = ref.read(chatSessionProvider);
+      final messages     = ref.read(chatSessionProvider).messages;
       final aiMode         = sourceChoice?.mode ?? AiService.instance.currentMode;
       final forceBulkKeyId = sourceChoice?.bulkKeyId;
       final forceProvider  = sourceChoice?.bulkProvider;
@@ -1186,7 +1186,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             break;
 
           case WebResearchEventType.done:
-            final currentMessages = ref.read(chatSessionProvider);
+            final currentMessages = ref.read(chatSessionProvider).messages;
             final lastIdx = currentMessages.length - 1;
             if (lastIdx >= 0 && receivedSources.isNotEmpty) {
               setState(() {
@@ -1197,7 +1197,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               _researchStatus = '';
               _isGenerating   = false;
             });
-            _autoSaveCurrentSession(ref.read(chatSessionProvider));
+            _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
             break;
         }
       }
@@ -1263,7 +1263,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       }
     }
 
-    final messages     = ref.read(chatSessionProvider);
+    final messages     = ref.read(chatSessionProvider).messages;
     final config       = ref.read(inferenceConfigProvider);
     final systemPrompt = ref.read(systemPromptProvider);
 
@@ -1297,7 +1297,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
-        _autoSaveCurrentSession(ref.read(chatSessionProvider));
+        _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
 
         // ── File edit result detection ───────────────────────────────────────
         // If text-based files were attached, offer to save the AI response as a file.
@@ -1316,7 +1316,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 ? first.filename.split('.').last.toLowerCase()
                 : 'txt';
             if (textExts.contains(ext)) {
-              final currentMsgs = ref.read(chatSessionProvider);
+              final currentMsgs = ref.read(chatSessionProvider).messages;
               final lastAi = currentMsgs.lastWhere(
                 (m) => m.role == ChatRole.assistant,
                 orElse: () => ChatMessage.assistant(''),
@@ -1350,7 +1350,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─── Online: via PuterAiService ───────────────────────────────────────────
 
   Future<void> _generateOnline(String userText) async {
-    final messages     = ref.read(chatSessionProvider);
+    final messages     = ref.read(chatSessionProvider).messages;
     final systemPrompt = ref.read(systemPromptProvider) ?? '';
 
     // Bangun history dari messages (kecuali 2 terakhir: user baru + placeholder)
@@ -1404,7 +1404,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     List<ChatAttachmentPayload> payloads = const [],
   }) async {
     final systemPrompt = ref.read(systemPromptProvider) ?? '';
-    final messages     = ref.read(chatSessionProvider);
+    final messages     = ref.read(chatSessionProvider).messages;
 
     final historyForApi = messages
         .where((m) => m.role != ChatRole.system)
@@ -1434,7 +1434,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
-        _autoSaveCurrentSession(ref.read(chatSessionProvider));
+        _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
       },
       onError: (Object e) {
         if (!mounted) return;
@@ -1752,7 +1752,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   String _getPreviousUserMessage(int assistantMsgIndex) {
-    final messages = ref.read(chatSessionProvider);
+    final messages = ref.read(chatSessionProvider).messages;
     if (assistantMsgIndex > 0 && assistantMsgIndex < messages.length) {
       final prev = messages[assistantMsgIndex - 1];
       if (prev.role == ChatRole.user) {
@@ -1770,7 +1770,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _resendMessage(_unused) async {
-    final messages = ref.read(chatSessionProvider);
+    final messages = ref.read(chatSessionProvider).messages;
     if (messages.isEmpty) return;
     // Ambil pesan user terakhir
     final lastUser = messages.lastWhere(
@@ -1783,7 +1783,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _regenerateLast() async {
-    final messages = ref.read(chatSessionProvider);
+    final messages = ref.read(chatSessionProvider).messages;
     if (messages.isEmpty) return;
     // Hapus pesan asisten terakhir
     final lastAssistant = messages.lastWhere(
@@ -1948,7 +1948,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   // Mulai chat baru: auto-save session aktif jika ada pesan, lalu reset
   Future<void> _startNewChat() async {
-    final msgs = ref.read(chatSessionProvider);
+    final msgs = ref.read(chatSessionProvider).messages;
     if (msgs.isNotEmpty) {
       await _autoSaveCurrentSession(msgs);
     }
@@ -2063,7 +2063,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _exportTxt() async {
-    final messages = ref.read(chatSessionProvider);
+    final messages = ref.read(chatSessionProvider).messages;
     if (messages.isEmpty) return;
     final sb = StringBuffer();
     for (final m in messages) {
@@ -2076,7 +2076,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _exportMd() async {
-    final messages = ref.read(chatSessionProvider);
+    final messages = ref.read(chatSessionProvider).messages;
     if (messages.isEmpty) return;
     final sb = StringBuffer();
     sb.writeln('# Chat Export — KanMon GO\n');
@@ -2091,7 +2091,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   void _copyAll() {
-    final messages = ref.read(chatSessionProvider);
+    final messages = ref.read(chatSessionProvider).messages;
     if (messages.isEmpty) return;
     final sb = StringBuffer();
     for (final m in messages) {
