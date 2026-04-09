@@ -29,11 +29,11 @@ enum AppThemePack {
 
   String get emoji => '☀️';
 
-  String get svgIcon => 'assets/icons/logo/icon_theme_light.svg';
+  String get svgIcon => 'assets/icons/content/icon_theme_light.svg';
 
   String get description => 'AMOLED hitam, aksen merah, teks putih';
 
-  String get previewImage => 'assets/theme/original/banners/banner_home.png';
+  String get previewImage => 'assets/theme/banners/banner_home.png';
 
   String get configPath => 'assets/theme/theme_config_original.json';
 }

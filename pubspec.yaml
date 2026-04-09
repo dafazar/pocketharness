@@ -106,18 +106,18 @@ flutter:
   assets:
     - assets/database/
     - assets/sounds/
-    - assets/audio/
-    - assets/html/
+    - assets/web/
+    - assets/fonts/
     - assets/icons/
-    - assets/icons/logo/
+    - assets/icons/ui/
+    - assets/icons/content/
     - assets/theme/
-    - assets/theme/original/
-    - assets/theme/original/banners/
-    - assets/theme/original/backgrounds/
-    - assets/theme/original/menus/
-    - assets/theme/original/quiz/
-    - assets/theme/original/flashcard/
-    - assets/theme/original/notes/
-    - assets/theme/original/swatches/
-    - assets/theme/original/kana/
-    - assets/theme/original/placeholders/
+    - assets/theme/banners/
+    - assets/theme/backgrounds/
+    - assets/theme/menus/
+    - assets/theme/quiz/
+    - assets/theme/flashcard/
+    - assets/theme/notes/
+    - assets/theme/swatches/
+    - assets/theme/kana/
+    - assets/theme/placeholders/

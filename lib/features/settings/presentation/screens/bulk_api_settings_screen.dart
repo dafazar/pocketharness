@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
+import 'package:kanmongo/data/services/content/bulk_api_service.dart';
+import 'package:kanmongo/data/services/ai/ai_source_settings_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 

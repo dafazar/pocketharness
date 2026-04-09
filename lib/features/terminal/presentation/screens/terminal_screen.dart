@@ -10,9 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
+import 'package:kanmongo/data/services/system/terminal_service.dart';
+import 'package:kanmongo/data/services/ai/ai_service.dart';
+import 'package:kanmongo/data/services/content/file_processor_service.dart';
 
 // ── Terminal entry ────────────────────────────────────────────────────────────
 enum TermType { prompt, output, error, ai, download, system, info }

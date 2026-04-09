@@ -16,7 +16,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/km_colors.dart';
-import '../../../../data/services/sfx_service.dart';
+import '../../../../data/services/media/sfx_service.dart';
 import '../../../../shared/widgets/back_handler.dart';
 
 // ── Furigana Service (Jisho API) ──────────────────────────────────────────────

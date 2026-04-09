@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai_persona_service.dart';
+import 'package:kanmongo/data/services/ai/ai_persona_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 

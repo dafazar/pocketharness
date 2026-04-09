@@ -5,8 +5,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
+import 'package:kanmongo/data/services/ai/puter_ai_service.dart';
+import 'package:kanmongo/data/services/ai/ai_source_settings_service.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class OnlineAiScreen extends StatefulWidget {

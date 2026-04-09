@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/ai_catalog_model.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/content/model_manager_service.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class AiCatalogScreen extends StatefulWidget {

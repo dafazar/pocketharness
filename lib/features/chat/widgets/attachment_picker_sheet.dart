@@ -34,8 +34,8 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
-import 'package:kanmongo/data/services/permission_service.dart';
+import 'package:kanmongo/data/services/content/file_processor_service.dart';
+import 'package:kanmongo/data/services/system/permission_service.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 // StoragePermissionHelper is defined in permission_service.dart (Session 2)
 

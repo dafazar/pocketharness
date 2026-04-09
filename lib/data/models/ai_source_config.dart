@@ -144,7 +144,7 @@ class OnlineAiConfig {
 
 // ── Bulk API config ───────────────────────────────────────────────────────────
 // NOTE: BulkApiKey, BulkApiProvider, BulkLoadMode are defined in
-//       lib/data/services/bulk_api_service.dart — imported where needed.
+//       lib/data/services/content/bulk_api_service.dart — imported where needed.
 //       BulkAiConfig only stores the config values; key list is managed
 //       by BulkApiService but mirrored here for settings persistence.
 class BulkAiConfig {

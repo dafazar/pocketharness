@@ -25,17 +25,17 @@ import 'package:kanmongo/core/membership/membership_service.dart';
 import 'package:kanmongo/core/sync/sync_service.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/data/repositories/user_repository.dart';
-import 'package:kanmongo/data/services/database_service.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/data/services/ai_persona_service.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/data/services/wallpaper_service.dart';
-import 'package:kanmongo/data/services/sfx_service.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
-import 'package:kanmongo/firebase_options.dart';
+import 'package:kanmongo/data/services/content/database_service.dart';
+import 'package:kanmongo/data/services/ai/ai_service.dart';
+import 'package:kanmongo/data/services/ai/llama_service.dart';
+import 'package:kanmongo/data/services/content/model_manager_service.dart';
+import 'package:kanmongo/data/services/ai/offline_ai_service.dart';
+import 'package:kanmongo/data/services/ai/ai_persona_service.dart';
+import 'package:kanmongo/data/services/system/terminal_service.dart';
+import 'package:kanmongo/data/services/system/wallpaper_service.dart';
+import 'package:kanmongo/data/services/media/sfx_service.dart';
+import 'package:kanmongo/data/services/ai/ai_source_settings_service.dart';
+import 'package:kanmongo/core/config/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

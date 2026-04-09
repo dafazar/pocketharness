@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/data/services/wallpaper_service.dart';
+import 'package:kanmongo/data/services/system/wallpaper_service.dart';
 
 class WallpaperNotifier extends Notifier<WallpaperConfig> {
   @override

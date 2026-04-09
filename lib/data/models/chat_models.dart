@@ -9,10 +9,10 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
-import 'package:kanmongo/data/services/web_research_service.dart';
+import 'package:kanmongo/data/services/ai/ai_service.dart';
+import 'package:kanmongo/data/services/content/bulk_api_service.dart';
+import 'package:kanmongo/data/services/content/file_processor_service.dart';
+import 'package:kanmongo/data/services/ai/web_research_service.dart';
 
 // ─── 1. enum AttachmentType ──────────────────────────────────────────────────
 

@@ -21,7 +21,7 @@ import 'package:kanmongo/features/settings/presentation/screens/bulk_api_setting
 import 'package:kanmongo/features/settings/presentation/screens/puter_setup_screen.dart';
 import 'package:kanmongo/features/settings/presentation/screens/ai_inference_params_screen.dart';
 import 'package:kanmongo/features/terminal/presentation/screens/terminal_screen.dart';
-import 'package:kanmongo/features/chat/chat_screen.dart';
+import 'package:kanmongo/features/chat/presentation/screens/chat_screen.dart';
 import 'package:kanmongo/features/agent/presentation/screens/agent_screen.dart';
 import 'package:kanmongo/features/media/presentation/screens/media_creator_screen.dart';
 import 'package:kanmongo/features/history/presentation/screens/history_screen.dart';
