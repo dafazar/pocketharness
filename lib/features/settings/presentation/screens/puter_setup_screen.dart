@@ -90,19 +90,116 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
     setState(() => _saving = false);
     if (mounted) {
       showTopSnack(context, '✅ Pengaturan tersimpan');
-                  }
-                },
-                icon: const Icon(Icons.paste_rounded, size: 16),
-                label: const Text('Tempel dari Clipboard'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: kfc.textSub,
-                  side: BorderSide(color: kfc.border),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+    }
+  }
+
+  Future<void> _testConnection() async {
+    setState(() { _testing = true; _testResult = null; _testMessage = ''; });
+    try {
+      final ok = await _svc.testConnection();
+      if (mounted) {
+        setState(() {
+          _testing = false;
+          _testResult = ok;
+          _testMessage = ok ? 'Koneksi berhasil! API key valid.' : 'Koneksi gagal. Periksa API key.';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() { _testing = false; _testResult = false; _testMessage = 'Error: $e'; });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final kfc = KmColors.of(context);
+    return Scaffold(
+      backgroundColor: kfc.background,
+      appBar: AppBar(
+        backgroundColor: kfc.surface,
+        foregroundColor: kfc.text,
+        elevation: 0,
+        title: const Text('Setup Puter.js',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+            // ── Enable toggle ─────────────────────────────────────────────
+            _card(kfc, child: Row(children: [
+              Icon(Icons.cloud_rounded, color: kfc.accent, size: 24),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Aktifkan Puter.js AI',
+                    style: TextStyle(color: kfc.text, fontWeight: FontWeight.w700, fontSize: 14)),
+                Text('Gunakan AI online via Puter.js sebagai sumber',
+                    style: TextStyle(color: kfc.textMuted, fontSize: 11)),
+              ])),
+              Switch(
+                value: _enabled,
+                onChanged: (v) => setState(() => _enabled = v),
+                activeColor: const Color(0xFF6C5CE7),
+              ),
+            ])),
+
+            const SizedBox(height: 20),
+
+            // ── API Key ───────────────────────────────────────────────────
+            _sectionLabel('API KEY PUTER.JS', kfc),
+            _card(kfc, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              TextField(
+                controller: _apiKeyCtrl,
+                obscureText: _obscureKey,
+                style: TextStyle(color: kfc.text, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Masukkan API key Puter.js...',
+                  hintStyle: TextStyle(color: kfc.textMuted, fontSize: 12),
+                  labelText: 'API Key',
+                  labelStyle: TextStyle(color: kfc.textSub),
+                  prefixIcon: Icon(Icons.key_rounded, color: kfc.textMuted, size: 20),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureKey ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: kfc.textMuted, size: 20),
+                    onPressed: () => setState(() => _obscureKey = !_obscureKey),
+                  ),
+                  filled: true,
+                  fillColor: kfc.inputFill,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: kfc.border)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: kfc.border)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF6C5CE7), width: 1.5)),
                 ),
-              )),
-            ]),
-          ])),
+              ),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data?.text != null && mounted) {
+                      setState(() => _apiKeyCtrl.text = data!.text!.trim());
+                      showTopSnack(context, '✅ Key ditempel dari clipboard');
+                    }
+                  },
+                  icon: const Icon(Icons.paste_rounded, size: 16),
+                  label: const Text('Tempel dari Clipboard'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: kfc.textSub,
+                    side: BorderSide(color: kfc.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                )),
+              ]),
+            ])),
 
           const SizedBox(height: 20),
 
@@ -497,7 +594,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                   onPressed: () async {
                     final key = _bulkKeyCtrl.text.trim();
                     if (key.isEmpty) {
-                      showTopSnack(context, 'API Key tidak boleh kosong', isError: true)
+                      showTopSnack(context, 'API Key tidak boleh kosong', isError: true);
                       return;
                     }
                     await _bulk.addKey(
@@ -512,7 +609,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                     _bulkUrlCtrl.clear();
                     _bulkModelCtrl.clear();
                     setState(() {});
-                    if (mounted) showTopSnack(context, '✅ API Key berhasil ditambahkan')
+                    if (mounted) showTopSnack(context, '✅ API Key berhasil ditambahkan');
                   },
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text('Tambah Key', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -545,7 +642,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                     onPressed: () async {
                       await _bulk.resetAllLimits();
                       setState(() {});
-                      if (mounted) showTopSnack(context, '✅ Semua limit di-reset')
+                      if (mounted) showTopSnack(context, '✅ Semua limit di-reset');
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 14),
                     label: const Text('Reset Limit', style: TextStyle(fontSize: 11)),
