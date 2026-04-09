@@ -1287,14 +1287,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     // If model is still loading (e.g., auto-load in progress at startup),
     // wait up to 30 seconds for it to finish before giving up.
     if (!LlamaService.instance.isModelLoaded) {
-      if (LlamaService.instance.status == ModelStatus.loading) {
+      if (LlamaService.instance.status == llama.ModelStatus.loading) {
         debugPrint('[ChatScreen] _generateOffline: model is loading — waiting up to 30s');
         bool didLoad = false;
         for (int i = 0; i < 60; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 500));
           if (!mounted) return;
           if (LlamaService.instance.isModelLoaded) { didLoad = true; break; }
-          if (LlamaService.instance.status == ModelStatus.error) break;
+          if (LlamaService.instance.status == llama.ModelStatus.error) break;
         }
         if (!didLoad) {
           if (mounted) {
@@ -1336,16 +1336,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         .where((m) => m.role != 'assistant' || m.content.isNotEmpty)
         .map((m) => llama.ChatMessage(
               id: m.id,
-              role: m.role == 'user' ? llama.llama.ChatRole.user
-                  : m.role == 'system' ? llama.llama.ChatRole.system
-                  : llama.llama.ChatRole.assistant,
+              role: m.role == 'user' ? llama.ChatRole.user
+                  : m.role == 'system' ? llama.ChatRole.system
+                  : llama.ChatRole.assistant,
               content: m.content,
+              timestamp: m.createdAt,
             ))
         .toList();
 
     if (payloads.isNotEmpty) {
       final fileContext = _buildOfflineFileContext(payloads);
-      final lastUserIdx = msgToSend.lastIndexWhere((m) => m.role == llama.llama.ChatRole.user);
+      final lastUserIdx = msgToSend.lastIndexWhere((m) => m.role == llama.ChatRole.user);
       if (lastUserIdx >= 0 && fileContext.isNotEmpty) {
         final orig = msgToSend[lastUserIdx];
         msgToSend = List<llama.ChatMessage>.from(msgToSend);
@@ -1390,7 +1391,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               final currentMsgs = ref.read(chatSessionProvider).messages;
               final lastAi = currentMsgs.lastWhere(
                 (m) => m.role == 'assistant',
-                orElse: () => llama.ChatMessage.assistant(''),
+                orElse: () => chat_models.ChatMessage(
+                  id: const Uuid().v4(),
+                  role: 'assistant',
+                  content: '',
+                  createdAt: DateTime.now(),
+                ),
               );
               if (lastAi.content.isNotEmpty && mounted) {
                 setState(() {
@@ -1721,7 +1727,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─────────────────────────────────────────────────────────────────────────
 
   Future<bool> _checkContextLimitBeforeGenerate(List<chat_models.ChatMessage> messages) async {
-    final params = ref.read(inferenceParamsProvider);
+    final params = ref.read(inferenceConfigProvider);
     final maxCtx = params.contextSize;
 
     // Estimasi: 1 token ≈ 3.5 karakter
@@ -1878,7 +1884,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
     ref.read(chatSessionProvider.notifier).deleteMessage(lastAssistant.id);
     // Tambah ulang placeholder
-    final placeholder = llama.ChatMessage.assistant('');
+    final placeholder = chat_models.ChatMessage(
+      id: const Uuid().v4(),
+      role: 'assistant',
+      content: '',
+      createdAt: DateTime.now(),
+      isStreaming: true,
+    );
     ref.read(chatSessionProvider.notifier).addMessage(placeholder);
     setState(() { _isGenerating = true; });
     await _generateOffline();
@@ -2444,12 +2456,12 @@ class _ModelStatusChip extends ConsumerWidget {
     Widget? loading;
 
     switch (status) {
-      case ModelStatus.loaded:
-      case ModelStatus.generating:
+      case llama.ModelStatus.loaded:
+      case llama.ModelStatus.generating:
         label    = model?.name ?? 'Model Aktif';
         dotColor = Colors.green;
         break;
-      case ModelStatus.loading:
+      case llama.ModelStatus.loading:
         label    = 'Memuat...';
         dotColor = Colors.orange;
         loading  = SizedBox(
@@ -2461,11 +2473,11 @@ class _ModelStatusChip extends ConsumerWidget {
           ),
         );
         break;
-      case ModelStatus.error:
+      case llama.ModelStatus.error:
         label    = 'Error Model';
         dotColor = Colors.red;
         break;
-      case ModelStatus.notLoaded:
+      case llama.ModelStatus.notLoaded:
       default:
         label    = 'Belum ada model';
         dotColor = Colors.grey;
