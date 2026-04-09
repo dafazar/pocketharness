@@ -9,10 +9,10 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:kanmongo/data/services/ai/ai_service.dart';
-import 'package:kanmongo/data/services/content/bulk_api_service.dart';
-import 'package:kanmongo/data/services/content/file_processor_service.dart';
-import 'package:kanmongo/data/services/ai/web_research_service.dart';
+import 'package:kanmongo/data/services/ai_service.dart';
+import 'package:kanmongo/data/services/bulk_api_service.dart';
+import 'package:kanmongo/data/services/file_processor_service.dart';
+import 'package:kanmongo/data/services/web_research_service.dart';
 
 // ─── 1. enum AttachmentType ──────────────────────────────────────────────────
 
@@ -300,7 +300,6 @@ class ChatMessage {
   final String? modelName;
   final List<ResearchSource>? webSources;
   final bool isError;
-  final int? tokenCount;
 
   const ChatMessage({
     required this.id,
@@ -314,38 +313,12 @@ class ChatMessage {
     this.modelName,
     this.webSources,
     this.isError = false,
-    this.tokenCount,
   });
 
   bool get isUser => role == 'user';
   bool get isAssistant => role == 'assistant';
   bool get hasAttachments => attachments.isNotEmpty;
   bool get hasWebSources => webSources != null && webSources!.isNotEmpty;
-
-  // Factory helpers — mirror llama_context.ChatMessage API agar chat_screen
-  // tidak perlu import llama_context hanya untuk membuat pesan baru.
-  factory ChatMessage.user(String content) => ChatMessage(
-        id: const Uuid().v4(),
-        role: 'user',
-        content: content,
-        createdAt: DateTime.now(),
-      );
-
-  factory ChatMessage.assistant(String content, {bool isStreaming = false}) =>
-      ChatMessage(
-        id: const Uuid().v4(),
-        role: 'assistant',
-        content: content,
-        createdAt: DateTime.now(),
-        isStreaming: isStreaming,
-      );
-
-  factory ChatMessage.system(String content) => ChatMessage(
-        id: const Uuid().v4(),
-        role: 'system',
-        content: content,
-        createdAt: DateTime.now(),
-      );
 
   ChatMessage copyWith({
     String? id,
@@ -359,7 +332,6 @@ class ChatMessage {
     Object? aiMode = _sentinel,
     Object? modelName = _sentinel,
     Object? webSources = _sentinel,
-    int? tokenCount,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -375,7 +347,6 @@ class ChatMessage {
       webSources: webSources == _sentinel
           ? this.webSources
           : webSources as List<ResearchSource>?,
-      tokenCount: tokenCount ?? this.tokenCount,
     );
   }
 
@@ -402,7 +373,6 @@ class ChatMessage {
       'web_sources_json':
           sourceList != null ? jsonEncode(sourceList) : null,
       'is_error': isError ? 1 : 0,
-      'token_count': tokenCount,
     };
   }
 
@@ -463,7 +433,6 @@ class ChatMessage {
       aiMode: aiMode,
       modelName: map['model_name'] as String?,
       webSources: webSources,
-      tokenCount: map['token_count'] as int?,
     );
   }
 }

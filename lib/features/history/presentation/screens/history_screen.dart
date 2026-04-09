@@ -6,9 +6,9 @@
 import 'package:flutter/material.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/data/services/ai/ai_service.dart';
-import 'package:kanmongo/data/services/content/history_service.dart';
-import 'package:kanmongo/features/chat/presentation/screens/chat_screen.dart';
+import 'package:kanmongo/data/services/ai_service.dart';
+import 'package:kanmongo/data/services/history_service.dart';
+import 'package:kanmongo/features/chat/chat_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});

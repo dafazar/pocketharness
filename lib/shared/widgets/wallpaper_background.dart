@@ -21,7 +21,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:kanmongo/core/wallpaper/wallpaper_provider.dart';
-import 'package:kanmongo/data/services/system/wallpaper_service.dart';
+import 'package:kanmongo/data/services/wallpaper_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WallpaperBackground  — widget utama

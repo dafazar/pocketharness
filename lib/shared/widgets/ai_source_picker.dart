@@ -4,19 +4,19 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/services/ai/ai_source_settings_service.dart';
+import '../../data/services/ai_source_settings_service.dart';
 import '../../data/models/ai_source_config.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai/puter_ai_service.dart'
+import 'package:kanmongo/data/services/puter_ai_service.dart'
     show kPuterModels, PuterAiModel, kPuterProviders;
-import 'package:kanmongo/data/services/content/bulk_api_service.dart';
+import 'package:kanmongo/data/services/bulk_api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:kanmongo/data/services/ai/offline_ai_service.dart';
-import 'package:kanmongo/data/services/content/model_manager_service.dart';
+import 'package:kanmongo/data/services/offline_ai_service.dart';
+import 'package:kanmongo/data/services/model_manager_service.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/data/services/ai/llama_service.dart';
+import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/models/chat_models.dart' show AiSourceChoice;
-import 'package:kanmongo/data/services/ai/ai_service.dart' show AiMode;
+import 'package:kanmongo/data/services/ai_service.dart' show AiMode;
 import 'package:kanmongo/features/chat/providers/chat_session_provider.dart'
     show aiSourceProvider;
 
@@ -24,7 +24,7 @@ import 'package:kanmongo/features/chat/providers/chat_session_provider.dart'
 export 'package:kanmongo/features/chat/providers/chat_session_provider.dart'
     show aiSourceProvider;
 export 'package:kanmongo/data/models/chat_models.dart' show AiSourceChoice;
-export 'package:kanmongo/data/services/ai/ai_service.dart' show AiMode;
+export 'package:kanmongo/data/services/ai_service.dart' show AiMode;
 
 
 class AiSourcePicker extends StatefulWidget {

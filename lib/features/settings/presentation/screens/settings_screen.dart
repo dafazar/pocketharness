@@ -1,8 +1,8 @@
-import 'package:kanmongo/data/services/ai/ai_persona_service.dart';
-import 'package:kanmongo/data/services/ai/puter_ai_service.dart';
-import 'package:kanmongo/data/services/content/bulk_api_service.dart';
-import 'package:kanmongo/data/services/ai/ai_service.dart';
-import 'package:kanmongo/data/services/media/sfx_service.dart';
+import 'package:kanmongo/data/services/ai_persona_service.dart';
+import 'package:kanmongo/data/services/puter_ai_service.dart';
+import 'package:kanmongo/data/services/bulk_api_service.dart';
+import 'package:kanmongo/data/services/ai_service.dart';
+import 'package:kanmongo/data/services/sfx_service.dart';
 import 'package:kanmongo/core/sync/sync_service.dart';
 import 'dart:io';
 
@@ -14,15 +14,15 @@ import 'package:file_picker/file_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/data/services/content/model_manager_service.dart';
-import 'package:kanmongo/data/services/ai/offline_ai_service.dart';
+import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/offline_ai_service.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kanmongo/core/theme/theme_provider.dart';
 import 'package:kanmongo/core/wallpaper/wallpaper_provider.dart';
-import 'package:kanmongo/data/services/media/tts_service.dart';
-import 'package:kanmongo/data/services/media/edge_tts_service.dart';
-import 'package:kanmongo/data/services/system/wallpaper_service.dart';
+import 'package:kanmongo/data/services/tts_service.dart';
+import 'package:kanmongo/data/services/edge_tts_service.dart';
+import 'package:kanmongo/data/services/wallpaper_service.dart';
 import 'package:kanmongo/shared/widgets/wallpaper_background.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 

@@ -13,7 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai/llama_service.dart';
+import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,37 +1,37 @@
 {
   "_comment": "KanMon GO Theme Config — Original (Merah & Putih)",
   "_version": "2.1.0-original",
-  "banner_home": "assets/theme/banners/banner_home.png",
-  "background": "assets/theme/backgrounds/bg_splash.png",
+  "banner_home": "assets/theme/original/banners/banner_home.png",
+  "background": "assets/theme/original/backgrounds/bg_splash.png",
   "banners": {
-    "home": "assets/theme/banners/banner_home.png",
-    "kana": "assets/theme/banners/banner_kana.png",
-    "kanji": "assets/theme/banners/banner_kanji.png",
-    "bunpou": "assets/theme/banners/banner_bunpou.png",
-    "vocab": "assets/theme/banners/banner_vocab.png",
-    "partikel": "assets/theme/banners/banner_partikel.png",
-    "writing": "assets/theme/banners/banner_writing.png",
-    "flashcard": "assets/theme/banners/banner_flashcard.png",
-    "quiz": "assets/theme/banners/banner_quiz.png",
-    "notes": "assets/theme/banners/banner_notes.png",
-    "library": "assets/theme/banners/banner_library.png",
-    "mensetsu": "assets/theme/banners/banner_mensetsu.png",
-    "splash": "assets/theme/banners/banner_splash.png"
+    "home": "assets/theme/original/banners/banner_home.png",
+    "kana": "assets/theme/original/banners/banner_kana.png",
+    "kanji": "assets/theme/original/banners/banner_kanji.png",
+    "bunpou": "assets/theme/original/banners/banner_bunpou.png",
+    "vocab": "assets/theme/original/banners/banner_vocab.png",
+    "partikel": "assets/theme/original/banners/banner_partikel.png",
+    "writing": "assets/theme/original/banners/banner_writing.png",
+    "flashcard": "assets/theme/original/banners/banner_flashcard.png",
+    "quiz": "assets/theme/original/banners/banner_quiz.png",
+    "notes": "assets/theme/original/banners/banner_notes.png",
+    "library": "assets/theme/original/banners/banner_library.png",
+    "mensetsu": "assets/theme/original/banners/banner_mensetsu.png",
+    "splash": "assets/theme/original/banners/banner_splash.png"
   },
   "backgrounds": {
-    "home": "assets/theme/backgrounds/bg_home.png",
-    "kana": "assets/theme/backgrounds/bg_kana.png",
-    "kanji": "assets/theme/backgrounds/bg_kanji.png",
-    "bunpou": "assets/theme/backgrounds/bg_bunpou.png",
-    "partikel": "assets/theme/backgrounds/bg_partikel.png",
-    "writing": "assets/theme/backgrounds/bg_writing.png",
-    "vocab": "assets/theme/backgrounds/bg_vocab.png",
-    "flashcard": "assets/theme/backgrounds/bg_flashcard.png",
-    "quiz": "assets/theme/backgrounds/bg_quiz.png",
-    "mensetsu": "assets/theme/backgrounds/bg_mensetsu.png",
-    "library": "assets/theme/backgrounds/bg_library.png",
-    "notes": "assets/theme/backgrounds/bg_notes.png",
-    "splash": "assets/theme/backgrounds/bg_splash.png"
+    "home": "assets/theme/original/backgrounds/bg_home.png",
+    "kana": "assets/theme/original/backgrounds/bg_kana.png",
+    "kanji": "assets/theme/original/backgrounds/bg_kanji.png",
+    "bunpou": "assets/theme/original/backgrounds/bg_bunpou.png",
+    "partikel": "assets/theme/original/backgrounds/bg_partikel.png",
+    "writing": "assets/theme/original/backgrounds/bg_writing.png",
+    "vocab": "assets/theme/original/backgrounds/bg_vocab.png",
+    "flashcard": "assets/theme/original/backgrounds/bg_flashcard.png",
+    "quiz": "assets/theme/original/backgrounds/bg_quiz.png",
+    "mensetsu": "assets/theme/original/backgrounds/bg_mensetsu.png",
+    "library": "assets/theme/original/backgrounds/bg_library.png",
+    "notes": "assets/theme/original/backgrounds/bg_notes.png",
+    "splash": "assets/theme/original/backgrounds/bg_splash.png"
   },
   "home_sections": [
     {
@@ -46,7 +46,7 @@
           "label": "Hiragana",
           "route": "/kana",
           "color": "#C0392B",
-          "image": "assets/theme/menus/menu_hiragana.png"
+          "image": "assets/theme/original/menus/menu_hiragana.png"
         },
         {
           "id": "katakana",
@@ -55,7 +55,7 @@
           "label": "Katakana",
           "route": "/kana",
           "color": "#D4651D",
-          "image": "assets/theme/menus/menu_katakana.png"
+          "image": "assets/theme/original/menus/menu_katakana.png"
         },
         {
           "id": "kanji",
@@ -64,7 +64,7 @@
           "label": "Kanji",
           "route": "/kanji",
           "color": "#2563B8",
-          "image": "assets/theme/menus/menu_kanji.png"
+          "image": "assets/theme/original/menus/menu_kanji.png"
         },
         {
           "id": "vocab",
@@ -73,7 +73,7 @@
           "label": "Kosakata",
           "route": "/vocab",
           "color": "#1A8C5B",
-          "image": "assets/theme/menus/menu_vocab.png"
+          "image": "assets/theme/original/menus/menu_vocab.png"
         },
         {
           "id": "writing",
@@ -82,7 +82,7 @@
           "label": "Menulis",
           "route": "/writing",
           "color": "#7030A0",
-          "image": "assets/theme/menus/menu_writing.png"
+          "image": "assets/theme/original/menus/menu_writing.png"
         },
         {
           "id": "bunpou",
@@ -91,7 +91,7 @@
           "label": "Tata Bahasa",
           "route": "/bunpou",
           "color": "#0F8C7A",
-          "image": "assets/theme/menus/menu_bunpou.png"
+          "image": "assets/theme/original/menus/menu_bunpou.png"
         },
         {
           "id": "partikel",
@@ -100,7 +100,7 @@
           "label": "Partikel",
           "route": "/partikel",
           "color": "#C07D10",
-          "image": "assets/theme/menus/menu_partikel.png"
+          "image": "assets/theme/original/menus/menu_partikel.png"
         }
       ]
     },
@@ -116,7 +116,7 @@
           "label": "Quiz",
           "route": "/quiz",
           "color": "#C0392B",
-          "image": "assets/theme/menus/menu_quiz.png"
+          "image": "assets/theme/original/menus/menu_quiz.png"
         },
         {
           "id": "flashcard",
@@ -125,7 +125,7 @@
           "label": "Flashcard",
           "route": "/flashcard",
           "color": "#D4651D",
-          "image": "assets/theme/menus/menu_flashcard.png"
+          "image": "assets/theme/original/menus/menu_flashcard.png"
         },
         {
           "id": "soal_tulis",
@@ -134,7 +134,7 @@
           "label": "Soal Menulis",
           "route": "/writing-quiz",
           "color": "#7030A0",
-          "image": "assets/theme/menus/menu_soal_tulis.png"
+          "image": "assets/theme/original/menus/menu_soal_tulis.png"
         }
       ]
     },
@@ -150,7 +150,7 @@
           "label": "Mensetsu",
           "route": "/mensetsu",
           "color": "#1A8C5B",
-          "image": "assets/theme/menus/menu_mensetsu.png"
+          "image": "assets/theme/original/menus/menu_mensetsu.png"
         },
         {
           "id": "library",
@@ -159,7 +159,7 @@
           "label": "Perpustakaan",
           "route": "/ebook",
           "color": "#2563B8",
-          "image": "assets/theme/menus/menu_library.png"
+          "image": "assets/theme/original/menus/menu_library.png"
         },
         {
           "id": "notes",
@@ -168,7 +168,7 @@
           "label": "Catatan",
           "route": "/notes",
           "color": "#7030A0",
-          "image": "assets/theme/menus/menu_notes.png"
+          "image": "assets/theme/original/menus/menu_notes.png"
         }
       ]
     }
@@ -176,7 +176,7 @@
   "home_menu": [
     {
       "id": "hiragana",
-      "image": "assets/theme/menus/menu_hiragana.png",
+      "image": "assets/theme/original/menus/menu_hiragana.png",
       "color": "#C0392B",
       "label": "Hiragana",
       "icon": "あ",
@@ -185,7 +185,7 @@
     },
     {
       "id": "katakana",
-      "image": "assets/theme/menus/menu_katakana.png",
+      "image": "assets/theme/original/menus/menu_katakana.png",
       "color": "#D4651D",
       "label": "Katakana",
       "icon": "ア",
@@ -194,7 +194,7 @@
     },
     {
       "id": "kanji",
-      "image": "assets/theme/menus/menu_kanji.png",
+      "image": "assets/theme/original/menus/menu_kanji.png",
       "color": "#2563B8",
       "label": "Kanji",
       "icon": "漢",
@@ -203,7 +203,7 @@
     },
     {
       "id": "vocab",
-      "image": "assets/theme/menus/menu_vocab.png",
+      "image": "assets/theme/original/menus/menu_vocab.png",
       "color": "#1A8C5B",
       "label": "Kosakata",
       "icon": "語",
@@ -212,7 +212,7 @@
     },
     {
       "id": "writing",
-      "image": "assets/theme/menus/menu_writing.png",
+      "image": "assets/theme/original/menus/menu_writing.png",
       "color": "#7030A0",
       "label": "Menulis",
       "icon": "書",
@@ -221,7 +221,7 @@
     },
     {
       "id": "bunpou",
-      "image": "assets/theme/menus/menu_bunpou.png",
+      "image": "assets/theme/original/menus/menu_bunpou.png",
       "color": "#0F8C7A",
       "label": "Tata Bahasa",
       "icon": "文",
@@ -230,7 +230,7 @@
     },
     {
       "id": "partikel",
-      "image": "assets/theme/menus/menu_partikel.png",
+      "image": "assets/theme/original/menus/menu_partikel.png",
       "color": "#C07D10",
       "label": "Partikel",
       "icon": "粒",
@@ -239,7 +239,7 @@
     },
     {
       "id": "quiz",
-      "image": "assets/theme/menus/menu_quiz.png",
+      "image": "assets/theme/original/menus/menu_quiz.png",
       "color": "#C0392B",
       "label": "Quiz",
       "icon": "問",
@@ -248,7 +248,7 @@
     },
     {
       "id": "flashcard",
-      "image": "assets/theme/menus/menu_flashcard.png",
+      "image": "assets/theme/original/menus/menu_flashcard.png",
       "color": "#D4651D",
       "label": "Flashcard",
       "icon": "🃏",
@@ -257,7 +257,7 @@
     },
     {
       "id": "soal_tulis",
-      "image": "assets/theme/menus/menu_soal_tulis.png",
+      "image": "assets/theme/original/menus/menu_soal_tulis.png",
       "color": "#7030A0",
       "label": "Soal Menulis",
       "icon": "✍️",
@@ -266,7 +266,7 @@
     },
     {
       "id": "mensetsu",
-      "image": "assets/theme/menus/menu_mensetsu.png",
+      "image": "assets/theme/original/menus/menu_mensetsu.png",
       "color": "#1A8C5B",
       "label": "Mensetsu",
       "icon": "面",
@@ -275,7 +275,7 @@
     },
     {
       "id": "library",
-      "image": "assets/theme/menus/menu_library.png",
+      "image": "assets/theme/original/menus/menu_library.png",
       "color": "#2563B8",
       "label": "Perpustakaan",
       "icon": "📖",
@@ -284,7 +284,7 @@
     },
     {
       "id": "notes",
-      "image": "assets/theme/menus/menu_notes.png",
+      "image": "assets/theme/original/menus/menu_notes.png",
       "color": "#7030A0",
       "label": "Catatan",
       "icon": "📝",
@@ -297,35 +297,35 @@
     "jlpt": [
       {
         "level": "N5",
-        "image": "assets/theme/quiz/quiz_jlpt_n5.png",
+        "image": "assets/theme/original/quiz/quiz_jlpt_n5.png",
         "color": "#16A34A",
         "label": "JLPT N5",
         "badge_color": "#DCFCE7"
       },
       {
         "level": "N4",
-        "image": "assets/theme/quiz/quiz_jlpt_n4.png",
+        "image": "assets/theme/original/quiz/quiz_jlpt_n4.png",
         "color": "#2563EB",
         "label": "JLPT N4",
         "badge_color": "#DBEAFE"
       },
       {
         "level": "N3",
-        "image": "assets/theme/quiz/quiz_jlpt_n3.png",
+        "image": "assets/theme/original/quiz/quiz_jlpt_n3.png",
         "color": "#CA8A04",
         "label": "JLPT N3",
         "badge_color": "#FEF9C3"
       },
       {
         "level": "N2",
-        "image": "assets/theme/quiz/quiz_jlpt_n2.png",
+        "image": "assets/theme/original/quiz/quiz_jlpt_n2.png",
         "color": "#EA580C",
         "label": "JLPT N2",
         "badge_color": "#FFEDD5"
       },
       {
         "level": "N1",
-        "image": "assets/theme/quiz/quiz_jlpt_n1.png",
+        "image": "assets/theme/original/quiz/quiz_jlpt_n1.png",
         "color": "#DC2626",
         "label": "JLPT N1",
         "badge_color": "#FEE2E2"
@@ -334,19 +334,19 @@
     "jft": [
       {
         "id": "basic",
-        "image": "assets/theme/quiz/quiz_jft_basic.png",
+        "image": "assets/theme/original/quiz/quiz_jft_basic.png",
         "color": "#10B981",
         "label": "JFT Basic"
       },
       {
         "id": "intermediate",
-        "image": "assets/theme/quiz/quiz_jft_intermediate.png",
+        "image": "assets/theme/original/quiz/quiz_jft_intermediate.png",
         "color": "#3B82F6",
         "label": "JFT Intermediate"
       },
       {
         "id": "advanced",
-        "image": "assets/theme/quiz/quiz_jft_advanced.png",
+        "image": "assets/theme/original/quiz/quiz_jft_advanced.png",
         "color": "#7C3AED",
         "label": "JFT Advanced"
       }
@@ -354,13 +354,13 @@
     "kana": [
       {
         "id": "hiragana",
-        "image": "assets/theme/quiz/quiz_kana_hiragana.png",
+        "image": "assets/theme/original/quiz/quiz_kana_hiragana.png",
         "color": "#F43F5E",
         "label": "Hiragana"
       },
       {
         "id": "katakana",
-        "image": "assets/theme/quiz/quiz_kana_katakana.png",
+        "image": "assets/theme/original/quiz/quiz_kana_katakana.png",
         "color": "#EA580C",
         "label": "Katakana"
       }
@@ -368,108 +368,108 @@
     "kanji": [
       {
         "level": "N5",
-        "image": "assets/theme/quiz/quiz_kanji_n5.png",
+        "image": "assets/theme/original/quiz/quiz_kanji_n5.png",
         "color": "#16A34A"
       },
       {
         "level": "N4",
-        "image": "assets/theme/quiz/quiz_kanji_n4.png",
+        "image": "assets/theme/original/quiz/quiz_kanji_n4.png",
         "color": "#2563EB"
       },
       {
         "level": "N3",
-        "image": "assets/theme/quiz/quiz_kanji_n3.png",
+        "image": "assets/theme/original/quiz/quiz_kanji_n3.png",
         "color": "#CA8A04"
       },
       {
         "level": "N2",
-        "image": "assets/theme/quiz/quiz_kanji_n2.png",
+        "image": "assets/theme/original/quiz/quiz_kanji_n2.png",
         "color": "#EA580C"
       },
       {
         "level": "N1",
-        "image": "assets/theme/quiz/quiz_kanji_n1.png",
+        "image": "assets/theme/original/quiz/quiz_kanji_n1.png",
         "color": "#DC2626"
       }
     ],
     "vocab": [
       {
         "level": "N5",
-        "image": "assets/theme/quiz/quiz_vocab_n5.png",
+        "image": "assets/theme/original/quiz/quiz_vocab_n5.png",
         "color": "#16A34A"
       },
       {
         "level": "N4",
-        "image": "assets/theme/quiz/quiz_vocab_n4.png",
+        "image": "assets/theme/original/quiz/quiz_vocab_n4.png",
         "color": "#2563EB"
       },
       {
         "level": "N3",
-        "image": "assets/theme/quiz/quiz_vocab_n3.png",
+        "image": "assets/theme/original/quiz/quiz_vocab_n3.png",
         "color": "#CA8A04"
       },
       {
         "level": "N2",
-        "image": "assets/theme/quiz/quiz_vocab_n2.png",
+        "image": "assets/theme/original/quiz/quiz_vocab_n2.png",
         "color": "#EA580C"
       },
       {
         "level": "N1",
-        "image": "assets/theme/quiz/quiz_vocab_n1.png",
+        "image": "assets/theme/original/quiz/quiz_vocab_n1.png",
         "color": "#DC2626"
       }
     ],
     "particle": [
       {
         "level": "N5",
-        "image": "assets/theme/quiz/quiz_particle_n5.png",
+        "image": "assets/theme/original/quiz/quiz_particle_n5.png",
         "color": "#16A34A"
       },
       {
         "level": "N4",
-        "image": "assets/theme/quiz/quiz_particle_n4.png",
+        "image": "assets/theme/original/quiz/quiz_particle_n4.png",
         "color": "#2563EB"
       },
       {
         "level": "N3",
-        "image": "assets/theme/quiz/quiz_particle_n3.png",
+        "image": "assets/theme/original/quiz/quiz_particle_n3.png",
         "color": "#CA8A04"
       },
       {
         "level": "N2",
-        "image": "assets/theme/quiz/quiz_particle_n2.png",
+        "image": "assets/theme/original/quiz/quiz_particle_n2.png",
         "color": "#EA580C"
       },
       {
         "level": "N1",
-        "image": "assets/theme/quiz/quiz_particle_n1.png",
+        "image": "assets/theme/original/quiz/quiz_particle_n1.png",
         "color": "#DC2626"
       }
     ],
     "sentence": [
       {
         "level": "N5",
-        "image": "assets/theme/quiz/quiz_sentence_n5.png",
+        "image": "assets/theme/original/quiz/quiz_sentence_n5.png",
         "color": "#16A34A"
       },
       {
         "level": "N4",
-        "image": "assets/theme/quiz/quiz_sentence_n4.png",
+        "image": "assets/theme/original/quiz/quiz_sentence_n4.png",
         "color": "#2563EB"
       },
       {
         "level": "N3",
-        "image": "assets/theme/quiz/quiz_sentence_n3.png",
+        "image": "assets/theme/original/quiz/quiz_sentence_n3.png",
         "color": "#CA8A04"
       },
       {
         "level": "N2",
-        "image": "assets/theme/quiz/quiz_sentence_n2.png",
+        "image": "assets/theme/original/quiz/quiz_sentence_n2.png",
         "color": "#EA580C"
       },
       {
         "level": "N1",
-        "image": "assets/theme/quiz/quiz_sentence_n1.png",
+        "image": "assets/theme/original/quiz/quiz_sentence_n1.png",
         "color": "#DC2626"
       }
     ],
@@ -504,176 +504,176 @@
   "quiz_jlpt": [
     {
       "level": "N5",
-      "image": "assets/theme/quiz/quiz_jlpt_n5.png",
+      "image": "assets/theme/original/quiz/quiz_jlpt_n5.png",
       "color": "#16A34A"
     },
     {
       "level": "N4",
-      "image": "assets/theme/quiz/quiz_jlpt_n4.png",
+      "image": "assets/theme/original/quiz/quiz_jlpt_n4.png",
       "color": "#2563EB"
     },
     {
       "level": "N3",
-      "image": "assets/theme/quiz/quiz_jlpt_n3.png",
+      "image": "assets/theme/original/quiz/quiz_jlpt_n3.png",
       "color": "#CA8A04"
     },
     {
       "level": "N2",
-      "image": "assets/theme/quiz/quiz_jlpt_n2.png",
+      "image": "assets/theme/original/quiz/quiz_jlpt_n2.png",
       "color": "#EA580C"
     },
     {
       "level": "N1",
-      "image": "assets/theme/quiz/quiz_jlpt_n1.png",
+      "image": "assets/theme/original/quiz/quiz_jlpt_n1.png",
       "color": "#DC2626"
     }
   ],
   "quiz_sentence_card": [
     {
       "level": "N5",
-      "image": "assets/theme/quiz/quiz_sentence_card_n5.png",
+      "image": "assets/theme/original/quiz/quiz_sentence_card_n5.png",
       "color": "#16A34A"
     },
     {
       "level": "N4",
-      "image": "assets/theme/quiz/quiz_sentence_card_n4.png",
+      "image": "assets/theme/original/quiz/quiz_sentence_card_n4.png",
       "color": "#2563EB"
     },
     {
       "level": "N3",
-      "image": "assets/theme/quiz/quiz_sentence_card_n3.png",
+      "image": "assets/theme/original/quiz/quiz_sentence_card_n3.png",
       "color": "#CA8A04"
     },
     {
       "level": "N2",
-      "image": "assets/theme/quiz/quiz_sentence_card_n2.png",
+      "image": "assets/theme/original/quiz/quiz_sentence_card_n2.png",
       "color": "#EA580C"
     },
     {
       "level": "N1",
-      "image": "assets/theme/quiz/quiz_sentence_card_n1.png",
+      "image": "assets/theme/original/quiz/quiz_sentence_card_n1.png",
       "color": "#DC2626"
     }
   ],
-  "quiz_stats_banner": "assets/theme/quiz/quiz_stats_banner.png",
+  "quiz_stats_banner": "assets/theme/original/quiz/quiz_stats_banner.png",
   "flashcard": {
     "_comment": "Tema sub-menu Flashcard",
-    "custom_mix": "assets/theme/flashcard/flashcard_custom_mix.png",
+    "custom_mix": "assets/theme/original/flashcard/flashcard_custom_mix.png",
     "kana": [
       {
         "id": "hiragana",
-        "image": "assets/theme/flashcard/flashcard_hiragana.png",
+        "image": "assets/theme/original/flashcard/flashcard_hiragana.png",
         "color": "#F43F5E"
       },
       {
         "id": "katakana",
-        "image": "assets/theme/flashcard/flashcard_katakana.png",
+        "image": "assets/theme/original/flashcard/flashcard_katakana.png",
         "color": "#EA580C"
       }
     ],
     "kanji": [
       {
         "level": "N5",
-        "image": "assets/theme/flashcard/flashcard_kanji_n5.png",
+        "image": "assets/theme/original/flashcard/flashcard_kanji_n5.png",
         "color": "#16A34A"
       },
       {
         "level": "N4",
-        "image": "assets/theme/flashcard/flashcard_kanji_n4.png",
+        "image": "assets/theme/original/flashcard/flashcard_kanji_n4.png",
         "color": "#2563EB"
       },
       {
         "level": "N3",
-        "image": "assets/theme/flashcard/flashcard_kanji_n3.png",
+        "image": "assets/theme/original/flashcard/flashcard_kanji_n3.png",
         "color": "#CA8A04"
       },
       {
         "level": "N2",
-        "image": "assets/theme/flashcard/flashcard_kanji_n2.png",
+        "image": "assets/theme/original/flashcard/flashcard_kanji_n2.png",
         "color": "#EA580C"
       },
       {
         "level": "N1",
-        "image": "assets/theme/flashcard/flashcard_kanji_n1.png",
+        "image": "assets/theme/original/flashcard/flashcard_kanji_n1.png",
         "color": "#DC2626"
       }
     ],
     "vocab": [
       {
         "level": "N5",
-        "image": "assets/theme/flashcard/flashcard_vocab_n5.png",
+        "image": "assets/theme/original/flashcard/flashcard_vocab_n5.png",
         "color": "#16A34A"
       },
       {
         "level": "N4",
-        "image": "assets/theme/flashcard/flashcard_vocab_n4.png",
+        "image": "assets/theme/original/flashcard/flashcard_vocab_n4.png",
         "color": "#2563EB"
       },
       {
         "level": "N3",
-        "image": "assets/theme/flashcard/flashcard_vocab_n3.png",
+        "image": "assets/theme/original/flashcard/flashcard_vocab_n3.png",
         "color": "#CA8A04"
       },
       {
         "level": "N2",
-        "image": "assets/theme/flashcard/flashcard_vocab_n2.png",
+        "image": "assets/theme/original/flashcard/flashcard_vocab_n2.png",
         "color": "#EA580C"
       },
       {
         "level": "N1",
-        "image": "assets/theme/flashcard/flashcard_vocab_n1.png",
+        "image": "assets/theme/original/flashcard/flashcard_vocab_n1.png",
         "color": "#DC2626"
       }
     ]
   },
   "kana_grid": {
     "_comment": "Gambar kartu grid pada layar Kana",
-    "hiragana": "assets/theme/kana/kana_grid_card_h.png",
-    "katakana": "assets/theme/kana/kana_grid_card_k.png"
+    "hiragana": "assets/theme/original/kana/kana_grid_card_h.png",
+    "katakana": "assets/theme/original/kana/kana_grid_card_k.png"
   },
   "placeholders": {
     "_comment": "Gambar placeholder saat konten belum ada",
-    "custom_banner": "assets/theme/placeholders/placeholder_custom_banner.png",
+    "custom_banner": "assets/theme/original/placeholders/placeholder_custom_banner.png",
     "kana": {
-      "hiragana": "assets/theme/placeholders/placeholder_kana_h.png",
-      "katakana": "assets/theme/placeholders/placeholder_kana_k.png"
+      "hiragana": "assets/theme/original/placeholders/placeholder_kana_h.png",
+      "katakana": "assets/theme/original/placeholders/placeholder_kana_k.png"
     },
     "kanji": {
-      "N5": "assets/theme/placeholders/placeholder_kanji_n5.png",
-      "N4": "assets/theme/placeholders/placeholder_kanji_n4.png",
-      "N3": "assets/theme/placeholders/placeholder_kanji_n3.png",
-      "N2": "assets/theme/placeholders/placeholder_kanji_n2.png",
-      "N1": "assets/theme/placeholders/placeholder_kanji_n1.png"
+      "N5": "assets/theme/original/placeholders/placeholder_kanji_n5.png",
+      "N4": "assets/theme/original/placeholders/placeholder_kanji_n4.png",
+      "N3": "assets/theme/original/placeholders/placeholder_kanji_n3.png",
+      "N2": "assets/theme/original/placeholders/placeholder_kanji_n2.png",
+      "N1": "assets/theme/original/placeholders/placeholder_kanji_n1.png"
     },
     "vocab": {
-      "N5": "assets/theme/placeholders/placeholder_vocab_n5.png",
-      "N4": "assets/theme/placeholders/placeholder_vocab_n4.png",
-      "N3": "assets/theme/placeholders/placeholder_vocab_n3.png",
-      "N2": "assets/theme/placeholders/placeholder_vocab_n2.png",
-      "N1": "assets/theme/placeholders/placeholder_vocab_n1.png"
+      "N5": "assets/theme/original/placeholders/placeholder_vocab_n5.png",
+      "N4": "assets/theme/original/placeholders/placeholder_vocab_n4.png",
+      "N3": "assets/theme/original/placeholders/placeholder_vocab_n3.png",
+      "N2": "assets/theme/original/placeholders/placeholder_vocab_n2.png",
+      "N1": "assets/theme/original/placeholders/placeholder_vocab_n1.png"
     }
   },
   "notes_backgrounds": [
-    "assets/theme/notes/note_bg_0.png",
-    "assets/theme/notes/note_bg_1.png",
-    "assets/theme/notes/note_bg_2.png",
-    "assets/theme/notes/note_bg_3.png",
-    "assets/theme/notes/note_bg_4.png",
-    "assets/theme/notes/note_bg_5.png",
-    "assets/theme/notes/note_bg_6.png",
-    "assets/theme/notes/note_bg_7.png"
+    "assets/theme/original/notes/note_bg_0.png",
+    "assets/theme/original/notes/note_bg_1.png",
+    "assets/theme/original/notes/note_bg_2.png",
+    "assets/theme/original/notes/note_bg_3.png",
+    "assets/theme/original/notes/note_bg_4.png",
+    "assets/theme/original/notes/note_bg_5.png",
+    "assets/theme/original/notes/note_bg_6.png",
+    "assets/theme/original/notes/note_bg_7.png"
   ],
   "nav_bar": {
-    "background": "assets/theme/menus/nav_bar_bg.png"
+    "background": "assets/theme/original/menus/nav_bar_bg.png"
   },
   "swatches": {
     "_comment": "Swatches warna referensi untuk designer",
-    "primary": "assets/theme/swatches/swatch_primary.png",
-    "secondary": "assets/theme/swatches/swatch_secondary.png",
-    "accent": "assets/theme/swatches/swatch_accent.png",
-    "gold": "assets/theme/swatches/swatch_gold.png",
-    "success": "assets/theme/swatches/swatch_success.png",
-    "warning": "assets/theme/swatches/swatch_warning.png",
-    "error": "assets/theme/swatches/swatch_error.png"
+    "primary": "assets/theme/original/swatches/swatch_primary.png",
+    "secondary": "assets/theme/original/swatches/swatch_secondary.png",
+    "accent": "assets/theme/original/swatches/swatch_accent.png",
+    "gold": "assets/theme/original/swatches/swatch_gold.png",
+    "success": "assets/theme/original/swatches/swatch_success.png",
+    "warning": "assets/theme/original/swatches/swatch_warning.png",
+    "error": "assets/theme/original/swatches/swatch_error.png"
   }
 }

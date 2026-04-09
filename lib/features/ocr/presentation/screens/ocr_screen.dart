@@ -11,10 +11,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:kanmongo/data/services/ai/ai_service.dart';
+import 'package:kanmongo/data/services/ai_service.dart';
 
 import '../../../../core/theme/km_colors.dart';
-import '../../../../data/services/media/sfx_service.dart';
+import '../../../../data/services/sfx_service.dart';
 import '../../../../shared/widgets/back_handler.dart';
 
 // ── Gemini key ────────────────────────────────────────────────────────────────

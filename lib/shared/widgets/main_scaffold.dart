@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/km_colors.dart';
 import '../../core/wallpaper/wallpaper_provider.dart';
-import '../../data/services/media/sfx_service.dart';
+import '../../data/services/sfx_service.dart';
 import 'wallpaper_background.dart';
 
 class MainScaffold extends ConsumerWidget {

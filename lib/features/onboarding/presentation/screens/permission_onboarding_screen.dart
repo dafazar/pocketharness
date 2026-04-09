@@ -9,8 +9,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/system/permission_service.dart';
-import 'package:kanmongo/data/services/media/sfx_service.dart';
+import 'package:kanmongo/data/services/permission_service.dart';
+import 'package:kanmongo/data/services/sfx_service.dart';
 
 class PermissionOnboardingScreen extends StatefulWidget {
   /// Dipanggil setelah user selesai (lewati atau izinkan semua)

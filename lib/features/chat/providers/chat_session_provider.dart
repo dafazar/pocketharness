@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/data/services/ai/ai_service.dart' show AiMode;
-import 'package:kanmongo/data/services/content/history_service.dart';
+import 'package:kanmongo/data/services/ai_service.dart' show AiMode;
+import 'package:kanmongo/data/services/history_service.dart';
 
 // ── Provider pilihan sumber AI ─────────────────────────────────────────────────
 final aiSourceProvider       = StateProvider<AiSourceChoice?>((ref) => null);
@@ -52,26 +52,8 @@ class ChatSessionNotifier extends StateNotifier<ChatSession> {
   }
 
   // 3. Replace pesan terakhir (setelah streaming selesai, set isStreaming=false)
-  // Overload menerima ChatMessage langsung
-  void replaceLastAssistantMessage(
-    Object msgOrContent, {
-    dynamic stopReason, // ignored – kept for API compat; chat_models tidak pakai StopReason
-  }) {
+  void replaceLastAssistantMessage(ChatMessage msg) {
     if (state.messages.isEmpty) return;
-    final ChatMessage msg;
-    if (msgOrContent is ChatMessage) {
-      msg = msgOrContent;
-    } else {
-      // msgOrContent adalah String
-      final content = msgOrContent as String;
-      final prev = state.messages.last;
-      msg = prev.copyWith(
-        content: content,
-        isStreaming: false,
-        isError: stopReason != null,
-        error: stopReason != null ? content : null,
-      );
-    }
     final msgs = [
       ...state.messages.sublist(0, state.messages.length - 1),
       msg,
@@ -133,15 +115,6 @@ class ChatSessionNotifier extends StateNotifier<ChatSession> {
   }
 
   // ── Helper: set lastAiMode pada state ─────────────────────────────────────
-
-  /// Estimasi penggunaan context window sebagai fraksi 0.0–1.0
-  /// menggunakan asumsi ~3.5 karakter per token
-  double getContextUsagePercent(int contextSize) {
-    if (contextSize <= 0) return 0.0;
-    final totalChars = state.messages.fold<int>(0, (sum, m) => sum + m.content.length);
-    final estimatedTokens = (totalChars / 3.5).ceil();
-    return (estimatedTokens / contextSize).clamp(0.0, 1.0);
-  }
   void setLastAiInfo({required AiMode mode, String? modelName}) {
     state = state.copyWith(
       lastAiMode: mode,

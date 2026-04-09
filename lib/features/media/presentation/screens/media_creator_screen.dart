@@ -19,10 +19,10 @@ import 'package:saver_gallery/saver_gallery.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai/ai_service.dart';
-import 'package:kanmongo/data/services/content/file_processor_service.dart';
-import 'package:kanmongo/data/services/media/media_edit_service.dart';
-import 'package:kanmongo/data/services/system/tool_installer_service.dart';
+import 'package:kanmongo/data/services/ai_service.dart';
+import 'package:kanmongo/data/services/file_processor_service.dart';
+import 'package:kanmongo/data/services/media_edit_service.dart';
+import 'package:kanmongo/data/services/tool_installer_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 

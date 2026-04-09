@@ -10,7 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:kanmongo/core/security/secure_db_key_service.dart';
-import 'package:kanmongo/data/services/media/sfx_service.dart';
+import 'package:kanmongo/data/services/sfx_service.dart';
 
 class AppLifecycleService extends WidgetsBindingObserver {
   AppLifecycleService._();

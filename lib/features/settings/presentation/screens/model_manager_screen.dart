@@ -20,9 +20,9 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai/llama_service.dart';
-import 'package:kanmongo/data/services/content/model_manager_service.dart';
-import 'package:kanmongo/data/services/system/permission_service.dart';
+import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/permission_service.dart';
 import 'package:kanmongo/shared/widgets/back_handler.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 

@@ -56,14 +56,14 @@ String _typeLabel(_FileType t) {
 
 String _typeEmoji(_FileType t) {
   switch (t) {
-    case _FileType.pdf:   return 'assets/icons/content/file-pdf-thin.svg';
-    case _FileType.pptx:  return 'assets/icons/content/presentation-chart-thin.svg';
-    case _FileType.docx:  return 'assets/icons/content/file-doc-thin.svg';
-    case _FileType.xlsx:  return 'assets/icons/content/microsoft-excel-logo-thin.svg';
-    case _FileType.audio: return 'assets/icons/content/music-note-thin.svg';
-    case _FileType.video: return 'assets/icons/content/video-thin.svg';
-    case _FileType.text:  return 'assets/icons/content/file-text-thin.svg';
-    default:              return 'assets/icons/content/file-thin.svg';
+    case _FileType.pdf:   return 'assets/icons/logo/file-pdf-thin.svg';
+    case _FileType.pptx:  return 'assets/icons/logo/presentation-chart-thin.svg';
+    case _FileType.docx:  return 'assets/icons/logo/file-doc-thin.svg';
+    case _FileType.xlsx:  return 'assets/icons/logo/microsoft-excel-logo-thin.svg';
+    case _FileType.audio: return 'assets/icons/logo/music-note-thin.svg';
+    case _FileType.video: return 'assets/icons/logo/video-thin.svg';
+    case _FileType.text:  return 'assets/icons/logo/file-text-thin.svg';
+    default:              return 'assets/icons/logo/file-thin.svg';
   }
 }
 
@@ -749,7 +749,7 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
   Widget _buildEmpty() {
     return Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        SvgPicture.asset('assets/icons/content/books-thin.svg', width: 64, height: 64, colorFilter: ColorFilter.mode(KmColors.of(context).textMuted, BlendMode.srcIn)),
+        SvgPicture.asset('assets/icons/logo/books-thin.svg', width: 64, height: 64, colorFilter: ColorFilter.mode(KmColors.of(context).textMuted, BlendMode.srcIn)),
         const SizedBox(height: 16),
         Text('Perpustakaan Kosong',
             style: TextStyle(color: KmColors.of(context).text,
@@ -1272,7 +1272,7 @@ class _AudioPlayerScreenState extends State<_AudioPlayerScreen>
               boxShadow: [BoxShadow(color: KmColors.of(context).accent.withValues(alpha: 0.4),
                   blurRadius: 30, spreadRadius: 5)],
             ),
-            child: Center(child: SvgPicture.asset('assets/icons/content/music-note-thin.svg', width: 80, height: 80, colorFilter: ColorFilter.mode(KmColors.of(context).textMuted, BlendMode.srcIn))),
+            child: Center(child: SvgPicture.asset('assets/icons/logo/music-note-thin.svg', width: 80, height: 80, colorFilter: ColorFilter.mode(KmColors.of(context).textMuted, BlendMode.srcIn))),
           ),
           const SizedBox(height: 40),
           Text(widget.title,

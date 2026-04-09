@@ -251,16 +251,16 @@ class _StatsGridFromFirestore extends ConsumerWidget {
           children: [
             _StatItem(label: 'AI Agent',
                 value: '${stats['totalXp'] ?? 0} sesi',
-                iconPath: 'assets/icons/content/icon_star.svg'),
+                iconPath: 'assets/icons/logo/icon_star.svg'),
             _StatItem(label: 'Streak',
                 value: '${stats['currentStreak'] ?? 0} hari',
-                iconPath: 'assets/icons/ui/ic_fire.svg'),
+                iconPath: 'assets/icons/ic_fire.svg'),
             _StatItem(label: 'Quiz Selesai',
                 value: '${stats['quizzesTaken'] ?? 0} scan',
-                iconPath: 'assets/icons/content/icon_quiz.svg'),  // OCR Scan count
+                iconPath: 'assets/icons/logo/icon_quiz.svg'),  // OCR Scan count
             _StatItem(label: 'Streak Terbaik',
                 value: '${stats['longestStreak'] ?? 0} hari',
-                iconPath: 'assets/icons/ui/ic_heart.svg'),
+                iconPath: 'assets/icons/ic_heart.svg'),
           ],
         );
       },

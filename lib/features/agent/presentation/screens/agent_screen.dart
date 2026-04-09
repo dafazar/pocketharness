@@ -17,14 +17,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai/agent_service.dart';
-import 'package:kanmongo/data/services/ai/agent_memory_service.dart';
-import 'package:kanmongo/data/services/content/export_service.dart';
-import 'package:kanmongo/data/services/content/file_processor_service.dart';
-import 'package:kanmongo/data/services/content/model_manager_service.dart';
-import 'package:kanmongo/data/services/ai/llama_service.dart';
+import 'package:kanmongo/data/services/agent_service.dart';
+import 'package:kanmongo/data/services/agent_memory_service.dart';
+import 'package:kanmongo/data/services/export_service.dart';
+import 'package:kanmongo/data/services/file_processor_service.dart';
+import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/data/services/ai/ai_service.dart';
+import 'package:kanmongo/data/services/ai_service.dart';
 import 'package:kanmongo/shared/widgets/ai_source_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
@@ -241,7 +241,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
 
     // Validasi: jika ada file error, warn user dan bersihkan
     if (_pendingFile != null && _pendingFile!.error != null) {
-      showTopSnack(context, '⚠️ File bermasalah: ${_pendingFile!.error}\nFile dilepas dari task.', duration: const Duration(seconds: 4), isError: true);
+      showTopSnack(context, '⚠️ File bermasalah: ${_pendingFile!.error}\nFile dilepas dari task.', duration: const Duration(seconds: 4), isError: true)
       setState(() => _pendingFile = null);
       if (task.trim().isEmpty) return;
     }
@@ -1013,8 +1013,9 @@ class _StepCard extends StatelessWidget {
   Future<void> _export(BuildContext ctx, String content, String format) async {
     final result = await ExportService.instance.export(data: content, format: format);
     if (result.isSuccess && ctx.mounted) {
-      showTopSnack(ctx, '✅ Ekspor: ${result.filename}', duration: const Duration(seconds: 4));
-      await ExportService.instance.shareFile(result.path);
+      showTopSnack(ctx, '✅ Ekspor: ${result.filename}', duration: const Duration(seconds: 4)).instance.shareFile(result.path);
+        }),
+      ));
     }
   }
 

@@ -10,7 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../data/services/ai/web_research_service.dart';
+import '../../../data/services/web_research_service.dart';
 
 class WebResearchSourcesCard extends StatefulWidget {
   final List<ResearchSource> sources;
