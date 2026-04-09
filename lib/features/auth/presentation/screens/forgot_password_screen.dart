@@ -172,12 +172,12 @@ class _EmailResetTabState extends ConsumerState<_EmailResetTab> {
       await ref.read(authServiceProvider)
           .resetPassword(_emailCtrl.text.trim());
       if (mounted) {
-        showTopSnack(context, 'Email reset dikirim ulang!')
+        showTopSnack(context, 'Email reset dikirim ulang!');
         _startResendCountdown();
       }
     } catch (_) {
       if (mounted) {
-        showTopSnack(context, 'Gagal kirim ulang. Coba lagi.', isError: true)
+        showTopSnack(context, 'Gagal kirim ulang. Coba lagi.', isError: true);
       }
     } finally {
       if (mounted) setState(() => _loading = false);

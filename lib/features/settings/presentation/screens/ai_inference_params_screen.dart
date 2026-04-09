@@ -664,7 +664,7 @@ class _TabPreset extends ConsumerWidget {
                       preset.config.repeatPenalty);
                   notifier.updateMaxTokens(
                       preset.config.maxNewTokens);
-                  showTopSnack(context, 'Preset ', duration: const Duration(seconds: 2))
+                  showTopSnack(context, 'Preset ', duration: const Duration(seconds: 2));
                 },
               );
             },

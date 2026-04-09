@@ -222,7 +222,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
       final file = File(p.join(dir.path, fn));
       await file.writeAsString(_aiResult);
       if (mounted) {
-        showTopSnack(context, '✅ Disimpan: $fn')
+        showTopSnack(context, '✅ Disimpan: $fn');
       }
     } catch (_) {}
   }
@@ -815,9 +815,9 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
                             skipIfExists: false,
                           );
                         }
-                        if (mounted) showTopSnack(context, '✅ Disimpan ke galeri!')
+                        if (mounted) showTopSnack(context, '✅ Disimpan ke galeri!');
                       } catch (e) {
-                        if (mounted) showTopSnack(context, '❌ Gagal simpan: $e', isError: true)
+                        if (mounted) showTopSnack(context, '❌ Gagal simpan: $e', isError: true);
                       }
                     },
                     icon: const Icon(Icons.save_alt_rounded, size: 18),
@@ -832,7 +832,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
                   ElevatedButton.icon(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: _editOutputPath!));
-                      showTopSnack(context, 'Path disalin', duration: Duration(seconds: 1))
+                      showTopSnack(context, 'Path disalin', duration: Duration(seconds: 1));
                     },
                     icon: const Icon(Icons.copy_rounded, size: 16),
                     label: const Text('Copy Path'),

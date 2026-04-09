@@ -236,11 +236,11 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
       await FirebaseAuth.instance.currentUser?.sendEmailVerification();
       _startResendCountdown();
       if (mounted) {
-        showTopSnack(context, 'Email verifikasi dikirim ulang!')
+        showTopSnack(context, 'Email verifikasi dikirim ulang!');
       }
     } catch (_) {
       if (mounted) {
-        showTopSnack(context, 'Gagal kirim ulang. Coba lagi.', isError: true)
+        showTopSnack(context, 'Gagal kirim ulang. Coba lagi.', isError: true);
       }
     }
   }
