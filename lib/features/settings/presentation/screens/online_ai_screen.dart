@@ -59,7 +59,7 @@ class _OnlineAiScreenState extends State<OnlineAiScreen>
     await AiSourceSettingsService.instance.pullOnlineFromService();
     if (mounted) {
       setState(() {});
-      showTopSnack(context, '${model.emoji} ${model.name} dipilih', duration: const Duration(seconds: 2))
+      showTopSnack(context, '${model.emoji} ${model.name} dipilih', duration: const Duration(seconds: 2));
     }
   }
 

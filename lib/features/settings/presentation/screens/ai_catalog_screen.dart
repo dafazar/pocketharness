@@ -83,7 +83,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
           _subs.remove(model.id);
           if (mounted) {
             setState(() => _downloads.remove(model.id));
-            showTopSnack(context, '✅ ${model.name} berhasil didownload!')
+            showTopSnack(context, '✅ ${model.name} berhasil didownload!');
           }
         }
         if (prog.hasError) {
@@ -101,7 +101,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
 
   void _copyLink(CatalogModel model) {
     Clipboard.setData(ClipboardData(text: model.downloadUrl));
-    showTopSnack(context, '✅ Link disalin! Buka Chrome dan paste di address bar.', duration: Duration(seconds: 3))
+    showTopSnack(context, '✅ Link disalin! Buka Chrome dan paste di address bar.', duration: Duration(seconds: 3));
   }
 
   void _showFilterSheet() {

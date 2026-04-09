@@ -729,7 +729,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                         );
                         if (context.mounted) setState(() {});
                         if (context.mounted) {
-                          showTopSnack(context, '✅ Firebase config berhasil disimpan!')
+                          showTopSnack(context, '✅ Firebase config berhasil disimpan!');
                         }
                       },
                       icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
@@ -963,7 +963,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                         onPressed: () async {
                           final k = keyCtrl.text.trim();
                           if (k.isEmpty) {
-                            showTopSnack(context, 'API key tidak boleh kosong')
+                            showTopSnack(context, 'API key tidak boleh kosong');
                             return;
                           }
                           Navigator.pop(ctx);
@@ -1490,7 +1490,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                 _actionBtn(kfc, Icons.copy_rounded, 'Copy',
                     () {
                       Clipboard.setData(ClipboardData(text: key.apiKey));
-                      showTopSnack(context, 'API key disalin')
+                      showTopSnack(context, 'API key disalin');
                     }, Colors.orange),
                 const Spacer(),
                 IconButton(
@@ -1693,7 +1693,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
               await _svc.resetAllLimits();
               setState(() {});
               if (mounted) {
-                showTopSnack(context, 'Semua rate limit di-reset ✅')
+                showTopSnack(context, 'Semua rate limit di-reset ✅');
               }
             },
           ),

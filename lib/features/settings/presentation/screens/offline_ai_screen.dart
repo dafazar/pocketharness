@@ -194,7 +194,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
       await prefs.remove(key);
     }
     if (mounted) {
-      showTopSnack(context, 'Cache model dihapus (${keys.length} entri)')
+      showTopSnack(context, 'Cache model dihapus (${keys.length} entri)');
     }
   }
 
@@ -215,7 +215,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
     await file.writeAsString(jsonStr);
 
     if (mounted) {
-      showTopSnack(context, 'Diekspor ke: ${file.path}')
+      showTopSnack(context, 'Diekspor ke: ${file.path}');
     }
   }
 

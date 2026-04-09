@@ -115,7 +115,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
   Widget build(BuildContext context) {
     final kfc = KmColors.of(context);
     return Scaffold(
-      backgroundColor: kfc.background,
+      backgroundColor: kfc.bg,
       appBar: AppBar(
         backgroundColor: kfc.surface,
         foregroundColor: kfc.text,
