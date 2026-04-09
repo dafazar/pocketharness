@@ -57,6 +57,9 @@ jobs:
 
     env:
       KEYSTORE_PATH: ${{ github.workspace }}/android/app/keystore.jks
+      # Suppress "Operation not permitted" tar warnings when restoring NDK cache
+      # from pre-installed SDK paths on the runner
+      TAR_OPTIONS: "--no-same-permissions"
 
     steps:
 
@@ -182,7 +185,7 @@ jobs:
           cd "$TARGET"
           git sparse-checkout init --no-cone
           git sparse-checkout set \
-            "CMakeLists.txt" "cmake/**" "include/**" "src/**" "ggml/**" "common/**"
+            "/CMakeLists.txt" "cmake/**" "include/**" "src/**" "ggml/**" "common/**"
           if ! grep -q "llama_memory_seq_add" "include/llama.h" 2>/dev/null; then
             echo "❌ llama_memory_seq_add tidak ditemukan di ${LLAMA_TAG}"
             exit 1
