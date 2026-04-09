@@ -114,6 +114,16 @@ class ChatSessionNotifier extends StateNotifier<ChatSession> {
     return raw.length > 50 ? '${raw.substring(0, 50)}…' : raw;
   }
 
+  // 10. Hitung persentase penggunaan context window
+  double getContextUsagePercent(int contextSize) {
+    if (contextSize <= 0) return 0.0;
+    final totalChars = state.messages
+        .fold<int>(0, (sum, m) => sum + m.content.length);
+    // Estimasi: 1 token ≈ 4 karakter
+    final approxTokens = totalChars ~/ 4;
+    return (approxTokens / contextSize).clamp(0.0, 1.0);
+  }
+
   // ── Helper: set lastAiMode pada state ─────────────────────────────────────
   void setLastAiInfo({required AiMode mode, String? modelName}) {
     state = state.copyWith(
