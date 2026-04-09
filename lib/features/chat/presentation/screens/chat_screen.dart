@@ -1651,7 +1651,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─────────────────────────────────────────────────────────────────────────
 
   Future<bool> _checkContextLimitBeforeGenerate(List<new_models.ChatMessage> messages) async {
-    final params = ref.read(inferenceConfigProvider);
+    final params = ref.read(modelConfigProvider);
     final maxCtx = params.contextSize;
 
     // Estimasi: 1 token ≈ 3.5 karakter
