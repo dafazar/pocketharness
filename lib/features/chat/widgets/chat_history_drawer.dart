@@ -1,9 +1,9 @@
 // lib/features/chat/widgets/chat_history_drawer.dart
-// KanMonAI — Chat History Drawer (Sesi 3)
-// Menampilkan daftar sesi chat tersimpan, dikelompokkan per waktu.
-// Mendukung: tap untuk load, rename, delete, hapus semua.
+// KanMonAI — Chat History Drawer
+// Fix D-003 (Pagination), D-005 (Confirm+deleteAll), E-005 (Empty State), E-009 (Search)
 // =============================================================================
 
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
@@ -35,33 +35,101 @@ class ChatHistoryDrawer extends StatefulWidget {
 }
 
 class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
-  List<ChatSession> _sessions = [];
-  bool _isLoading = true;
-  // Grouped by label: LinkedHashMap agar urutan terjaga
+  // ── D-003: Pagination state ───────────────────────────────────────────────
+  final List<ChatSession> _sessions = [];
+  int _offset = 0;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+  late final ScrollController _listScrollCtrl;
+
+  // ── E-009: Search state ───────────────────────────────────────────────────
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  Timer? _searchDebounce;
+
+  // Grouped by label (only used when not searching)
   LinkedHashMap<String, List<ChatSession>> _grouped = LinkedHashMap();
 
   @override
   void initState() {
     super.initState();
-    _loadSessions();
+    _listScrollCtrl = ScrollController()
+      ..addListener(() {
+        if (_listScrollCtrl.position.pixels >=
+                _listScrollCtrl.position.maxScrollExtent - 200 &&
+            !_loadingMore &&
+            _hasMore &&
+            _searchQuery.isEmpty) {
+          _loadMore();
+        }
+      });
+    _loadMore();
   }
 
-  Future<void> _loadSessions() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-    try {
-      final sessions = await HistoryService.instance.loadAllChatSessions();
-      if (!mounted) return;
+  @override
+  void dispose() {
+    _listScrollCtrl.dispose();
+    _searchCtrl.dispose();
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  // ── D-003: Pagination methods ─────────────────────────────────────────────
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore || _searchQuery.isNotEmpty) return;
+    setState(() => _loadingMore = true);
+    final newSessions = await HistoryService.instance.loadChatSessionsPaged(
+      offset: _offset,
+    );
+    if (mounted) {
       setState(() {
-        _sessions = sessions;
-        _grouped = _groupByDate(sessions);
-        _isLoading = false;
+        _sessions.addAll(newSessions);
+        _offset += newSessions.length;
+        _hasMore = newSessions.length == HistoryService.kPageSize;
+        _grouped = _groupByDate(_sessions);
+        _loadingMore = false;
       });
-    } catch (e) {
-      debugPrint('[ChatHistoryDrawer] _loadSessions error: $e');
-      if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  Future<void> _refreshList() async {
+    setState(() {
+      _sessions.clear();
+      _offset = 0;
+      _hasMore = true;
+      _grouped = LinkedHashMap();
+    });
+    if (_searchQuery.isNotEmpty) {
+      await _performSearch(_searchQuery);
+    } else {
+      await _loadMore();
+    }
+  }
+
+  // ── E-009: Search methods ─────────────────────────────────────────────────
+
+  Future<void> _performSearch(String query) async {
+    setState(() {
+      _sessions.clear();
+      _offset = 0;
+      _hasMore = false;
+      _loadingMore = true;
+    });
+    final results = await HistoryService.instance.searchChatSessions(query);
+    if (mounted) {
+      setState(() {
+        _sessions.addAll(results);
+        _offset = results.length;
+        _hasMore = query.trim().isEmpty &&
+            results.length == HistoryService.kPageSize;
+        _grouped = _groupByDate(_sessions);
+        _loadingMore = false;
+      });
+    }
+  }
+
+  // ── Grouping ──────────────────────────────────────────────────────────────
 
   LinkedHashMap<String, List<ChatSession>> _groupByDate(
       List<ChatSession> sessions) {
@@ -73,8 +141,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
 
     final result = LinkedHashMap<String, List<ChatSession>>();
     for (final s in sessions) {
-      final d = DateTime(
-          s.updatedAt.year, s.updatedAt.month, s.updatedAt.day);
+      final d = DateTime(s.updatedAt.year, s.updatedAt.month, s.updatedAt.day);
       String key;
       if (d == today) {
         key = 'Hari Ini';
@@ -100,6 +167,8 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
     if (diff.inDays == 1) return 'Kemarin';
     return DateFormat('d MMM yyyy', 'id_ID').format(dt);
   }
+
+  // ── Session actions ───────────────────────────────────────────────────────
 
   Future<void> _renameSession(ChatSession s) async {
     final ctrl = TextEditingController(text: s.title);
@@ -129,9 +198,8 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
     );
     if (confirmed == true && ctrl.text.trim().isNotEmpty) {
       try {
-        await HistoryService.instance
-            .updateSessionTitle(s.id, ctrl.text.trim());
-        _loadSessions();
+        await HistoryService.instance.updateSessionTitle(s.id, ctrl.text.trim());
+        _refreshList();
       } catch (e) {
         debugPrint('[ChatHistoryDrawer] rename error: $e');
       }
@@ -161,50 +229,60 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
     if (confirmed == true) {
       try {
         await HistoryService.instance.deleteChatSession(s.id);
-        _loadSessions();
+        _refreshList();
       } catch (e) {
         debugPrint('[ChatHistoryDrawer] delete error: $e');
       }
     }
   }
 
-  Future<void> _confirmDeleteAll() async {
-    final confirmed = await showDialog<bool>(
+  // D-005: Konfirmasi + gunakan deleteAllSessions()
+  Future<void> _confirmClearAllHistory() async {
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus Semua Riwayat?'),
         content: const Text(
-            'Seluruh riwayat chat akan dihapus permanen dan tidak bisa dikembalikan.'),
+          'Semua riwayat chat akan dihapus permanen dan tidak dapat dipulihkan.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Batal')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Hapus Semua'),
           ),
         ],
       ),
     );
-    if (confirmed == true) {
-      try {
-        for (final s in _sessions) {
-          await HistoryService.instance.deleteChatSession(s.id);
-        }
-        _loadSessions();
-      } catch (e) {
-        debugPrint('[ChatHistoryDrawer] deleteAll error: $e');
+    if (confirm != true) return;
+
+    try {
+      await HistoryService.instance.deleteAllSessions();
+      widget.onNewChat.call();
+      if (mounted) {
+        setState(() {
+          _sessions.clear();
+          _offset = 0;
+          _hasMore = false;
+          _grouped = LinkedHashMap();
+        });
       }
+    } catch (e) {
+      debugPrint('[ChatHistoryDrawer] deleteAll error: $e');
     }
   }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final c = KmColors.of(context);
-    final maxWidth =
-        MediaQuery.sizeOf(context).width * 0.82;
+    final maxWidth = MediaQuery.sizeOf(context).width * 0.82;
     final drawerWidth = maxWidth > 320.0 ? 320.0 : maxWidth;
 
     return Drawer(
@@ -215,8 +293,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
           children: [
             // ── Header ──────────────────────────────────────────────────────
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   Text(
@@ -229,8 +306,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: Icon(Icons.edit_rounded, color: c.textMuted,
-                        size: 20),
+                    icon: Icon(Icons.edit_rounded, color: c.textMuted, size: 20),
                     tooltip: 'Chat Baru',
                     onPressed: () {
                       widget.onNewChat();
@@ -238,8 +314,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                     },
                   ),
                   IconButton(
-                    icon: Icon(Icons.close_rounded, color: c.textMuted,
-                        size: 20),
+                    icon: Icon(Icons.close_rounded, color: c.textMuted, size: 20),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -248,8 +323,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
 
             // ── Tombol Chat Baru ────────────────────────────────────────────
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.add_comment_rounded, size: 18),
                 label: const Text('Mulai Chat Baru'),
@@ -267,33 +341,165 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
 
             Divider(color: c.border, height: 16),
 
+            // ── E-009: Search bar ────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: TextField(
+                controller: _searchCtrl,
+                decoration: InputDecoration(
+                  hintText: 'Cari riwayat...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _searchQuery = '');
+                            _refreshList();
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: c.surface,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 0,
+                    horizontal: 16,
+                  ),
+                ),
+                onChanged: (val) {
+                  _searchDebounce?.cancel();
+                  _searchDebounce = Timer(
+                    const Duration(milliseconds: 350),
+                    () {
+                      setState(() => _searchQuery = val);
+                      _performSearch(val);
+                    },
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
             // ── Daftar Sesi ─────────────────────────────────────────────────
             Expanded(
-              child: _isLoading
+              child: _loadingMore && _sessions.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : _sessions.isEmpty
-                      ? _buildEmptyState(c)
-                      : ListView(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          children: [
-                            for (final entry in _grouped.entries) ...[
-                              _SectionHeader(label: entry.key),
-                              for (final session in entry.value)
-                                _SessionTile(
-                                  session: session,
-                                  isSelected: session.id ==
-                                      widget.currentSession.id,
-                                  relativeTime: _relativeTime(
-                                      session.updatedAt),
-                                  onTap: () {
-                                    widget.onSessionSelected(session);
-                                    Navigator.pop(context);
-                                  },
-                                  onRename: () => _renameSession(session),
-                                  onDelete: () => _deleteSession(session),
+                      // E-005: Empty state informatif
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _searchQuery.isNotEmpty
+                                      ? Icons.search_off_rounded
+                                      : Icons.chat_bubble_outline_rounded,
+                                  size: 64,
+                                  color: Theme.of(context).colorScheme.outline,
                                 ),
-                            ],
-                          ],
+                                const SizedBox(height: 16),
+                                Text(
+                                  _searchQuery.isNotEmpty
+                                      ? 'Tidak ada hasil untuk "$_searchQuery"'
+                                      : 'Belum ada riwayat chat',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (_searchQuery.isEmpty)
+                                  Text(
+                                    'Mulai chat baru untuk melihat riwayat di sini.',
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outline,
+                                        ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _listScrollCtrl,
+                          padding: const EdgeInsets.only(bottom: 8),
+                          itemCount: _searchQuery.isNotEmpty
+                              ? _sessions.length
+                              : _sessions.length + (_hasMore ? 1 : 0),
+                          itemBuilder: (ctx, i) {
+                            // Pagination loader
+                            if (_searchQuery.isEmpty && i == _sessions.length) {
+                              return _loadingMore
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Center(
+                                          child: CircularProgressIndicator()),
+                                    )
+                                  : const SizedBox.shrink();
+                            }
+                            // Session tile (flat list when searching, grouped otherwise)
+                            if (_searchQuery.isNotEmpty) {
+                              return _SessionTile(
+                                session: _sessions[i],
+                                isSelected:
+                                    _sessions[i].id == widget.currentSession.id,
+                                relativeTime:
+                                    _relativeTime(_sessions[i].updatedAt),
+                                onTap: () {
+                                  widget.onSessionSelected(_sessions[i]);
+                                  Navigator.pop(context);
+                                },
+                                onRename: () => _renameSession(_sessions[i]),
+                                onDelete: () => _deleteSession(_sessions[i]),
+                              );
+                            }
+                            // Grouped: build from _grouped
+                            int idx = 0;
+                            for (final entry in _grouped.entries) {
+                              // section header
+                              if (i == idx) {
+                                return _SectionHeader(label: entry.key);
+                              }
+                              idx++;
+                              for (final session in entry.value) {
+                                if (i == idx) {
+                                  return _SessionTile(
+                                    session: session,
+                                    isSelected:
+                                        session.id == widget.currentSession.id,
+                                    relativeTime:
+                                        _relativeTime(session.updatedAt),
+                                    onTap: () {
+                                      widget.onSessionSelected(session);
+                                      Navigator.pop(context);
+                                    },
+                                    onRename: () => _renameSession(session),
+                                    onDelete: () => _deleteSession(session),
+                                  );
+                                }
+                                idx++;
+                              }
+                            }
+                            return const SizedBox.shrink();
+                          },
                         ),
             ),
 
@@ -310,7 +516,7 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
                     'Hapus Semua Riwayat',
                     style: TextStyle(color: Colors.red),
                   ),
-                  onPressed: _confirmDeleteAll,
+                  onPressed: _confirmClearAllHistory,
                 ),
               ),
           ],
@@ -318,25 +524,6 @@ class _ChatHistoryDrawerState extends State<ChatHistoryDrawer> {
       ),
     );
   }
-
-  Widget _buildEmptyState(KmColors c) => Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.chat_bubble_outline_rounded,
-                size: 52, color: c.textMuted),
-            const SizedBox(height: 12),
-            Text('Belum ada riwayat',
-                style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: c.text)),
-            const SizedBox(height: 6),
-            Text('Percakapan akan tersimpan di sini.',
-                style: TextStyle(color: c.textMuted, fontSize: 13)),
-          ],
-        ),
-      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -442,8 +629,7 @@ class _SessionTile extends StatelessWidget {
             PopupMenuItem(
               value: 'delete',
               child: Row(children: [
-                const Icon(Icons.delete_outlined, size: 18,
-                    color: Colors.red),
+                const Icon(Icons.delete_outlined, size: 18, color: Colors.red),
                 const SizedBox(width: 10),
                 const Text('Hapus', style: TextStyle(color: Colors.red)),
               ]),

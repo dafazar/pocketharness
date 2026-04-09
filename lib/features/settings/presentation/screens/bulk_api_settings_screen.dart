@@ -32,6 +32,8 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
   void initState() {
     super.initState();
     _tab = TabController(length: 2, vsync: this);
+    // E-004 fix: listener agar FAB muncul/hilang saat switch tab
+    _tab.addListener(() { if (mounted) setState(() {}); });
     _svc.load().then((_) => setState(() {}));
   }
 

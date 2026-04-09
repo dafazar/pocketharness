@@ -156,9 +156,18 @@ class MessageBubble extends StatelessWidget {
                     _buildContent(context, kfc, isUser),
 
                     // ── FileEditResponseWidget (diff/replace pattern) ───
+                    // A-002 fix: parse content untuk FileEditResult agar tidak error build
                     if (!isUser && message.content.isNotEmpty &&
-                        !message.isStreaming)
-                      FileEditResponseWidget(aiResponse: message.content),
+                        !message.isStreaming &&
+                        _hasFileEditMarker(message.content))
+                      FileEditResponseWidget(
+                        result: FileEditResult(
+                          textContent: message.content,
+                          originalFilename: 'response',
+                          outputExtension: 'txt',
+                          description: 'AI response',
+                        ),
+                      ),
 
                     const SizedBox(height: 4),
 
@@ -423,6 +432,15 @@ class MessageBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+// A-002 fix: helper untuk deteksi apakah konten AI mengandung marker file-edit
+bool _hasFileEditMarker(String content) {
+  // Hanya tampilkan FileEditResponseWidget jika ada marker khusus
+  // agar tidak muncul di semua bubble AI biasa
+  return content.contains('<<<EDIT_START>>>') ||
+      content.contains('<<<FILE_EDIT>>>') ||
+      content.contains('[FILE_EDIT_RESULT]');
 }
 
 // =============================================================================

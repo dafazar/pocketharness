@@ -47,6 +47,7 @@ import 'package:kanmongo/features/chat/widgets/attachment_chip_row.dart';
 import 'package:kanmongo/features/chat/widgets/attachment_picker_sheet.dart';
 import 'package:kanmongo/features/chat/widgets/attachment_preview.dart';
 import 'package:kanmongo/features/chat/widgets/chat_history_drawer.dart';
+import 'package:kanmongo/features/chat/providers/chat_session_provider.dart';
 import 'package:kanmongo/features/chat/widgets/artifact_panel.dart';
 import 'package:kanmongo/features/chat/widgets/code_block_widget.dart';
 import 'package:kanmongo/features/chat/widgets/file_edit_response_widget.dart';
@@ -56,6 +57,7 @@ import 'package:kanmongo/features/chat/widgets/web_research_sources_card.dart';
 import 'package:kanmongo/data/services/web_research_service.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHAT SCREEN
@@ -91,6 +93,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   bool   _isGenerating            = false;
   bool   _showRawText             = false; // toggle markdown/raw
   StreamSubscription<String>? _genSub;
+  bool _genSubLocked = false;  // B-003: blokir concurrent cancel
+  Timer? _autoSaveTimer; // D-008: debounce autosave
+  Timer? _debounceTimer; // B-008: debounce timer
+  Timer? _searchDebounce; // B-008: search debounce
 
   // ── File edit result (shown below last AI message after offline generation) ─
   FileEditResult? _pendingFileEditResult;
@@ -123,6 +129,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   // ── Route argument guard (6A-ii) ──────────────────────────────────────────
   bool _sessionLoaded = false;
+  // ── E-002: loading session state ──────────────────────────────────────────
+  bool _isLoadingSession = false;
 
   // ── Attachment chip row key (6B-i) ────────────────────────────────────────
   final _chipRowKey = GlobalKey<AttachmentChipRowState>();
@@ -164,8 +172,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   void dispose() {
+    // Cancel stream subscription
     _genSub?.cancel();
     _genSub = null;
+    // Cancel timers — B-008
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = null;
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _searchDebounce?.cancel();
+    _searchDebounce = null;
+    // Stop llama jika masih generating
+    if (_isGenerating) {
+      LlamaService.instance.stopGeneration().catchError((_) {});
+    }
+    // Dispose controllers
     _scrollCtrl.dispose();
     _inputCtrl.dispose();
     _focusNode.dispose();
@@ -203,33 +224,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           listenable: _artifactCtrl,
           builder: (context, _) {
             final panelOpen = _artifactCtrl.isOpen;
-            return Row(
+            return Stack(
               children: [
-                // ── Chat column ──────────────────────────────────────────────
-                Expanded(
-                  child: Column(
-                    children: [
-                      if (modelLoaded) _buildContextUsageBar(),
-                      // Show adaptive pipeline status bar when running
-                      if (_adaptivePhase != null && _adaptivePhase != AdaptiveEditPhase.done)
-                        _AdaptiveStatusBar(
-                          phase: _adaptivePhase!,
-                          status: _adaptiveStatus,
-                        ),
-                      Expanded(
-                        child: showEmptyModel
-                            ? _EmptyModelWidget(onSwitchOnline: _switchToOnlineMode)
-                            : _buildMessageList(messages),
+                Row(
+                  children: [
+                    // ── Chat column ──────────────────────────────────────────────
+                    Expanded(
+                      child: Column(
+                        children: [
+                          if (modelLoaded) _buildContextUsageBar(),
+                          // Show adaptive pipeline status bar when running
+                          if (_adaptivePhase != null && _adaptivePhase != AdaptiveEditPhase.done)
+                            _AdaptiveStatusBar(
+                              phase: _adaptivePhase!,
+                              status: _adaptiveStatus,
+                            ),
+                          Expanded(
+                            child: showEmptyModel
+                                ? _EmptyModelWidget(onSwitchOnline: _switchToOnlineMode)
+                                : _buildMessageList(messages),
+                          ),
+                          _buildInputArea(),
+                        ],
                       ),
-                      _buildInputArea(),
-                    ],
-                  ),
+                    ),
+                    // ── Artifact panel ───────────────────────────────────────────
+                    if (panelOpen)
+                      ArtifactPanel(
+                        controller: _artifactCtrl,
+                        width: MediaQuery.of(context).size.width > 900 ? 440 : 340,
+                      ),
+                  ],
                 ),
-                // ── Artifact panel ───────────────────────────────────────────
-                if (panelOpen)
-                  ArtifactPanel(
-                    controller: _artifactCtrl,
-                    width: MediaQuery.of(context).size.width > 900 ? 440 : 340,
+                // ── E-002: Loading overlay saat load session dari drawer ──────
+                if (_isLoadingSession)
+                  const Positioned.fill(
+                    child: ColoredBox(
+                      color: Colors.black38,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
                   ),
               ],
             );
@@ -1065,11 +1098,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           _scrollToBottom();
         },
         onDone: () {
+          if (!mounted) return;
           setState(() { _isGenerating = false; });
           _genSub = null;
           _autoSaveCurrentSession(ref.read(chatSessionProvider));
         },
         onError: (Object e) {
+          if (!mounted) return;
           ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
             '❌ Vision error: $e',
             stopReason: StopReason.error,
@@ -1080,6 +1115,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       );
     } catch (e) {
       debugPrint('[ChatScreen] _generateWithVision error: $e');
+      if (!mounted) return;
       ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
         '❌ Error: $e',
         stopReason: StopReason.error,
@@ -1165,6 +1201,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             break;
         }
       }
+    } on TimeoutException catch (e) {
+      // B-007 fix: handle timeout agar UI tidak stuck
+      debugPrint('[ChatScreen] _generateWithWebResearch timeout: $e');
+      if (mounted) {
+        ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
+          '⏰ Web research timeout. Silakan coba lagi.',
+          stopReason: StopReason.timeout,
+        );
+        setState(() {
+          _researchStatus = '';
+          _isGenerating   = false;
+        });
+      }
     } catch (e) {
       debugPrint('[ChatScreen] _generateWithWebResearch error: $e');
       if (mounted) {
@@ -1245,6 +1294,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         _scrollToBottom();
       },
       onDone: () {
+        if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
         _autoSaveCurrentSession(ref.read(chatSessionProvider));
@@ -1286,6 +1336,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         }
       },
       onError: (Object e) {
+        if (!mounted) return;
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
           '❌ Error: $e',
           stopReason: StopReason.error,
@@ -1328,11 +1379,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         _scrollToBottom();
       },
       onDone: () {
+        if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
         _autoSaveCurrentSession(ref.read(chatSessionProvider));
       },
       onError: (Object e) {
+        if (!mounted) return;
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
           '❌ Error online: $e',
           stopReason: StopReason.error,
@@ -1378,11 +1431,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         _scrollToBottom();
       },
       onDone: () {
+        if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
         _autoSaveCurrentSession(ref.read(chatSessionProvider));
       },
       onError: (Object e) {
+        if (!mounted) return;
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
           '❌ Error Bulk API: $e',
           stopReason: StopReason.error,
@@ -1486,12 +1541,196 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   // ─────────────────────────────────────────────────────────────────────────
+  // B-003: Cancel helper — blokir concurrent stream cancel
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static const int _kMaxRetry = 2;
+  static const Duration _kRetryDelay = Duration(seconds: 2);
+
+  Future<void> _cancelAndClearGenSub() async {
+    if (_genSubLocked) return;
+    _genSubLocked = true;
+    try {
+      await _genSub?.cancel();
+      _genSub = null;
+    } finally {
+      _genSubLocked = false;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // B-004: Retry helper
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<T> _withRetry<T>(
+    Future<T> Function() fn, {
+    int maxRetries = _kMaxRetry,
+    bool Function(Object)? retryIf,
+  }) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        return await fn();
+      } catch (e) {
+        attempt++;
+        final shouldRetry = retryIf != null ? retryIf(e) : true;
+        if (attempt > maxRetries || !shouldRetry) rethrow;
+        debugPrint('[ChatScreen] retry attempt $attempt after error: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Koneksi bermasalah, mencoba ulang ($attempt/$maxRetries)...'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        await Future.delayed(_kRetryDelay * attempt);
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // B-005: Error message granular
+  // ─────────────────────────────────────────────────────────────────────────
+
+  String _friendlyError(Object error) {
+    final s = error.toString().toLowerCase();
+    if (s.contains('socketexception') ||
+        s.contains('network') ||
+        s.contains('connection refused') ||
+        s.contains('failed host lookup')) {
+      return '❌ Tidak ada koneksi internet. Periksa jaringan Anda.';
+    }
+    if (s.contains('timeout') || s.contains('timeoutexception')) {
+      return '⏰ Request timeout. Server lambat merespons, coba lagi.';
+    }
+    if (s.contains('rate limit') || s.contains('429') || s.contains('too many')) {
+      return '⚡ Rate limit tercapai. Tunggu sebentar lalu coba lagi.';
+    }
+    if (s.contains('401') || s.contains('unauthorized') || s.contains('api key')) {
+      return '🔑 API Key tidak valid. Periksa pengaturan di Settings → API.';
+    }
+    if (s.contains('403') || s.contains('forbidden')) {
+      return '🚫 Akses ditolak. Periksa izin API Anda.';
+    }
+    if (s.contains('500') || s.contains('internal server') || s.contains('503')) {
+      return '🔧 Server AI sedang bermasalah. Coba beberapa menit lagi.';
+    }
+    if (s.contains('model not loaded') || s.contains('no model')) {
+      return '🤖 Model belum dimuat. Buka Settings → Offline AI untuk memuat model.';
+    }
+    if (s.contains('out of memory') || s.contains('oom')) {
+      return '💾 Memori tidak cukup. Tutup aplikasi lain atau gunakan model lebih kecil.';
+    }
+    if (s.contains('context') &&
+        (s.contains('exceed') || s.contains('limit') || s.contains('too long'))) {
+      return '📏 Konteks terlalu panjang. Mulai chat baru atau hapus beberapa pesan lama.';
+    }
+    return '❗ Terjadi kesalahan: $error';
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // B-009: Cek context limit sebelum generate offline
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Future<bool> _checkContextLimitBeforeGenerate(List<new_models.ChatMessage> messages) async {
+    final params = ref.read(inferenceParamsProvider);
+    final maxCtx = params.contextSize;
+
+    // Estimasi: 1 token ≈ 3.5 karakter
+    final totalChars = messages.fold<int>(0, (sum, m) => sum + m.content.length);
+    final estimatedTokens = (totalChars / 3.5).ceil();
+
+    // Batas aman 85% dari max context
+    final safeLimit = (maxCtx * 0.85).toInt();
+
+    if (estimatedTokens <= safeLimit) return true;
+
+    if (!mounted) return false;
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('⚠️ Context Hampir Penuh'),
+        content: Text(
+          'Estimasi token: ~$estimatedTokens\n'
+          'Batas aman: $safeLimit dari $maxCtx token\n\n'
+          'Respons mungkin terpotong atau model tidak stabil.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Lanjutkan'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            onPressed: () {
+              final currentMsgs = ref.read(chatSessionProvider).messages;
+              final kept = currentMsgs.length > 4
+                  ? currentMsgs.sublist(currentMsgs.length - 4)
+                  : currentMsgs;
+              final currentSession = ref.read(chatSessionProvider);
+              ref.read(chatSessionProvider.notifier)
+                  .loadSession(currentSession.copyWith(messages: kept));
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Trim & Lanjutkan'),
+          ),
+        ],
+      ),
+    );
+    return proceed ?? false;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // D-004: Hapus pesan dengan Undo
+  // ─────────────────────────────────────────────────────────────────────────
+
+  void _deleteMessageWithUndo(String id) {
+    final msgs = ref.read(chatSessionProvider).messages;
+    final deletedIndex = msgs.indexWhere((m) => m.id == id);
+    if (deletedIndex < 0) return;
+    final deletedMsg = msgs[deletedIndex];
+
+    _deleteMessage(id);
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Pesan dihapus'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () {
+            final currentMsgs = List<new_models.ChatMessage>.from(
+              ref.read(chatSessionProvider).messages,
+            );
+            final insertAt = deletedIndex.clamp(0, currentMsgs.length);
+            currentMsgs.insert(insertAt, deletedMsg);
+            final currentSession = ref.read(chatSessionProvider);
+            ref.read(chatSessionProvider.notifier).loadSession(
+              currentSession.copyWith(messages: currentMsgs),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // LOGIC: STOP GENERATION
   // ─────────────────────────────────────────────────────────────────────────
 
   Future<void> _stopGeneration() async {
-    await _genSub?.cancel();
-    _genSub = null;
+    await _cancelAndClearGenSub();  // B-003: gunakan helper
+    // E-006 fix: hentikan adaptive edit pipeline jika sedang berjalan
+    if (_adaptivePhase != null) {
+      setState(() { _adaptivePhase = null; });
+    }
     await LlamaService.instance.stopGeneration();
     setState(() { _isGenerating = false; });
   }
@@ -1524,6 +1763,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   void _deleteMessage(String id) {
+    // D-002/D-007 fix: cleanup Maps saat pesan dihapus
+    _messageAttachments.remove(id);
+    _messageWebSources.removeWhere((k, v) => false); // indeks bisa bergeser, bersihkan semua stale
     ref.read(chatSessionProvider.notifier).deleteMessage(id);
   }
 
@@ -1682,6 +1924,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             onPressed: () {
               final newTitle = _renameCtrl.text.trim();
               if (newTitle.isNotEmpty) {
+                // E-008 fix: persist ke DB via HistoryService langsung
+                HistoryService.instance
+                    .updateSessionTitle(_currentSession.id, newTitle)
+                    .catchError((e) => debugPrint('[ChatScreen] rename error: $e'));
                 ref
                     .read(chatSessionProvider.notifier)
                     .setTitle(newTitle);
@@ -1708,6 +1954,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     }
     if (mounted) {
       ref.read(chatSessionProvider.notifier).clearSession();
+      // D-002/D-007 fix: bersihkan Maps saat mulai chat baru
+      _messageAttachments.clear();
+      _messageWebSources.clear();
       setState(() {
         _pendingAttachments = [];
         _currentSession = new_models.ChatSession.empty();
@@ -1717,7 +1966,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   // Auto-save session aktif ke DB menggunakan model baru ChatSession
+  // D-008 fix: debounce 2 detik agar tidak flood DB saat streaming
   Future<void> _autoSaveCurrentSession(List<ChatMessage> msgs) async {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(seconds: 2), () async {
+      await _doAutoSave(msgs);
+    });
+  }
+
+  Future<void> _doAutoSave(List<ChatMessage> msgs) async {
     try {
       final now = DateTime.now();
       final converted = msgs.map((m) => new_models.ChatMessage(
@@ -1739,7 +1996,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     } catch (e) {
       debugPrint('[ChatScreen] _autoSaveCurrentSession error: $e');
     }
-  }
+  } // end _doAutoSave
 
   String _generateTitleFromMessages(List<ChatMessage> msgs) {
     final firstUser = msgs.firstWhere(
@@ -1752,22 +2009,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   // Load sesi dari history drawer ke chat aktif
   Future<void> _loadSessionFromHistory(new_models.ChatSession session) async {
-    // Auto-save sesi sekarang jika ada pesan
-    final current = ref.read(chatSessionProvider);
-    if (current.isNotEmpty) {
-      await _autoSaveCurrentSession(current);
-    }
-    // Konversi new_models.ChatMessage → ChatMessage (llama_context)
-    ref.read(chatSessionProvider.notifier).clearSession();
-    for (final msg in session.messages) {
-      final chatMsg = msg.role == 'user'
-          ? ChatMessage.user(msg.content)
-          : ChatMessage.assistant(msg.content);
-      ref.read(chatSessionProvider.notifier).addMessage(chatMsg);
-    }
-    if (mounted) {
-      setState(() => _currentSession = session);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    // E-002: guard concurrent load
+    if (_isLoadingSession) return;
+    if (!mounted) return;
+    setState(() => _isLoadingSession = true);
+
+    try {
+      // Stop generation dulu jika sedang berjalan
+      if (_isGenerating) await _stopGeneration();
+
+      // Auto-save sesi aktif sebelum ganti
+      final currentMsgs = ref.read(chatSessionProvider.notifier).state.messages;
+      if (currentMsgs.isNotEmpty) {
+        // Trigger save via canonical notifier
+        await ref.read(chatSessionProvider.notifier).autoSave();
+      }
+      // Load session baru via canonical loadSession
+      await ref.read(chatSessionProvider.notifier).loadSession(session);
+      if (mounted) {
+        setState(() => _currentSession = session);
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingSession = false);
     }
   }
 

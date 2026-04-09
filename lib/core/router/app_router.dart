@@ -22,6 +22,7 @@ import 'package:kanmongo/features/settings/presentation/screens/puter_setup_scre
 import 'package:kanmongo/features/settings/presentation/screens/ai_inference_params_screen.dart';
 import 'package:kanmongo/features/terminal/presentation/screens/terminal_screen.dart';
 import 'package:kanmongo/features/chat/chat_screen.dart';
+import 'package:kanmongo/features/agent/presentation/screens/agent_screen.dart';
 import 'package:kanmongo/features/media/presentation/screens/media_creator_screen.dart';
 import 'package:kanmongo/features/history/presentation/screens/history_screen.dart';
 import 'package:kanmongo/features/ocr/presentation/screens/ocr_screen.dart';
@@ -63,6 +64,8 @@ class KmRoutes {
   static const reader          = '/reader';
   static const paywall         = '/membership';
   static const membershipStatus = '/membership/status';
+  static const agent           = '/agent';
+  static const privacy         = '/privacy';
 }
 
 CustomTransitionPage<void> _slide(Widget child) => CustomTransitionPage(
@@ -158,7 +161,25 @@ final GoRouter appRouter = GoRouter(
       },
     ),
     GoRoute(path: '/chat',     pageBuilder: (c, s) => _fade(const ChatScreen())),
+    GoRoute(path: '/agent',    pageBuilder: (c, s) => _fade(const AgentScreen())),
     GoRoute(path: '/media',    pageBuilder: (c, s) => _fade(const MediaCreatorScreen())),
+    // C-005 fix: Privacy Policy screen
+    GoRoute(
+      path: '/privacy',
+      pageBuilder: (c, s) => _slide(Scaffold(
+        appBar: AppBar(title: const Text('Kebijakan Privasi')),
+        body: const SingleChildScrollView(
+          padding: EdgeInsets.all(20),
+          child: Text(
+            'Kebijakan Privasi KanMon GO\n\n'
+            'KanMon GO menghormati privasi pengguna. Data percakapan disimpan '
+            'secara lokal di perangkat Anda dan tidak dikirim ke server tanpa izin.\n\n'
+            'Untuk informasi lengkap, kunjungi: https://kanmongo.app/privacy',
+            style: TextStyle(fontSize: 15, height: 1.6),
+          ),
+        ),
+      )),
+    ),
   ],
   errorBuilder: (context, state) => Scaffold(
     body: Center(child: Text('Route tidak ditemukan: ${state.uri}')),

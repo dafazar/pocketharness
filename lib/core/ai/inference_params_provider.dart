@@ -2,6 +2,7 @@
 // Provider Riverpod untuk semua state AI menggunakan StateNotifier
 // Kompatibel dengan flutter_riverpod ^2.5.1
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,46 +33,53 @@ class InferenceConfigNotifier extends StateNotifier<InferenceConfig> {
     load();
   }
 
+  // D-006 fix: debounce save agar slider tidak trigger I/O setiap frame
+  Timer? _saveTimer;
+  void _debouncedSave() {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 300), save);
+  }
+
   /// Perbarui nilai temperature
   void updateTemperature(double value) {
     state = state.copyWith(temperature: value.clamp(0.0, 2.0));
-    save();
+    _debouncedSave();
   }
 
   /// Perbarui nilai top-p
   void updateTopP(double value) {
     state = state.copyWith(topP: value.clamp(0.0, 1.0));
-    save();
+    _debouncedSave();
   }
 
   /// Perbarui nilai top-k
   void updateTopK(int value) {
     state = state.copyWith(topK: value.clamp(1, 200));
-    save();
+    _debouncedSave();
   }
 
   /// Perbarui nilai min-p
   void updateMinP(double value) {
     state = state.copyWith(minP: value.clamp(0.0, 1.0));
-    save();
+    _debouncedSave();
   }
 
   /// Perbarui jumlah token maksimum yang dihasilkan
   void updateMaxTokens(int value) {
     state = state.copyWith(maxNewTokens: value.clamp(64, 8192));
-    save();
+    _debouncedSave();
   }
 
   /// Perbarui seed (gunakan -1 untuk acak)
   void updateSeed(int value) {
     state = state.copyWith(seed: value);
-    save();
+    _debouncedSave();
   }
 
   /// Perbarui penalti pengulangan
   void updateRepeatPenalty(double value) {
     state = state.copyWith(repeatPenalty: value.clamp(1.0, 2.0));
-    save();
+    _debouncedSave();
   }
 
   /// Perbarui mode dan parameter mirostat
@@ -312,118 +320,8 @@ class SystemPromptNotifier extends StateNotifier<String?> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 6. CHAT SESSION PROVIDER
+// 6. CHAT SESSION PROVIDER — re-export dari canonical source
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Provider untuk sesi chat yang sedang aktif
-final chatSessionProvider =
-    StateNotifierProvider<ChatSessionNotifier, List<ChatMessage>>(
-      (ref) => ChatSessionNotifier(),
-    );
-
-/// Notifier untuk mengelola pesan dalam sesi chat
-class ChatSessionNotifier extends StateNotifier<List<ChatMessage>> {
-  ChatSessionNotifier() : super([]);
-
-  /// Tambahkan pesan baru ke sesi
-  void addMessage(ChatMessage message) {
-    state = [...state, message];
-  }
-
-  /// Tambahkan token ke pesan asisten terakhir (streaming)
-  void updateLastAssistantMessage(String append) {
-    if (state.isEmpty) return;
-    final last = state.last;
-    if (last.role != ChatRole.assistant) return;
-    state = [
-      ...state.sublist(0, state.length - 1),
-      last.copyWith(content: last.content + append),
-    ];
-  }
-
-  /// Ganti konten pesan asisten terakhir dengan hasil final
-  void replaceLastAssistantMessage(
-    String content, {
-    StopReason? stopReason,
-  }) {
-    if (state.isEmpty) return;
-    final last = state.last;
-    if (last.role != ChatRole.assistant) return;
-    state = [
-      ...state.sublist(0, state.length - 1),
-      last.copyWith(content: content, stopReason: stopReason),
-    ];
-  }
-
-  /// Hapus pesan berdasarkan ID
-  void deleteMessage(String id) {
-    state = state.where((m) => m.id != id).toList();
-  }
-
-  /// Hapus seluruh sesi chat
-  void clearSession() {
-    state = [];
-  }
-
-  /// Hitung persentase penggunaan konteks (estimasi kasar: 1 token ≈ 4 karakter)
-  double getContextUsagePercent(int maxContextSize) {
-    if (maxContextSize <= 0) return 0;
-    final totalChars = state.fold<int>(0, (sum, m) => sum + m.content.length);
-    final estimatedTokens = (totalChars / 4).ceil();
-    return (estimatedTokens / maxContextSize).clamp(0.0, 1.0);
-  }
-
-  /// Pangkas riwayat chat agar tidak melebihi batas token konteks
-  /// Pesan sistem selalu dipertahankan, lalu pesan terbaru dipertahankan
-  void trimForContext(int maxTokens) {
-    if (state.isEmpty) return;
-
-    // Pisahkan pesan sistem dan pesan percakapan
-    final systemMessages = state.where((m) => m.role == ChatRole.system).toList();
-    final convMessages = state.where((m) => m.role != ChatRole.system).toList();
-
-    // Hitung estimasi token untuk setiap pesan
-    int estimateTokens(ChatMessage m) => (m.content.length / 4).ceil();
-
-    final systemTokens = systemMessages.fold<int>(0, (s, m) => s + estimateTokens(m));
-    int remainingTokens = maxTokens - systemTokens;
-
-    // Pertahankan pesan terbaru selama masih dalam batas
-    final kept = <ChatMessage>[];
-    for (final msg in convMessages.reversed) {
-      final t = estimateTokens(msg);
-      if (remainingTokens - t >= 0) {
-        kept.insert(0, msg);
-        remainingTokens -= t;
-      } else {
-        break;
-      }
-    }
-
-    state = [...systemMessages, ...kept];
-  }
-
-  /// Load session dari ChatSession (untuk membuka session yang tersimpan)
-  void loadSession(dynamic session) {
-    // Gunakan reflection atau tipe casting untuk mendapatkan messages
-    if (session == null) return;
-    
-    // Coba akses field 'messages' dari session object
-    try {
-      final messages = session.messages;
-      if (messages is List<ChatMessage>) {
-        state = List<ChatMessage>.from(messages);
-      }
-    } catch (e) {
-      // Fallback jika akses field gagal
-      // Pesan error diabaikan untuk production
-    }
-  }
-
-  /// Set title untuk session saat ini (digunakan untuk rename)
-  void setTitle(String title) {
-    // Notifier ini hanya mengelola messages, bukan title
-    // Title dikelola di UI level (chat_screen.dart)
-    // Method ini ada untuk kompatibilitas dengan kode yang memanggil setTitle
-  }
-}
+export 'package:kanmongo/features/chat/providers/chat_session_provider.dart'
+    show chatSessionProvider, ChatSessionNotifier;

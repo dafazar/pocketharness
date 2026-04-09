@@ -485,6 +485,115 @@ class HistoryService {
     }
   }
 
+
+  // ── D-003: Pagination ─────────────────────────────────────────────────────
+
+  static const int kPageSize = 20;
+
+  Future<List<ChatSession>> loadChatSessionsPaged({
+    required int offset,
+    int limit = kPageSize,
+  }) async {
+    await _ensureDb();
+    try {
+      final sessionRows = await _db!.query(
+        'chat_sessions',
+        orderBy: 'updated_at DESC',
+        limit: limit,
+        offset: offset,
+      );
+      final List<ChatSession> result = [];
+      for (final row in sessionRows) {
+        final sid = row['id'] as String;
+        final msgRows = await _db!.query(
+          'chat_messages',
+          where: 'session_id = ?',
+          whereArgs: [sid],
+          orderBy: 'created_at ASC',
+        );
+        final messages = msgRows.map((r) {
+          final m = Map<String, dynamic>.from(r);
+          m['id'] = m['id']?.toString() ?? '';
+          return ChatMessage.fromMap(m);
+        }).toList();
+        result.add(ChatSession.fromMap(row, messages));
+      }
+      return result;
+    } catch (e) {
+      debugPrint('[HistoryService] loadChatSessionsPaged error: $e');
+      return [];
+    }
+  }
+
+  Future<int> countChatSessions() async {
+    await _ensureDb();
+    try {
+      final result = await _db!.rawQuery(
+        'SELECT COUNT(*) as cnt FROM chat_sessions',
+      );
+      return result.first['cnt'] as int? ?? 0;
+    } catch (e) {
+      debugPrint('[HistoryService] countChatSessions error: $e');
+      return 0;
+    }
+  }
+
+  // ── D-005: Delete all ─────────────────────────────────────────────────────
+
+  Future<void> deleteAllSessions() async {
+    await _ensureDb();
+    try {
+      await _db!.transaction((txn) async {
+        await txn.delete('chat_messages');
+        await txn.delete('chat_sessions');
+      });
+    } catch (e) {
+      debugPrint('[HistoryService] deleteAllSessions error: $e');
+    }
+  }
+
+  // ── E-009: Search ─────────────────────────────────────────────────────────
+
+  Future<List<ChatSession>> searchChatSessions(
+    String query, {
+    int limit = kPageSize,
+  }) async {
+    if (query.trim().isEmpty) {
+      return loadChatSessionsPaged(offset: 0, limit: limit);
+    }
+    await _ensureDb();
+    try {
+      final q = '%${query.trim()}%';
+      final sessionRows = await _db!.query(
+        'chat_sessions',
+        where: 'title LIKE ?',
+        whereArgs: [q],
+        orderBy: 'updated_at DESC',
+        limit: limit,
+      );
+      final List<ChatSession> result = [];
+      for (final row in sessionRows) {
+        final sid = row['id'] as String;
+        final msgRows = await _db!.query(
+          'chat_messages',
+          where: 'session_id = ?',
+          whereArgs: [sid],
+          orderBy: 'created_at ASC',
+        );
+        final messages = msgRows.map((r) {
+          final m = Map<String, dynamic>.from(r);
+          m['id'] = m['id']?.toString() ?? '';
+          return ChatMessage.fromMap(m);
+        }).toList();
+        result.add(ChatSession.fromMap(row, messages));
+      }
+      return result;
+    } catch (e) {
+      debugPrint('[HistoryService] searchChatSessions error: $e');
+      return [];
+    }
+  }
+
   Future<void> close() async {
     await _db?.close();
     _db = null;

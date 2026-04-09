@@ -178,33 +178,38 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
 
   // ── BENCHMARK ─────────────────────────────────────────────────────────────
   Future<void> _runBenchmark() async {
+    // E-007 fix: benchmark nyata via LlamaService, bukan simulasi
+    if (!LlamaService.instance.isModelLoaded) {
+      if (mounted) showTopSnack(context, 'Muat model dulu sebelum menjalankan benchmark');
+      return;
+    }
     setState(() {
       _isBenchmarking = true;
       _benchmarkResult = null;
     });
     try {
-      final loadStart = DateTime.now();
-      // Simulasi warm-up / load model
-      await Future.delayed(const Duration(milliseconds: 500));
-      final loadMs = DateTime.now().difference(loadStart).inMilliseconds;
-
-      final genStart = DateTime.now();
-      // Simulasi generate 50 token
-      await Future.delayed(const Duration(milliseconds: 800));
-      final generateMs = DateTime.now().difference(genStart).inMilliseconds;
-
-      const tokenCount = 50;
-      final tps = tokenCount / (generateMs / 1000.0);
-
-      setState(() {
-        _benchmarkResult = '${tps.toStringAsFixed(1)} tok/s  •  '
-            'Load: ${loadMs}ms  •  '
-            'Generate: ${generateMs}ms';
-      });
+      final start = DateTime.now();
+      final sb = StringBuffer();
+      await for (final token in LlamaService.instance.generateStream(
+        messages: [ChatMessage.user('Hitung dari 1 sampai 20 dalam bahasa Indonesia.')],
+        config: const InferenceConfig(maxNewTokens: 100, temperature: 0.1),
+      )) {
+        sb.write(token);
+      }
+      final ms = DateTime.now().difference(start).inMilliseconds;
+      final words = sb.toString().trim().split(RegExp(r'\s+'));
+      final tokenEst = words.length;
+      final tps = ms > 0 ? tokenEst / (ms / 1000.0) : 0.0;
+      if (mounted) {
+        setState(() {
+          _benchmarkResult = '~${tps.toStringAsFixed(1)} tok/s  •  '
+              '${ms}ms total  •  ~$tokenEst token';
+        });
+      }
     } catch (e) {
-      setState(() => _benchmarkResult = 'Error: ${e.toString()}');
+      if (mounted) setState(() => _benchmarkResult = 'Error: ${e.toString()}');
     } finally {
-      setState(() => _isBenchmarking = false);
+      if (mounted) setState(() => _isBenchmarking = false);
     }
   }
 
@@ -1027,7 +1032,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
 
     return BackHandler(
       child: Scaffold(
-        backgroundColor: kfc.background,
+        backgroundColor: kfc.bg,
         appBar: AppBar(
           backgroundColor: kfc.card,
           elevation: 0,

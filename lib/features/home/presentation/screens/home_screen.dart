@@ -89,6 +89,13 @@ const _menuItems = [
     color: Color(0xFFEC4899),
     icon: Icons.camera_alt_rounded,
   ),
+  _MenuItem(
+    label: 'AI Agent',
+    subtitle: 'Otonom · Tools · Memory',
+    route: '/agent',
+    color: Color(0xFF7C3AED),
+    icon: Icons.smart_toy_rounded,
+  ),
 ];
 
 // ── Home Screen ───────────────────────────────────────────────────────────────

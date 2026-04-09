@@ -80,11 +80,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           Text('Tidak Ada Internet'),
         ]),
         content: const Text(
-          'KanMon GO membutuhkan koneksi internet untuk berjalan.\n\n'
-          'Pastikan WiFi atau data seluler kamu aktif, lalu coba lagi.',
+          'KanMon GO membutuhkan koneksi internet untuk fitur online.\n\n'
+          'Kamu tetap bisa menggunakan AI Offline, E-Book lokal, dan fitur lainnya.',
           style: TextStyle(fontSize: 14, height: 1.5),
         ),
         actions: [
+          // E-003 fix: tombol lanjut offline agar user tidak terjebak di splash
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.go(KmRoutes.home);
+            },
+            child: const Text('Lanjut Offline'),
+          ),
           FilledButton.icon(
             icon: const Icon(Icons.refresh_rounded, size: 18),
             label: const Text('Coba Lagi'),

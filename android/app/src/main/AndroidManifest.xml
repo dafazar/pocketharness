@@ -40,13 +40,7 @@
     ══════════════════════════════════════════════════════════ -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
-    <!-- ═══════════════════════════════════════════════════════
-         STORAGE — MANAGE_EXTERNAL_STORAGE (API 30+)
-         Required for reading GGUF model files from arbitrary locations
-    ══════════════════════════════════════════════════════════ -->
-    <uses-permission
-        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
+    <!-- C-001 fix: MANAGE_EXTERNAL_STORAGE dihapus — gunakan SAF/FilePicker -->
 
     <!-- ═══════════════════════════════════════════════════════
          HARDWARE
@@ -100,13 +94,14 @@
         android:hardwareAccelerated="true"
         android:largeHeap="true"
         android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:extractNativeLibs="true"
-        android:allowBackup="false"
-        android:fullBackupContent="false"
-        android:requestLegacyExternalStorage="true">
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:requestLegacyExternalStorage="false">
 
-        <!-- requestLegacyExternalStorage="true" untuk Android 10 (API 29).
-             Di Android 11+ diabaikan — MANAGE_EXTERNAL_STORAGE yang berlaku. -->
+        <!-- C-003 fix: requestLegacyExternalStorage diset false — gunakan SAF -->
 
         <activity
             android:name=".MainActivity"

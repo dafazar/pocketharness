@@ -227,8 +227,7 @@ class _KanMonGOAppState extends State<KanMonGOApp> {
     super.dispose();
   }
   @override
-  Widget build(BuildContext context) =>
-      const ProviderScope(child: _AppContent());
+  Widget build(BuildContext context) => const _AppContent();
 }
 
 class _AppContent extends ConsumerWidget {

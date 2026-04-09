@@ -84,6 +84,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
   void dispose() {
     _inputCtrl.dispose();
     _scroll.dispose();
+    AgentService.instance.forceStop();
     _sub?.cancel();
     super.dispose();
   }

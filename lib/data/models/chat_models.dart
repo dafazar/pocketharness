@@ -299,6 +299,7 @@ class ChatMessage {
   final AiMode? aiMode;
   final String? modelName;
   final List<ResearchSource>? webSources;
+  final bool isError;
 
   const ChatMessage({
     required this.id,
@@ -311,6 +312,7 @@ class ChatMessage {
     this.aiMode,
     this.modelName,
     this.webSources,
+    this.isError = false,
   });
 
   bool get isUser => role == 'user';
@@ -325,6 +327,7 @@ class ChatMessage {
     List<ChatAttachment>? attachments,
     DateTime? createdAt,
     bool? isStreaming,
+    bool? isError,
     Object? error = _sentinel,
     Object? aiMode = _sentinel,
     Object? modelName = _sentinel,
@@ -337,6 +340,7 @@ class ChatMessage {
       attachments: attachments ?? this.attachments,
       createdAt: createdAt ?? this.createdAt,
       isStreaming: isStreaming ?? this.isStreaming,
+      isError: isError ?? this.isError,
       error: error == _sentinel ? this.error : error as String?,
       aiMode: aiMode == _sentinel ? this.aiMode : aiMode as AiMode?,
       modelName: modelName == _sentinel ? this.modelName : modelName as String?,
@@ -368,6 +372,7 @@ class ChatMessage {
       'model_name': modelName,
       'web_sources_json':
           sourceList != null ? jsonEncode(sourceList) : null,
+      'is_error': isError ? 1 : 0,
     };
   }
 
@@ -423,6 +428,7 @@ class ChatMessage {
         map['created_at'] as int? ?? 0,
       ),
       isStreaming: false, // tidak di-persist
+      isError: (map['is_error'] as int? ?? 0) == 1,
       error: map['error'] as String?,
       aiMode: aiMode,
       modelName: map['model_name'] as String?,
