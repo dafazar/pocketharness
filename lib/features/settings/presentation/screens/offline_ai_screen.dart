@@ -159,15 +159,36 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
     await OfflineAiService.instance.setTopK(_localInference.topK);
     await AiSourceSettingsService.instance.pullOfflineFromService();
 
-    // 4. Jika konfigurasi model berubah dan model sedang di-load → reload model
+    // 5. Jika konfigurasi model berubah dan model sedang di-load → reload model
     if (_modelConfigChanged) {
       final activeModel = ref.read(activeModelInfoProvider);
-      if (activeModel != null) {
-        if (mounted) {
-          showTopSnack(context, 'Mereload model dengan konfigurasi baru...');
+      if (activeModel != null && mounted) {
+        showTopSnack(context, 'Mereload model dengan konfigurasi baru...');
+      }
+    }
+
+    setState(() {
+      _hasUnsavedChanges = false;
+      _modelConfigChanged = false;
+    });
+
+    if (mounted) showTopSnack(context, 'Pengaturan disimpan ✓');
+  }
+
+  // ── BENCHMARK ─────────────────────────────────────────────────────────────
+  Future<void> _runBenchmark() async {
+    setState(() {
+      _isBenchmarking = true;
+      _benchmarkResult = null;
+    });
+    try {
+      final loadStart = DateTime.now();
+      // Simulasi warm-up / load model
+      await Future.delayed(const Duration(milliseconds: 500));
       final loadMs = DateTime.now().difference(loadStart).inMilliseconds;
 
       final genStart = DateTime.now();
+      // Simulasi generate 50 token
       await Future.delayed(const Duration(milliseconds: 800));
       final generateMs = DateTime.now().difference(genStart).inMilliseconds;
 
@@ -184,6 +205,45 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
     } finally {
       setState(() => _isBenchmarking = false);
     }
+  }
+
+  // ── RESET SEMUA KE DEFAULT ────────────────────────────────────────────────
+  Future<void> _resetAllToDefault() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset ke Default'),
+        content: const Text(
+            'Semua parameter AI akan dikembalikan ke nilai bawaan. Lanjutkan?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final defaultInference = InferenceConfig.defaultConfig;
+    final defaultModel = LlamaModelConfig.defaultConfig;
+    setState(() {
+      _localInference = defaultInference;
+      _localModelConfig = defaultModel;
+      _seedController.text = defaultInference.seed.toString();
+      _systemPromptController.text = _systemPromptPresets['Asisten Umum']!;
+      _selectedPreset = 'Asisten Umum';
+      _forceCpu = false;
+      _memorySaveMode = false;
+      _logTokens = false;
+    });
+    _markChanged(modelConfigChanged: true);
+    if (mounted) showTopSnack(context, 'Semua pengaturan direset ke default ✓');
   }
 
   // ── HAPUS CACHE MODEL ─────────────────────────────────────────────────────
@@ -251,6 +311,31 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
 
       if (mounted) {
         showTopSnack(context, 'Pengaturan berhasil diimpor ✓');
+      }
+    } catch (e) {
+      if (mounted) {
+        showTopSnack(context, 'Gagal mengimpor: ${e.toString()}');
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // SECTION 2 — PARAMETER INFERENSI
+  // ─────────────────────────────────────────────────────────────────────────
+
+  Widget _buildInferenceSection(KmColors kfc) {
+    return _card(kfc, [
+      _sectionHeader(kfc, 'Parameter Inferensi', Icons.tune_rounded),
+      const SizedBox(height: 14),
+
+      // 1. Temperature
+      _paramSlider(
+        kfc,
+        label: 'Temperature', emoji: '🌡️',
+        tooltip: 'Kreativitas output AI. Tinggi = lebih kreatif/acak, Rendah = lebih deterministik',
+        value: _localInference.temperature, min: 0.0, max: 2.0, decimals: 2,
+        onChanged: (v) {
+          setState(() => _localInference = _localInference.copyWith(temperature: v));
           _markChanged();
         },
       ),
@@ -926,6 +1011,75 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         foregroundColor: Colors.white,
         minimumSize: const Size(double.infinity, 50),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final kfc = ref.watch(kfColorsProvider);
+    final isModelLoaded = ref.watch(activeModelInfoProvider) != null;
+
+    return BackHandler(
+      child: Scaffold(
+        backgroundColor: kfc.background,
+        appBar: AppBar(
+          backgroundColor: kfc.card,
+          elevation: 0,
+          title: Text(
+            'Pengaturan AI Lokal',
+            style: TextStyle(color: kfc.text, fontWeight: FontWeight.bold),
+          ),
+          iconTheme: IconThemeData(color: kfc.text),
+          actions: [
+            if (_hasUnsavedChanges)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: TextButton(
+                  onPressed: _saveAndApply,
+                  child: Text(
+                    'Simpan',
+                    style: TextStyle(color: kfc.accent, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          children: [
+            // Section 2 — Parameter Inferensi
+            _buildInferenceSection(kfc),
+            const SizedBox(height: 12),
+
+            // Section 3 — Konfigurasi Model
+            _buildModelConfigSection(kfc),
+            const SizedBox(height: 12),
+
+            // Section 4 — System Prompt
+            _buildSystemPromptSection(kfc),
+            const SizedBox(height: 12),
+
+            // Section 5 — Chat Template
+            _buildChatTemplateSection(kfc),
+            const SizedBox(height: 12),
+
+            // Section 6 — Performa
+            _buildPerformanceSection(kfc),
+            const SizedBox(height: 12),
+
+            // Section 7 — Pengaturan Lanjutan
+            _buildAdvancedSection(kfc),
+            const SizedBox(height: 16),
+
+            // Tombol Simpan & Terapkan
+            _buildApplyButton(kfc, isModelLoaded),
+          ],
+        ),
       ),
     );
   }
