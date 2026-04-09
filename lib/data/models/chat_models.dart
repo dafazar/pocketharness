@@ -320,6 +320,31 @@ class ChatMessage {
   bool get hasAttachments => attachments.isNotEmpty;
   bool get hasWebSources => webSources != null && webSources!.isNotEmpty;
 
+  // Factory helpers — mirror llama_context.ChatMessage API agar chat_screen
+  // tidak perlu import llama_context hanya untuk membuat pesan baru.
+  factory ChatMessage.user(String content) => ChatMessage(
+        id: const Uuid().v4(),
+        role: 'user',
+        content: content,
+        createdAt: DateTime.now(),
+      );
+
+  factory ChatMessage.assistant(String content, {bool isStreaming = false}) =>
+      ChatMessage(
+        id: const Uuid().v4(),
+        role: 'assistant',
+        content: content,
+        createdAt: DateTime.now(),
+        isStreaming: isStreaming,
+      );
+
+  factory ChatMessage.system(String content) => ChatMessage(
+        id: const Uuid().v4(),
+        role: 'system',
+        content: content,
+        createdAt: DateTime.now(),
+      );
+
   ChatMessage copyWith({
     String? id,
     String? role,

@@ -52,8 +52,26 @@ class ChatSessionNotifier extends StateNotifier<ChatSession> {
   }
 
   // 3. Replace pesan terakhir (setelah streaming selesai, set isStreaming=false)
-  void replaceLastAssistantMessage(ChatMessage msg) {
+  // Overload menerima ChatMessage langsung
+  void replaceLastAssistantMessage(
+    Object msgOrContent, {
+    dynamic stopReason, // ignored – kept for API compat; chat_models tidak pakai StopReason
+  }) {
     if (state.messages.isEmpty) return;
+    final ChatMessage msg;
+    if (msgOrContent is ChatMessage) {
+      msg = msgOrContent;
+    } else {
+      // msgOrContent adalah String
+      final content = msgOrContent as String;
+      final prev = state.messages.last;
+      msg = prev.copyWith(
+        content: content,
+        isStreaming: false,
+        isError: stopReason != null,
+        error: stopReason != null ? content : null,
+      );
+    }
     final msgs = [
       ...state.messages.sublist(0, state.messages.length - 1),
       msg,

@@ -31,9 +31,16 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:kanmongo/core/ai/llama_context.dart';
+import 'package:kanmongo/core/ai/llama_context.dart'
+    show
+        LlamaModelConfig,
+        InferenceConfig,
+        ModelStatus,
+        StopReason,
+        LlamaModelInfo;
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:kanmongo/data/models/chat_models.dart';
 import 'package:kanmongo/data/models/chat_models.dart' as chat_models;
 import 'package:kanmongo/data/services/ai/ai_service.dart';
 import 'package:kanmongo/data/services/ai/llama_service.dart';
@@ -412,15 +419,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           );
         }
         final msg = messages[index];
-        final isLastAssistant = msg.role == ChatRole.assistant &&
-            messages.where((m) => m.role == ChatRole.assistant).last.id == msg.id;
+        final isLastAssistant = msg.role == 'assistant' &&
+            messages.where((m) => m.role == 'assistant').last.id == msg.id;
 
         final bubble = _MessageBubble(
           message:        msg,
           showRawText:    _showRawText,
           attachments:    _messageAttachments[msg.id] ?? const [],
-          isLastUser:     msg.role == ChatRole.user &&
-              messages.where((m) => m.role == ChatRole.user).last.id == msg.id,
+          isLastUser:     msg.role == 'user' &&
+              messages.where((m) => m.role == 'user').last.id == msg.id,
           isLastAssistant: isLastAssistant,
           onDelete:       () => _deleteMessage(msg.id),
           onResend:       () => _resendMessage(msg),
@@ -875,7 +882,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     // ── 3. Pilih mode & build history ────────────────────────────────────────
     final choice  = ref.read(aiSourceProvider);
     final history = ref.read(chatSessionProvider).messages
-        .where((m) => m.content.isNotEmpty && m.role != ChatRole.system)
+        .where((m) => m.content.isNotEmpty && m.role != 'system')
         .toList()
         .reversed
         .skip(2)            // skip placeholder + user terbaru
@@ -883,7 +890,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         .reversed
         .take(10)
         .map((m) => <String, dynamic>{
-              'role':    m.role == ChatRole.user ? 'user' : 'assistant',
+              'role':    m.role == 'user' ? 'user' : 'assistant',
               'content': m.content,
             })
         .toList();
@@ -937,7 +944,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       if ((_currentSession.title == 'Chat Baru' || _currentSession.title.isEmpty) &&
           msgs.length >= 2) {
         final firstUser = msgs.firstWhere(
-          (m) => m.role == ChatRole.user && m.content.isNotEmpty,
+          (m) => m.role == 'user' && m.content.isNotEmpty,
           orElse: () => msgs.first,
         );
         final raw   = firstUser.content.trim().replaceAll('\n', ' ');
@@ -955,10 +962,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   List<Map<String, String>> _buildHistoryForAi() {
     final messages = ref.read(chatSessionProvider).messages;
     return messages
-        .where((m) => m.role != ChatRole.system && m.content.isNotEmpty)
+        .where((m) => m.role != 'system' && m.content.isNotEmpty)
         .take(12)
         .map((m) => <String, String>{
-              'role':    m.role == ChatRole.user ? 'user' : 'assistant',
+              'role':    m.role == 'user' ? 'user' : 'assistant',
               'content': m.content,
             })
         .toList();
@@ -1074,7 +1081,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           .where((m) => m.content.isNotEmpty &&
               messages.indexOf(m) < messages.length - 2)
           .map((m) => {
-                'role': m.role == ChatRole.user ? 'user' : 'assistant',
+                'role': m.role == 'user' ? 'user' : 'assistant',
                 'content': m.content,
               })
           .toList();
@@ -1140,14 +1147,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
       // Build history: semua pesan kecuali 2 terakhir (user baru + placeholder)
       final allMsgs = messages
-          .where((m) => m.role != ChatRole.system)
+          .where((m) => m.role != 'system')
           .toList();
       final histList = allMsgs.length > 2
           ? allMsgs.sublist(0, allMsgs.length - 2)
           : <ChatMessage>[];
       final historyMaps = histList
           .map((m) => {
-                'role': m.role == ChatRole.user ? 'user' : 'assistant',
+                'role': m.role == 'user' ? 'user' : 'assistant',
                 'content': m.content,
               })
           .toList();
@@ -1269,12 +1276,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     // Inject file context into the last user message if payloads present
     List<ChatMessage> msgToSend = messages
-        .where((m) => m.role != ChatRole.assistant || m.content.isNotEmpty)
+        .where((m) => m.role != 'assistant' || m.content.isNotEmpty)
         .toList();
 
     if (payloads.isNotEmpty) {
       final fileContext = _buildOfflineFileContext(payloads);
-      final lastUserIdx = msgToSend.lastIndexWhere((m) => m.role == ChatRole.user);
+      final lastUserIdx = msgToSend.lastIndexWhere((m) => m.role == 'user');
       if (lastUserIdx >= 0 && fileContext.isNotEmpty) {
         final orig = msgToSend[lastUserIdx];
         msgToSend = List<ChatMessage>.from(msgToSend);
@@ -1318,7 +1325,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             if (textExts.contains(ext)) {
               final currentMsgs = ref.read(chatSessionProvider).messages;
               final lastAi = currentMsgs.lastWhere(
-                (m) => m.role == ChatRole.assistant,
+                (m) => m.role == 'assistant',
                 orElse: () => ChatMessage.assistant(''),
               );
               if (lastAi.content.isNotEmpty && mounted) {
@@ -1355,7 +1362,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     // Bangun history dari messages (kecuali 2 terakhir: user baru + placeholder)
     final history = messages
-        .where((m) => m.role != ChatRole.system)
+        .where((m) => m.role != 'system')
         .toList();
     // Hapus 2 terakhir (user baru + placeholder asisten)
     final historyForApi = history.length > 2
@@ -1364,7 +1371,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
     final historyMaps = historyForApi
         .map((m) => {
-              'role': m.role == ChatRole.user ? 'user' : 'assistant',
+              'role': m.role == 'user' ? 'user' : 'assistant',
               'content': m.content,
             })
         .toList();
@@ -1382,7 +1389,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
-        _autoSaveCurrentSession(ref.read(chatSessionProvider));
+        _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
       },
       onError: (Object e) {
         if (!mounted) return;
@@ -1407,13 +1414,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final messages     = ref.read(chatSessionProvider).messages;
 
     final historyForApi = messages
-        .where((m) => m.role != ChatRole.system)
+        .where((m) => m.role != 'system')
         .toList();
     final histMaps = historyForApi.length > 2
         ? historyForApi
             .sublist(0, historyForApi.length - 2)
             .map((m) => {
-                  'role': m.role == ChatRole.user ? 'user' : 'assistant',
+                  'role': m.role == 'user' ? 'user' : 'assistant',
                   'content': m.content,
                 })
             .toList()
@@ -1635,7 +1642,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─────────────────────────────────────────────────────────────────────────
 
   Future<bool> _checkContextLimitBeforeGenerate(List<new_models.ChatMessage> messages) async {
-    final params = ref.read(inferenceParamsProvider);
+    final params = ref.read(inferenceConfigProvider);
     final maxCtx = params.contextSize;
 
     // Estimasi: 1 token ≈ 3.5 karakter
@@ -1755,7 +1762,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final messages = ref.read(chatSessionProvider).messages;
     if (assistantMsgIndex > 0 && assistantMsgIndex < messages.length) {
       final prev = messages[assistantMsgIndex - 1];
-      if (prev.role == ChatRole.user) {
+      if (prev.role == 'user') {
         return prev.content;
       }
     }
@@ -1774,7 +1781,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (messages.isEmpty) return;
     // Ambil pesan user terakhir
     final lastUser = messages.lastWhere(
-      (m) => m.role == ChatRole.user,
+      (m) => m.role == 'user',
       orElse: () => messages.last,
     );
     _inputCtrl.text = lastUser.content;
@@ -1787,7 +1794,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (messages.isEmpty) return;
     // Hapus pesan asisten terakhir
     final lastAssistant = messages.lastWhere(
-      (m) => m.role == ChatRole.assistant,
+      (m) => m.role == 'assistant',
       orElse: () => messages.last,
     );
     ref.read(chatSessionProvider.notifier).deleteMessage(lastAssistant.id);
@@ -1979,7 +1986,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       final now = DateTime.now();
       final converted = msgs.map((m) => new_models.ChatMessage(
         id: m.id,
-        role: m.role == ChatRole.user ? 'user' : m.role == ChatRole.assistant ? 'assistant' : 'system',
+        role: m.role,
         content: m.content,
         createdAt: now,
       )).toList();
@@ -2000,7 +2007,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   String _generateTitleFromMessages(List<ChatMessage> msgs) {
     final firstUser = msgs.firstWhere(
-      (m) => m.role == ChatRole.user && m.content.isNotEmpty,
+      (m) => m.role == 'user' && m.content.isNotEmpty,
       orElse: () => msgs.first,
     );
     final raw = firstUser.content.trim().replaceAll('\n', ' ');
@@ -2067,8 +2074,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (messages.isEmpty) return;
     final sb = StringBuffer();
     for (final m in messages) {
-      final peran = m.role == ChatRole.user ? 'Kamu' : 'AI';
-      final waktu = DateFormat('HH:mm').format(m.timestamp);
+      final peran = m.role == 'user' ? 'Kamu' : 'AI';
+      final waktu = DateFormat('HH:mm').format(m.createdAt);
       sb.writeln('[$waktu] $peran: ${m.content}');
       sb.writeln();
     }
@@ -2081,8 +2088,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final sb = StringBuffer();
     sb.writeln('# Chat Export — KanMon GO\n');
     for (final m in messages) {
-      final peran  = m.role == ChatRole.user ? '**Kamu**' : '**AI**';
-      final waktu  = DateFormat('HH:mm').format(m.timestamp);
+      final peran  = m.role == 'user' ? '**Kamu**' : '**AI**';
+      final waktu  = DateFormat('HH:mm').format(m.createdAt);
       sb.writeln('### $peran [$waktu]\n');
       sb.writeln('${m.content}\n');
       sb.writeln('---\n');
@@ -2095,7 +2102,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (messages.isEmpty) return;
     final sb = StringBuffer();
     for (final m in messages) {
-      final peran = m.role == ChatRole.user ? 'Kamu' : 'AI';
+      final peran = m.role == 'user' ? 'Kamu' : 'AI';
       sb.writeln('$peran: ${m.content}');
     }
     Clipboard.setData(ClipboardData(text: sb.toString()));
@@ -2774,7 +2781,7 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kfc    = KmColors.of(context);
-    final isUser = message.role == ChatRole.user;
+    final isUser = message.role == 'user';
 
     return GestureDetector(
       onLongPress: () => _showMessageSheet(context, kfc),
@@ -2877,7 +2884,7 @@ class _MessageBubble extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          DateFormat('HH:mm').format(message.timestamp),
+                          DateFormat('HH:mm').format(message.createdAt),
                           style: TextStyle(
                             color: isUser
                                 ? Colors.white70
