@@ -32,12 +32,9 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:kanmongo/core/ai/llama_context.dart'
-    show
-        LlamaModelConfig,
-        InferenceConfig,
-        ModelStatus,
-        StopReason,
-        LlamaModelInfo;
+    show LlamaModelConfig, InferenceConfig, ModelStatus, StopReason, LlamaModelInfo;
+// ignore: duplicate_import
+import 'package:kanmongo/core/ai/llama_context.dart' as lc;
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/chat_models.dart';
@@ -1291,8 +1288,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       }
     }
 
+    // Convert chat_models.ChatMessage → llama_context.ChatMessage untuk LlamaService
+    final llamaMsgs = msgToSend.map((m) => lc.ChatMessage(
+      id:        m.id,
+      role:      m.role == 'user'
+                   ? lc.ChatRole.user
+                   : m.role == 'assistant'
+                       ? lc.ChatRole.assistant
+                       : lc.ChatRole.system,
+      content:   m.content,
+      timestamp: m.createdAt,
+    )).toList();
+
     _genSub = LlamaService.instance.generateStream(
-      messages:             msgToSend,
+      messages:             llamaMsgs,
       config:               config,
       systemPromptOverride: systemPrompt,
     ).listen(

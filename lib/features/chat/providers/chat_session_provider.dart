@@ -133,6 +133,15 @@ class ChatSessionNotifier extends StateNotifier<ChatSession> {
   }
 
   // ── Helper: set lastAiMode pada state ─────────────────────────────────────
+
+  /// Estimasi penggunaan context window sebagai fraksi 0.0–1.0
+  /// menggunakan asumsi ~3.5 karakter per token
+  double getContextUsagePercent(int contextSize) {
+    if (contextSize <= 0) return 0.0;
+    final totalChars = state.messages.fold<int>(0, (sum, m) => sum + m.content.length);
+    final estimatedTokens = (totalChars / 3.5).ceil();
+    return (estimatedTokens / contextSize).clamp(0.0, 1.0);
+  }
   void setLastAiInfo({required AiMode mode, String? modelName}) {
     state = state.copyWith(
       lastAiMode: mode,

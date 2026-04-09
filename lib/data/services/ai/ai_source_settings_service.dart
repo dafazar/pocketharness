@@ -9,7 +9,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../models/ai_source_config.dart';
+import 'package:kanmongo/data/models/ai_source_config.dart';
 import 'package:kanmongo/data/services/ai/puter_ai_service.dart';
 import 'package:kanmongo/data/services/content/bulk_api_service.dart';
 import 'package:kanmongo/data/services/ai/offline_ai_service.dart';

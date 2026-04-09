@@ -300,6 +300,7 @@ class ChatMessage {
   final String? modelName;
   final List<ResearchSource>? webSources;
   final bool isError;
+  final int? tokenCount;
 
   const ChatMessage({
     required this.id,
@@ -313,6 +314,7 @@ class ChatMessage {
     this.modelName,
     this.webSources,
     this.isError = false,
+    this.tokenCount,
   });
 
   bool get isUser => role == 'user';
@@ -357,6 +359,7 @@ class ChatMessage {
     Object? aiMode = _sentinel,
     Object? modelName = _sentinel,
     Object? webSources = _sentinel,
+    int? tokenCount,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -372,6 +375,7 @@ class ChatMessage {
       webSources: webSources == _sentinel
           ? this.webSources
           : webSources as List<ResearchSource>?,
+      tokenCount: tokenCount ?? this.tokenCount,
     );
   }
 
@@ -398,6 +402,7 @@ class ChatMessage {
       'web_sources_json':
           sourceList != null ? jsonEncode(sourceList) : null,
       'is_error': isError ? 1 : 0,
+      'token_count': tokenCount,
     };
   }
 
@@ -458,6 +463,7 @@ class ChatMessage {
       aiMode: aiMode,
       modelName: map['model_name'] as String?,
       webSources: webSources,
+      tokenCount: map['token_count'] as int?,
     );
   }
 }
