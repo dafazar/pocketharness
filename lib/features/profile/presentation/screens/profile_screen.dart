@@ -9,6 +9,7 @@ import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/core/theme/theme_provider.dart';
 import 'package:kanmongo/data/repositories/user_repository.dart';
 import 'package:kanmongo/shared/widgets/wallpaper_background.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -110,10 +111,7 @@ class ProfileScreen extends ConsumerWidget {
                   _ProfileMenuItem(
                     icon: Icons.sync_rounded,
                     label: 'Sinkronisasi Data',
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Data disinkronisasi ke cloud.')),
-                    ),
+                    onTap: () => showTopSnack(context, 'Data disinkronisasi ke cloud.'),
                   ),
                   const SizedBox(height: 16),
                   _ProfileMenuItem(

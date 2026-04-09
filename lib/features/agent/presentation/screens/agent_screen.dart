@@ -29,6 +29,7 @@ import 'package:kanmongo/shared/widgets/ai_source_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ── Task History Model ────────────────────────────────────────────────────────
 
@@ -160,12 +161,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
           _processingFileName = '';
           _canSend            = true;
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(processed.error != null
-              ? '⚠️ ${processed.error}'
-              : '✅ File siap: ${processed.filename} (${processed.sizeLabel})'),
-          duration: const Duration(seconds: 3),
-        ));
+        showTopSnack(context, processed.error != null ? '⚠️ \${processed.error}' : '✅ File siap: \${processed.filename} (\${processed.sizeLabel})', duration: const Duration(seconds: 3), isError: processed.error != null);
       }
     } catch (e) {
       if (mounted) {
@@ -174,10 +170,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
           _processingFileName = '';
           _canSend            = _inputCtrl.text.trim().isNotEmpty;
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('❌ Gagal memproses file: $e'),
-          backgroundColor: Colors.red.shade700,
-        ));
+        showTopSnack(context, '❌ Gagal memproses file: $e', isError: true);
       }
     }
   }
@@ -247,11 +240,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
 
     // Validasi: jika ada file error, warn user dan bersihkan
     if (_pendingFile != null && _pendingFile!.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('⚠️ File bermasalah: ${_pendingFile!.error}\nFile dilepas dari task.'),
-        backgroundColor: Colors.orange.shade700,
-        duration: const Duration(seconds: 4),
-      ));
+      showTopSnack(context, '⚠️ File bermasalah: ${_pendingFile!.error}\nFile dilepas dari task.', duration: const Duration(seconds: 4), isError: true)
       setState(() => _pendingFile = null);
       if (task.trim().isEmpty) return;
     }
@@ -1023,13 +1012,7 @@ class _StepCard extends StatelessWidget {
   Future<void> _export(BuildContext ctx, String content, String format) async {
     final result = await ExportService.instance.export(data: content, format: format);
     if (result.isSuccess && ctx.mounted) {
-      ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-        content: Text('✅ Ekspor: ${result.filename}'),
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(label: 'Bagikan', onPressed: () {
-          ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
-          ExportService.instance.shareFile(result.path);
+      showTopSnack(ctx, '✅ Ekspor: ${result.filename}', duration: const Duration(seconds: 4)).instance.shareFile(result.path);
         }),
       ));
     }
@@ -1040,8 +1023,7 @@ class _StepCard extends StatelessWidget {
       await ExportService.instance.shareFile(filePath);
     } catch (e) {
       if (ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(content: Text('❌ Gagal berbagi file: $e')));
+        showTopSnack(ctx, '❌ Gagal berbagi file: $e', isError: true);
       }
     }
   }
@@ -1242,8 +1224,7 @@ class _AgentSettingsState extends State<AgentSettingsScreen> {
     await _svc.saveConfig(updated);
     if (mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Pengaturan agent disimpan')));
+      showTopSnack(context, '✅ Pengaturan agent disimpan');
     }
   }
 
@@ -1435,8 +1416,7 @@ class _AgentSettingsState extends State<AgentSettingsScreen> {
                 onPressed: () async {
                   await AgentMemoryService.instance.clear();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('✅ Memori dihapus')));
+                    showTopSnack(context, '✅ Memori dihapus');
                   }
                 },
                 icon: const Icon(Icons.delete_forever_rounded, size: 16),

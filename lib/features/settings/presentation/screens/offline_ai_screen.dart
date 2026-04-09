@@ -23,6 +23,7 @@ import 'package:kanmongo/data/services/model_manager_service.dart';
 import 'package:kanmongo/data/services/offline_ai_service.dart';
 import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 import 'package:kanmongo/shared/widgets/back_handler.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN UTAMA
@@ -163,61 +164,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
       final activeModel = ref.read(activeModelInfoProvider);
       if (activeModel != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Mereload model dengan konfigurasi baru...'),
-              backgroundColor: KmColors.of(context).accent,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
-        }
-        // Lepas lalu muat ulang model dengan konfigurasi terbaru
-        await LlamaService.instance.releaseModel();
-        await LlamaService.instance.loadModel(
-          activeModel,
-          config: ref.read(modelConfigProvider),
-        );
-      }
-    }
-
-    setState(() {
-      _hasUnsavedChanges = false;
-      _modelConfigChanged = false;
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Pengaturan berhasil disimpan ✓'),
-          backgroundColor: KmColors.of(context).accent,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-    }
-  }
-
-  // ── BENCHMARK ────────────────────────────────────────────────────────────
-  Future<void> _runBenchmark() async {
-    setState(() {
-      _isBenchmarking = true;
-      _benchmarkResult = null;
-    });
-
-    try {
-      // Pastikan model sudah dimuat sebelum benchmark
-      if (!LlamaService.instance.isModelLoaded) {
-        setState(() {
-          _benchmarkResult = 'Model belum dimuat. Muat model terlebih dahulu.';
-          _isBenchmarking = false;
-        });
-        return;
-      }
-
-      final loadStart = DateTime.now();
-      // Simulasi warmup — pada implementasi nyata ini akan memanggil LlamaService.generate
-      await Future.delayed(const Duration(milliseconds: 300));
+          showTopSnack(context, 'Mereload model dengan konfigurasi baru...');
       final loadMs = DateTime.now().difference(loadStart).inMilliseconds;
 
       final genStart = DateTime.now();
@@ -247,13 +194,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
       await prefs.remove(key);
     }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cache model dihapus (${keys.length} entri)'),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      showTopSnack(context, 'Cache model dihapus (${keys.length} entri)')
     }
   }
 
@@ -274,13 +215,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
     await file.writeAsString(jsonStr);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Diekspor ke: ${file.path}'),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      showTopSnack(context, 'Diekspor ke: ${file.path}')
     }
   }
 
@@ -315,261 +250,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
       _markChanged(modelConfigChanged: true);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Pengaturan berhasil diimpor ✓'),
-            backgroundColor: KmColors.of(context).accent,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal mengimpor: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    }
-  }
-
-  // ── RESET SEMUA KE DEFAULT ────────────────────────────────────────────────
-  Future<void> _resetAllToDefault() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Reset Semua Pengaturan?'),
-        content: const Text(
-          'Semua parameter inferensi, konfigurasi model, dan system prompt '
-          'akan dikembalikan ke nilai default. Tindakan ini tidak dapat dibatalkan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-
-    setState(() {
-      _localInference = InferenceConfig.defaultConfig;
-      _localModelConfig = LlamaModelConfig.defaultConfig;
-      _seedController.text = '-1';
-      _systemPromptController.text = _systemPromptPresets['Asisten Umum']!;
-      _selectedPreset = 'Asisten Umum';
-      _forceCpu = false;
-      _memorySaveMode = false;
-      _logTokens = false;
-    });
-
-    // Reset provider ke default
-    ref.read(inferenceConfigProvider.notifier).resetToDefaults();
-    ref.read(modelConfigProvider.notifier).resetToDefaults();
-    ref.read(systemPromptProvider.notifier).clear();
-
-    _markChanged(modelConfigChanged: true);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // BUILD UTAMA
-  // ─────────────────────────────────────────────────────────────────────────
-
-  @override
-  Widget build(BuildContext context) {
-    final kfc = KmColors.of(context);
-    final activeModel = ref.watch(activeModelInfoProvider);
-    final isModelLoaded = LlamaService.instance.isModelLoaded;
-
-    return ConfirmExitBack(
-      message: _hasUnsavedChanges
-          ? 'Ada perubahan yang belum disimpan. Keluar?'
-          : 'Kembali ke Settings?',
-      child: Scaffold(
-        backgroundColor: kfc.bg,
-        appBar: AppBar(
-          backgroundColor: kfc.card,
-          foregroundColor: Colors.white,
-          title: const Text('AI Lokal (Offline)'),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(1),
-            child: Divider(color: kfc.border, height: 1, thickness: 1),
-          ),
-          actions: [
-            // Tombol simpan cepat di AppBar jika ada perubahan
-            if (_hasUnsavedChanges)
-              TextButton(
-                onPressed: _saveAndApply,
-                child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-              ),
-          ],
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-          children: [
-            _buildModelActiveSection(kfc, activeModel, isModelLoaded),
-            const SizedBox(height: 20),
-            _buildInferenceParamsSection(kfc),
-            const SizedBox(height: 20),
-            _buildModelConfigSection(kfc),
-            const SizedBox(height: 20),
-            _buildSystemPromptSection(kfc),
-            const SizedBox(height: 20),
-            _buildChatTemplateSection(kfc),
-            const SizedBox(height: 20),
-            _buildPerformanceSection(kfc),
-            const SizedBox(height: 20),
-            _buildAdvancedSection(kfc),
-            const SizedBox(height: 20),
-            _buildApplyButton(kfc, isModelLoaded),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // SECTION 1 — MODEL AKTIF
-  // ─────────────────────────────────────────────────────────────────────────
-
-  Widget _buildModelActiveSection(
-    KmColors kfc,
-    LlamaModelInfo? activeModel,
-    bool isModelLoaded,
-  ) {
-    return _card(kfc, [
-      _sectionHeader(kfc, 'Model Aktif', Icons.memory_rounded),
-      const SizedBox(height: 14),
-
-      if (activeModel != null && isModelLoaded) ...[
-        // Indikator status model siap
-        Row(children: [
-          Container(
-            width: 8, height: 8,
-            decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 8),
-          const Text('Model Siap', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.w600)),
-        ]),
-        const SizedBox(height: 10),
-
-        // Nama model
-        Text(activeModel.name, style: TextStyle(color: kfc.text, fontSize: 15, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-
-        // Badge: ukuran, kuantisasi, jumlah parameter
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
-            if (activeModel.sizeBytes > 0) _badge(kfc, activeModel.sizeLabel, Colors.blue),
-            if (activeModel.quantization != QuantizationType.unknown)
-              _badge(kfc, activeModel.quantizationLabel, kfc.accent),
-            if (activeModel.parameterCount != null)
-              _badge(kfc, '${activeModel.parameterCount}B params', Colors.purple),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        // Tombol ganti dan lepas model
-        Row(children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: () => context.push(KmRoutes.modelManager),
-              icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-              label: const Text('Ganti Model'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kfc.accent,
-                side: BorderSide(color: kfc.accent),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          TextButton.icon(
-            onPressed: () async {
-              await LlamaService.instance.releaseModel();
-              ref.read(activeModelInfoProvider.notifier).state = null;
-              if (mounted) setState(() {});
-            },
-            icon: const Icon(Icons.eject_rounded, size: 16, color: Colors.red),
-            label: const Text('Lepas Model', style: TextStyle(color: Colors.red)),
-          ),
-        ]),
-
-      ] else ...[
-        // Belum ada model yang dimuat
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: kfc.surface,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(children: [
-            Icon(Icons.memory_rounded, color: kfc.textMuted, size: 40),
-            const SizedBox(height: 8),
-            Text('Belum ada model yang dimuat', style: TextStyle(color: kfc.textMuted, fontSize: 13)),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () => context.push(KmRoutes.modelManager),
-              icon: const Icon(Icons.folder_open_rounded, size: 16),
-              label: const Text('Pilih Model'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kfc.accent,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ]),
-        ),
-      ],
-    ]);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // SECTION 2 — PARAMETER INFERENSI
-  // ─────────────────────────────────────────────────────────────────────────
-
-  Widget _buildInferenceParamsSection(KmColors kfc) {
-    return _card(kfc, [
-      Row(children: [
-        _sectionHeader(kfc, 'Parameter Inferensi', Icons.tune_rounded),
-        const Spacer(),
-        // Tombol info tentang parameter inferensi
-        GestureDetector(
-          onTap: () => _showInfoDialog(
-            context,
-            'Parameter Inferensi',
-            'Parameter ini mengontrol cara model AI menghasilkan teks.\n\n'
-                'Temperature mengontrol kreativitas respons. '
-                'Top-P dan Top-K membatasi ruang pilihan token. '
-                'Min-P menetapkan batas probabilitas minimum. '
-                'Seed membuat output dapat direproduksi. '
-                'Mirostat adalah algoritma sampling adaptif untuk '
-                'menjaga kualitas teks tetap konsisten.',
-          ),
-          child: Icon(Icons.info_outline_rounded, color: kfc.textMuted, size: 20),
-        ),
-      ]),
-      const SizedBox(height: 16),
-
-      // 1. Temperature
-      _paramSlider(
-        kfc,
-        label: 'Temperature', emoji: '🌡️',
-        tooltip: 'Kreativitas respons. Rendah = deterministik, Tinggi = kreatif & random',
-        value: _localInference.temperature, min: 0.0, max: 2.0, decimals: 2,
-        onChanged: (v) {
-          setState(() => _localInference = _localInference.copyWith(temperature: v));
+        showTopSnack(context, 'Pengaturan berhasil diimpor ✓');
           _markChanged();
         },
       ),

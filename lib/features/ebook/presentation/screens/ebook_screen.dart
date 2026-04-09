@@ -21,6 +21,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:kanmongo/shared/widgets/wallpaper_background.dart';
 import 'package:kanmongo/shared/widgets/back_handler.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 enum _FileType { pdf, pptx, docx, xlsx, audio, video, text, unknown }
 
@@ -309,26 +310,11 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
       await _loadFiles();
       _exitEditMode();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Berganti nama ke "$newName"',
-              style: TextStyle(color: KmColors.of(context).text)),
-          backgroundColor: KmColors.of(context).card,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: KmColors.of(context).border),
-          ),
-          duration: const Duration(seconds: 2),
-        ));
+        showTopSnack(context, 'Berganti nama ke ', duration: const Duration(seconds: 2))
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Gagal rename: $e',
-              style: const TextStyle(color: Colors.white)),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ));
+        showTopSnack(context, 'Gagal rename: $e', isError: true)
       }
     }
   }
@@ -387,17 +373,7 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
     _exitEditMode();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('$count file dihapus',
-            style: TextStyle(color: KmColors.of(context).text)),
-        backgroundColor: KmColors.of(context).card,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: KmColors.of(context).border),
-        ),
-        duration: const Duration(seconds: 2),
-      ));
+      showTopSnack(context, '$count file dihapus', duration: const Duration(seconds: 2))
     }
   }
 
@@ -478,17 +454,7 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
       await _loadFiles();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('"${file['title']}" dihapus',
-              style: TextStyle(color: KmColors.of(context).text)),
-          backgroundColor: KmColors.of(context).card,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: KmColors.of(context).border),
-          ),
-          duration: const Duration(seconds: 2),
-        ));
+        showTopSnack(context, '', duration: const Duration(seconds: 2))
       }
     }
   }

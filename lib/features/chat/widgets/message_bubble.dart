@@ -23,6 +23,7 @@ import 'package:kanmongo/features/chat/widgets/code_block_widget.dart';
 import 'package:kanmongo/features/chat/widgets/file_edit_response_widget.dart';
 import 'package:kanmongo/features/chat/widgets/wave_dot_loading.dart';
 import 'package:kanmongo/features/chat/widgets/web_research_sources_card.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // =============================================================================
 // PUBLIC WIDGET: MessageBubble
@@ -357,9 +358,7 @@ class MessageBubble extends StatelessWidget {
                   Navigator.pop(context);
                   Clipboard.setData(
                       ClipboardData(text: message.content));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pesan disalin.')),
-                  );
+                  showTopSnack(context, 'Pesan disalin.');
                 },
               ),
               // Hapus

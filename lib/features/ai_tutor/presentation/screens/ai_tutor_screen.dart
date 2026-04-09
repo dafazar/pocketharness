@@ -8,6 +8,7 @@ import 'package:kanmongo/data/services/puter_ai_service.dart';
 import 'package:kanmongo/data/services/file_processor_service.dart';
 import 'package:kanmongo/data/services/ai_persona_service.dart';
 import 'package:kanmongo/data/services/export_service.dart';
+import 'package:kanmongo/data/services/kanmonai_system_prompt.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_file/open_file.dart';
@@ -21,6 +22,7 @@ import '../../../../data/services/sfx_service.dart';
 import '../../../../shared/widgets/back_handler.dart';
 import '../../../../shared/widgets/km_widgets.dart';
 import '../../../../shared/widgets/ai_source_picker.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ── Models ────────────────────────────────────
 
@@ -510,24 +512,15 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
     // Gunakan persona aktif dari AiPersonaService
     final personaPrompt = AiPersonaService.instance.buildSystemPrompt(subject: subject);
     if (personaPrompt.isNotEmpty) return personaPrompt;
-    return '''Kamu adalah AI Chat — asisten AI yang cerdas, ramah, dan sangat membantu untuk pengguna Indonesia.
-
-Kepribadianmu:
-- Hangat, antusias, dan mendukung semangat belajar
-- Selalu menggunakan Bahasa Indonesia yang natural dan mudah dipahami
-- Memberikan contoh praktis dan relatable untuk orang Indonesia
-- Menggunakan analogi yang relevan dengan konteks Indonesia
-
-Format respons:
-- Gunakan **bold** untuk penekanan
-- Gunakan format yang jelas dan terstruktur
-- Berikan contoh konkret yang mudah dipahami
-- Akhiri dengan pertanyaan follow-up atau tantangan kecil untuk belajar
-
-Fokus topik saat ini: $subject
-Sesuaikan gaya bahasa dengan konteks percakapan.
-
-Jangan pernah memberikan jawaban yang terlalu panjang. Prioritaskan kejelasan dan kemudahan dipahami.''';
+    // Fallback: KanMonAI identity + tutor context
+    return '$kKanMonAIShortSystemPrompt\n\n'
+        'Kepribadianmu sebagai tutor:\n'
+        '- Hangat, antusias, dan mendukung semangat belajar\n'
+        '- Memberikan contoh praktis dan relatable\n'
+        '- Format respons jelas dan terstruktur dengan **bold** untuk penekanan\n'
+        '- Akhiri dengan pertanyaan follow-up atau tantangan kecil\n\n'
+        'Fokus topik saat ini: $subject\n'
+        'Jangan pernah memberikan jawaban yang terlalu panjang. Prioritaskan kejelasan.';
   }
 
   void _scrollToBottom() {
@@ -1270,9 +1263,7 @@ class _FileOutputButton extends StatelessWidget {
       await ExportService.instance.shareFile(filePath);
     } catch (e) {
       if (ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('❌ Gagal berbagi: \$e')),
-        );
+        showTopSnack(ctx, '❌ Gagal berbagi: \$e', isError: true)
       }
     }
   }

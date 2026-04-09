@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kanmongo/core/auth/auth_service.dart';
 import 'package:kanmongo/core/router/app_router.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SHELL
@@ -171,16 +172,12 @@ class _EmailResetTabState extends ConsumerState<_EmailResetTab> {
       await ref.read(authServiceProvider)
           .resetPassword(_emailCtrl.text.trim());
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email reset dikirim ulang!')),
-        );
+        showTopSnack(context, 'Email reset dikirim ulang!')
         _startResendCountdown();
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal kirim ulang. Coba lagi.')),
-        );
+        showTopSnack(context, 'Gagal kirim ulang. Coba lagi.', isError: true)
       }
     } finally {
       if (mounted) setState(() => _loading = false);

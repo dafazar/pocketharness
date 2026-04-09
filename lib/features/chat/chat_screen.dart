@@ -54,6 +54,7 @@ import 'package:kanmongo/data/models/chat_models.dart' as new_models;
 import 'package:kanmongo/data/services/history_service.dart';
 import 'package:kanmongo/features/chat/widgets/web_research_sources_card.dart';
 import 'package:kanmongo/data/services/web_research_service.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 import 'package:go_router/go_router.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -220,7 +221,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                             ? _EmptyModelWidget(onSwitchOnline: _switchToOnlineMode)
                             : _buildMessageList(messages),
                       ),
-                      if (_isGenerating) _buildStopButton(),
                       _buildInputArea(),
                     ],
                   ),
@@ -421,28 +421,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─────────────────────────────────────────────────────────────────────────
   // STOP BUTTON
   // ─────────────────────────────────────────────────────────────────────────
-
-  Widget _buildStopButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _stopGeneration,
-          icon: const Icon(Icons.stop_rounded, size: 18),
-          label: const Text('Hentikan'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // INPUT AREA
@@ -672,10 +650,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   onPressed: () {
                     WebResearchService.instance.clearCache();
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Cache web research dibersihkan')),
-                    );
+                    showTopSnack(context, 'Cache web research dibersihkan');
                   },
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('Bersihkan Cache'),
@@ -715,17 +690,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Widget _buildActionButton(KmColors kfc) {
-    final hasText = _inputCtrl.text.trim().isNotEmpty;
-    if (hasText) {
-      // Tombol kirim
+    // ── Stop button (saat AI sedang generate) ────────────────────────────────
+    if (_isGenerating) {
       return GestureDetector(
-        onTap: _isGenerating ? null : _sendMessage,
+        onTap: _stopGeneration,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: _isGenerating ? kfc.textMuted : kfc.accent,
+            color: kfc.wrong,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(3)),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final hasText = _inputCtrl.text.trim().isNotEmpty;
+    if (hasText) {
+      // Tombol kirim
+      return GestureDetector(
+        onTap: _sendMessage,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: kfc.accent,
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
@@ -1857,9 +1858,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   void _showSnackbar(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
-    );
+    showTopSnack(context, msg, duration: const Duration(seconds: 3));
   }
 
   // ── Chat Edit Mode persistence ─────────────────────────────────────────────
@@ -2677,9 +2676,7 @@ class _MessageBubble extends StatelessWidget {
                   Navigator.pop(context);
                   Clipboard.setData(
                       ClipboardData(text: message.content));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pesan disalin.')),
-                  );
+                  showTopSnack(context, 'Pesan disalin.');
                 },
               ),
               ListTile(

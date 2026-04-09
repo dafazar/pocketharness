@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/services/ai_persona_service.dart';
 import 'package:uuid/uuid.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class AiPersonaScreen extends StatefulWidget {
   const AiPersonaScreen({super.key});
@@ -158,10 +159,7 @@ class _PersonaTabState extends State<_PersonaTab> {
               setState(() {});
               widget.onChanged();
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('✅ Persona aktif: ${p.emoji} ${p.name}'),
-                  duration: const Duration(seconds: 2),
-                ));
+                showTopSnack(context, '✅ Persona aktif: ${p.emoji} ${p.name}', duration: const Duration(seconds: 2));
               }
             },
           ),
@@ -368,8 +366,7 @@ class _ParameterTabState extends State<_ParameterTab> {
     await widget.svc.saveParams(_p);
     widget.onChanged();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Parameter disimpan')));
+      showTopSnack(context, '✅ Parameter disimpan');
     }
   }
 

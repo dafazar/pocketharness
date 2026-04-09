@@ -9,6 +9,7 @@ import 'package:open_file/open_file.dart';
 
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/chat_models.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class AttachmentPreview extends StatelessWidget {
   final ChatAttachment attachment;
@@ -543,12 +544,7 @@ class _CodePreview extends StatelessWidget {
                 GestureDetector(
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: text));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Disalin ke clipboard'),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
+                    showTopSnack(context, 'Disalin ke clipboard', duration: const Duration(seconds: 1));
                   },
                   child: Icon(Icons.copy_rounded, color: kfc.textSub, size: 14),
                 ),

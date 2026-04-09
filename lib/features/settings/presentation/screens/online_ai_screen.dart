@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/services/puter_ai_service.dart';
 import 'package:kanmongo/data/services/ai_source_settings_service.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class OnlineAiScreen extends StatefulWidget {
   const OnlineAiScreen({super.key});
@@ -58,15 +59,7 @@ class _OnlineAiScreenState extends State<OnlineAiScreen>
     await AiSourceSettingsService.instance.pullOnlineFromService();
     if (mounted) {
       setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${model.emoji} ${model.name} dipilih'),
-          backgroundColor: const Color(0xFF6C5CE7),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      showTopSnack(context, '${model.emoji} ${model.name} dipilih', duration: const Duration(seconds: 2))
     }
   }
 

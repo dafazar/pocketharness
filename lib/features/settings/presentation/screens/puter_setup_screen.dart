@@ -9,6 +9,7 @@ import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/services/puter_ai_service.dart';
 import 'package:kanmongo/data/services/bulk_api_service.dart';
 import 'package:kanmongo/data/services/ai_source_settings_service.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class PuterSetupScreen extends StatefulWidget {
   const PuterSetupScreen({super.key});
@@ -88,249 +89,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
     await AiSourceSettingsService.instance.pullOnlineFromService();
     setState(() => _saving = false);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('✅ Pengaturan tersimpan'),
-          backgroundColor: Colors.green.shade700,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  Future<void> _testConnection() async {
-    if (_apiKeyCtrl.text.trim().isEmpty) {
-      setState(() {
-        _testResult  = false;
-        _testMessage = 'API Key tidak boleh kosong';
-      });
-      return;
-    }
-
-    setState(() { _testing = true; _testResult = null; _testMessage = ''; });
-
-    // Simpan dulu agar service punya data terbaru
-    await _svc.saveSettings(
-      apiKey:  _apiKeyCtrl.text.trim(),
-      baseUrl: _baseUrlCtrl.text.trim().isEmpty
-          ? 'https://api.puter.com/puterai/openai/v1/chat/completions'
-          : _baseUrlCtrl.text.trim(),
-    );
-
-    final ok = await _svc.testConnection();
-    if (!mounted) return;
-
-    setState(() {
-      _testing     = false;
-      _testResult  = ok;
-      _testMessage = ok
-          ? 'Koneksi berhasil! AI Online siap digunakan.'
-          : 'Koneksi gagal. Periksa API key dan koneksi internet.';
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final kfc = KmColors.of(context);
-
-    return Scaffold(
-      backgroundColor: kfc.bg,
-      appBar: AppBar(
-        backgroundColor: kfc.card,
-        title: Text('Setup Puter.js',
-            style: TextStyle(color: kfc.text, fontWeight: FontWeight.bold)),
-        iconTheme: IconThemeData(color: kfc.text),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? SizedBox(
-                    width: 16, height: 16,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: kfc.accent))
-                : Text('Simpan',
-                    style: TextStyle(color: kfc.accent,
-                        fontWeight: FontWeight.w700)),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Divider(color: kfc.border, height: 1),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 60),
-        children: [
-
-          // ── Hero banner ──────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF6C5CE7), Color(0xFF00B4D8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF6C5CE7).withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text('⚡', style: TextStyle(fontSize: 24)),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Puter.js Integration',
-                          style: TextStyle(color: Colors.white,
-                              fontWeight: FontWeight.bold, fontSize: 18)),
-                      Text('Akses 20+ model AI premium',
-                          style: TextStyle(color: Colors.white70, fontSize: 13)),
-                    ])),
-              ]),
-              const SizedBox(height: 16),
-              // Features row
-              Row(children: [
-                _featureChip('☁️ Cloud'),
-                const SizedBox(width: 8),
-                _featureChip('🔒 Aman'),
-                const SizedBox(width: 8),
-                _featureChip('⚡ Cepat'),
-                const SizedBox(width: 8),
-                _featureChip('🆓 Gratis*'),
-              ]),
-            ]),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ── Aktif toggle ─────────────────────────────────────────────────
-          _sectionLabel('STATUS', kfc),
-          _card(kfc, child: Row(children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: _enabled
-                    ? Colors.green.withValues(alpha: 0.12)
-                    : kfc.inputFill,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                _enabled ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
-                color: _enabled ? Colors.green : kfc.textMuted,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('AI Online',
-                  style: TextStyle(color: kfc.text, fontWeight: FontWeight.w700,
-                      fontSize: 14)),
-              Text(_enabled
-                  ? 'Aktif — menggunakan model cloud'
-                  : 'Nonaktif — hanya AI offline yang bekerja',
-                  style: TextStyle(color: kfc.textSub, fontSize: 12)),
-            ])),
-            Switch(
-              value: _enabled,
-              onChanged: (v) => setState(() => _enabled = v),
-              activeColor: const Color(0xFF6C5CE7),
-            ),
-          ])),
-
-          const SizedBox(height: 20),
-
-          // ── API Key ──────────────────────────────────────────────────────
-          _sectionLabel('API KEY PUTER.JS', kfc),
-          _card(kfc, child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-            // Info daftar
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6C5CE7).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Row(children: [
-                  const Text('ℹ️', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 8),
-                  Text('Cara mendapatkan Auth Token:',
-                      style: TextStyle(color: kfc.text, fontWeight: FontWeight.w600,
-                          fontSize: 13)),
-                ]),
-                const SizedBox(height: 8),
-                _stepRow('1', 'Buka puter.com di browser HP kamu', kfc),
-                _stepRow('2', 'Daftar/login akun gratis Puter', kfc),
-                _stepRow('3', 'Buka Settings → API → API Keys', kfc),
-                _stepRow('4', 'Generate / copy auth token kamu', kfc),
-              ]),
-            ),
-            const SizedBox(height: 14),
-            // Input API key
-            TextField(
-              controller: _apiKeyCtrl,
-              obscureText: _obscureKey,
-              style: TextStyle(color: kfc.text, fontSize: 14,
-                  fontFamily: 'monospace'),
-              decoration: InputDecoration(
-                hintText: 'puter_xxxxxxxxxxxxxxxx',
-                hintStyle: TextStyle(color: kfc.textMuted, fontSize: 13),
-                labelText: 'Auth Token Puter',
-                labelStyle: TextStyle(color: kfc.textSub),
-                prefixIcon: Icon(Icons.key_rounded, color: kfc.accent, size: 20),
-                suffixIcon: Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(
-                    icon: Icon(
-                      _obscureKey ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                      color: kfc.textMuted, size: 18),
-                    onPressed: () => setState(() => _obscureKey = !_obscureKey),
-                  ),
-                  if (_apiKeyCtrl.text.isNotEmpty)
-                    IconButton(
-                      icon: Icon(Icons.clear_rounded, color: kfc.textMuted, size: 18),
-                      onPressed: () => setState(() => _apiKeyCtrl.clear()),
-                    ),
-                ]),
-                filled: true,
-                fillColor: kfc.inputFill,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: kfc.border)),
-                enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: kfc.border)),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: Color(0xFF6C5CE7), width: 1.5)),
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 10),
-            // Copy & paste button
-            Row(children: [
-              Expanded(child: OutlinedButton.icon(
-                onPressed: () async {
-                  final data = await Clipboard.getData('text/plain');
-                  if (data?.text != null) {
-                    setState(() => _apiKeyCtrl.text = data!.text!.trim());
+      showTopSnack(context, '✅ Pengaturan tersimpan');
                   }
                 },
                 icon: const Icon(Icons.paste_rounded, size: 16),
@@ -738,9 +497,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                   onPressed: () async {
                     final key = _bulkKeyCtrl.text.trim();
                     if (key.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('API Key tidak boleh kosong'), backgroundColor: Colors.red),
-                      );
+                      showTopSnack(context, 'API Key tidak boleh kosong', isError: true)
                       return;
                     }
                     await _bulk.addKey(
@@ -755,9 +512,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                     _bulkUrlCtrl.clear();
                     _bulkModelCtrl.clear();
                     setState(() {});
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('✅ API Key berhasil ditambahkan'), backgroundColor: Colors.green),
-                    );
+                    if (mounted) showTopSnack(context, '✅ API Key berhasil ditambahkan')
                   },
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text('Tambah Key', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -790,9 +545,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                     onPressed: () async {
                       await _bulk.resetAllLimits();
                       setState(() {});
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('✅ Semua limit di-reset'), backgroundColor: Colors.green),
-                      );
+                      if (mounted) showTopSnack(context, '✅ Semua limit di-reset')
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 14),
                     label: const Text('Reset Limit', style: TextStyle(fontSize: 11)),

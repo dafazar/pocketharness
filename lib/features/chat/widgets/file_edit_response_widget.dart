@@ -16,6 +16,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA CLASS
@@ -102,9 +103,7 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
       await Share.shareXFiles([XFile(path)], subject: widget.result.description);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membagikan: $e')),
-        );
+        showTopSnack(context, 'Gagal membagikan: $e', isError: true);
       }
     }
   }
@@ -114,9 +113,7 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
     if (text == null) return;
     await Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Konten disalin ke clipboard')),
-      );
+      showTopSnack(context, 'Konten disalin ke clipboard');
     }
   }
 

@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/ai_catalog_model.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class AiCatalogScreen extends StatefulWidget {
   const AiCatalogScreen({super.key});
@@ -82,10 +83,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
           _subs.remove(model.id);
           if (mounted) {
             setState(() => _downloads.remove(model.id));
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('✅ ${model.name} berhasil didownload!'),
-              backgroundColor: Colors.green.shade600,
-            ));
+            showTopSnack(context, '✅ ${model.name} berhasil didownload!')
           }
         }
         if (prog.hasError) {
@@ -93,10 +91,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
           _subs.remove(model.id);
           if (mounted) {
             setState(() => _downloads.remove(model.id));
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('❌ Download gagal: ${prog.error}'),
-              backgroundColor: Colors.red.shade700,
-            ));
+            showTopSnack(context, '❌ Download gagal: ${prog.error}', isError: true);
           }
         }
       },
@@ -106,10 +101,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
 
   void _copyLink(CatalogModel model) {
     Clipboard.setData(ClipboardData(text: model.downloadUrl));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('✅ Link disalin! Buka Chrome dan paste di address bar.'),
-      duration: Duration(seconds: 3),
-    ));
+    showTopSnack(context, '✅ Link disalin! Buka Chrome dan paste di address bar.', duration: Duration(seconds: 3))
   }
 
   void _showFilterSheet() {

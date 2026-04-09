@@ -11,6 +11,7 @@ import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/services/bulk_api_service.dart';
 import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class BulkApiSettingsScreen extends StatefulWidget {
   const BulkApiSettingsScreen({super.key});
@@ -728,12 +729,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                         );
                         if (context.mounted) setState(() {});
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('✅ Firebase config berhasil disimpan!'),
-                              backgroundColor: Colors.green,
-                            ),
-                          );
+                          showTopSnack(context, '✅ Firebase config berhasil disimpan!')
                         }
                       },
                       icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
@@ -967,11 +963,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                         onPressed: () async {
                           final k = keyCtrl.text.trim();
                           if (k.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text('API key tidak boleh kosong')),
-                            );
+                            showTopSnack(context, 'API key tidak boleh kosong')
                             return;
                           }
                           Navigator.pop(ctx);
@@ -1498,9 +1490,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                 _actionBtn(kfc, Icons.copy_rounded, 'Copy',
                     () {
                       Clipboard.setData(ClipboardData(text: key.apiKey));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('API key disalin')),
-                      );
+                      showTopSnack(context, 'API key disalin')
                     }, Colors.orange),
                 const Spacer(),
                 IconButton(
@@ -1703,9 +1693,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
               await _svc.resetAllLimits();
               setState(() {});
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Semua rate limit di-reset ✅')),
-                );
+                showTopSnack(context, 'Semua rate limit di-reset ✅')
               }
             },
           ),

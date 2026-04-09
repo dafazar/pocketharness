@@ -18,6 +18,7 @@ import 'package:kanmongo/data/services/agent_memory_service.dart';
 import 'package:kanmongo/data/services/media_edit_service.dart';
 import 'package:kanmongo/data/services/tool_installer_service.dart';
 import 'package:kanmongo/data/services/history_service.dart';
+import 'package:kanmongo/data/services/kanmonai_system_prompt.dart';
 
 // ── Tool result ───────────────────────────────────────────────────────────────
 class ToolResult {
@@ -1026,7 +1027,8 @@ Contoh:
       s.length > max ? '${s.substring(0, max)}\n... [terpotong]' : s;
 
   String _defaultSystemPrompt(AgentConfig cfg) =>
-      'Kamu adalah ${cfg.name} — AI agent yang powerful dan otonom. '
+      '$kKanMonAIShortSystemPrompt\n\n'
+      'Kamu sekarang berjalan sebagai ${cfg.name} — AI agent yang powerful dan otonom. '
       'Kamu bisa menggunakan berbagai tools untuk menyelesaikan task apapun. '
       'Selalu berpikir langkah-demi-langkah sebelum bertindak. '
       'Prioritaskan efisiensi dan hasil yang akurat. '

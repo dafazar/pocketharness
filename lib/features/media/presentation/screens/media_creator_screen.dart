@@ -24,6 +24,7 @@ import 'package:kanmongo/data/services/file_processor_service.dart';
 import 'package:kanmongo/data/services/media_edit_service.dart';
 import 'package:kanmongo/data/services/tool_installer_service.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class MediaCreatorScreen extends ConsumerStatefulWidget {
   const MediaCreatorScreen({super.key});
@@ -207,11 +208,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
     } finally {
       setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_saveMsg ?? ''),
-          backgroundColor: _saveMsg?.startsWith('✅') == true
-              ? Colors.green.shade600 : Colors.red.shade700,
-        ));
+        showTopSnack(context, _saveMsg ?? '', isError: _saveMsg?.startsWith('✅') != true);
       }
     }
   }
@@ -225,13 +222,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
       final file = File(p.join(dir.path, fn));
       await file.writeAsString(_aiResult);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('✅ Disimpan: $fn'),
-          action: SnackBarAction(
-            label: 'Copy',
-            onPressed: () => Clipboard.setData(ClipboardData(text: _aiResult)),
-          ),
-        ));
+        showTopSnack(context, '✅ Disimpan: $fn')
       }
     } catch (_) {}
   }
@@ -824,13 +815,9 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
                             skipIfExists: false,
                           );
                         }
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('✅ Disimpan ke galeri!'), backgroundColor: Colors.green),
-                        );
+                        if (mounted) showTopSnack(context, '✅ Disimpan ke galeri!')
                       } catch (e) {
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('❌ Gagal simpan: $e'), backgroundColor: Colors.red),
-                        );
+                        if (mounted) showTopSnack(context, '❌ Gagal simpan: $e', isError: true)
                       }
                     },
                     icon: const Icon(Icons.save_alt_rounded, size: 18),
@@ -845,9 +832,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
                   ElevatedButton.icon(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: _editOutputPath!));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Path disalin'), duration: Duration(seconds: 1)),
-                      );
+                      showTopSnack(context, 'Path disalin', duration: Duration(seconds: 1))
                     },
                     icon: const Icon(Icons.copy_rounded, size: 16),
                     label: const Text('Copy Path'),

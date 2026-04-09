@@ -14,6 +14,7 @@ import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODEL DATA: Preset Inferensi
@@ -230,9 +231,7 @@ class _AiInferenceParamsScreenState
   }
 
   void _tampilSnackbar(String pesan) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(pesan), duration: const Duration(seconds: 2)),
-    );
+    showTopSnack(context, pesan, duration: const Duration(seconds: 2));
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -665,13 +664,7 @@ class _TabPreset extends ConsumerWidget {
                       preset.config.repeatPenalty);
                   notifier.updateMaxTokens(
                       preset.config.maxNewTokens);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          'Preset "${preset.nama}" diterapkan'),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                  showTopSnack(context, 'Preset ', duration: const Duration(seconds: 2))
                 },
               );
             },

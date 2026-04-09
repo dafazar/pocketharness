@@ -22,6 +22,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/features/chat/widgets/artifact_panel.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class CodeBlockWidget extends StatefulWidget {
   final String code;
@@ -64,9 +65,7 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
     Clipboard.setData(ClipboardData(
       text: _isEditing ? _editCtrl.text : widget.code,
     ));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Kode disalin!'), duration: Duration(seconds: 2)),
-    );
+    showTopSnack(context, 'Kode disalin!');
   }
 
   void _toggleEdit() {
@@ -87,9 +86,7 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
     } catch (e) {
       debugPrint('[CodeBlock] Export error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export gagal: $e')),
-        );
+        showTopSnack(context, 'Export gagal: $e', isError: true);
       }
     }
   }
@@ -120,17 +117,13 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
 
       await File(path).writeAsString(_editCtrl.text);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Disimpan ke $path')),
-        );
+        showTopSnack(context, 'Disimpan ke $path');
         setState(() => _isEditing = false);
       }
     } catch (e) {
       debugPrint('[CodeBlock] SaveToFile error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal simpan: $e')),
-        );
+        showTopSnack(context, 'Gagal simpan: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

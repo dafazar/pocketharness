@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ── Provider (definisi TUNGGAL) ───────────────────────────────────────────────
 final connectivityProvider = StreamProvider<bool>((ref) async* {
@@ -110,18 +111,7 @@ class _NoInternetScreenState extends State<NoInternetScreen>
     if (!mounted) return;
     setState(() => _isChecking = false);
     if (!_hasConnection(result)) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Row(children: [
-          const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 18),
-          const SizedBox(width: 10),
-          Text('Masih offline. Percobaan ke-$_retryCount gagal.'),
-        ]),
-        backgroundColor: const Color(0xFFDC2626),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
-      ));
+      showTopSnack(context, 'Masih offline. Percobaan ke-$_retryCount gagal.', isError: true);
     }
   }
 

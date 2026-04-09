@@ -24,6 +24,7 @@ import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
 import 'package:kanmongo/data/services/permission_service.dart';
 import 'package:kanmongo/shared/widgets/back_handler.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN UTAMA
@@ -669,17 +670,7 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
   /// Tampilkan snackbar di bagian bawah layar
   void _showSnackbar(String message, {required Color color}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content  : Text(message, style: const TextStyle(color: Colors.white)),
-        backgroundColor: color,
-        behavior : SnackBarBehavior.floating,
-        duration : const Duration(seconds: 3),
-        shape    : RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin   : const EdgeInsets.all(12),
-      ),
-    );
-  }
+    showTopSnack(context, message);}
 
   KmColors get c => KmColors.of(context);
 }

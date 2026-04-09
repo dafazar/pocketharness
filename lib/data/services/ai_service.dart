@@ -18,6 +18,7 @@ import 'dart:convert';
 import 'dart:math' show min;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:kanmongo/data/services/kanmonai_system_prompt.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
@@ -266,10 +267,7 @@ class AiService {
     debugPrint('[AiService] Warm-up complete — mode=$currentMode');
   }
 
-  static const _fallbackSystemPrompt =
-      'Kamu adalah AI Chat — asisten AI yang cerdas dan membantu. '
-      'Jawab dalam Bahasa Indonesia kecuali diminta lain. '
-      'Jawab ringkas, jelas, dan langsung ke inti.';
+  static const _fallbackSystemPrompt = kKanMonAIShortSystemPrompt;
 
   static String get _defaultSystemPrompt =>
       AiPersonaService.instance.activePersona.systemPrompt.isNotEmpty

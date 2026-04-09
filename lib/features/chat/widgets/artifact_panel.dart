@@ -25,6 +25,7 @@ import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA MODEL
@@ -614,10 +615,7 @@ class _ArtifactPanelState extends State<ArtifactPanel>
     final ctrl = _editorCtrls[item.id];
     Clipboard.setData(ClipboardData(text: ctrl?.text ?? item.content));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Konten disalin!'),
-        duration: Duration(seconds: 2)),
-    );
+    showTopSnack(context, 'Konten disalin!');
   }
 
   Future<void> _saveToFile(ArtifactItem item) async {
@@ -631,15 +629,10 @@ class _ArtifactPanelState extends State<ArtifactPanel>
       final file    = File('${dir.path}/$name');
       await file.writeAsString(content);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Disimpan: ${file.path}'),
-          duration: const Duration(seconds: 3)),
-      );
+      showTopSnack(context, 'Disimpan: ${file.path}', duration: const Duration(seconds: 3));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal simpan: $e')),
-      );
+      showTopSnack(context, 'Gagal simpan: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -678,9 +671,7 @@ class _ArtifactPanelState extends State<ArtifactPanel>
     if (confirmed == true) {
       await File(targetPath).writeAsString(newContent);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Perubahan berhasil diterapkan!')),
-      );
+      showTopSnack(context, '✅ Perubahan berhasil diterapkan!');
     }
   }
 
@@ -693,10 +684,7 @@ class _ArtifactPanelState extends State<ArtifactPanel>
     final file    = File('${dir.path}/artifact_$ts$ext');
     await file.writeAsString(content);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('✅ File dibuat: ${file.path}'),
-        duration: const Duration(seconds: 3)),
-    );
+    showTopSnack(context, '✅ File dibuat: ${file.path}', duration: const Duration(seconds: 3));
   }
 
   Future<bool?> _showApplyConfirmDialog(String path, String newContent) {

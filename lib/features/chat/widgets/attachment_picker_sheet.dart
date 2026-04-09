@@ -36,6 +36,7 @@ import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/chat_models.dart';
 import 'package:kanmongo/data/services/file_processor_service.dart';
 import 'package:kanmongo/data/services/permission_service.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 // StoragePermissionHelper is defined in permission_service.dart (Session 2)
 
 // ── Public widget ─────────────────────────────────────────────────────────────
@@ -71,9 +72,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
     } catch (e) {
       debugPrint('[AttachmentPicker] pick error: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membuka picker: $e')),
-        );
+        showTopSnack(context, 'Gagal membuka picker: $e', isError: true);
       }
       return;
     }
@@ -184,9 +183,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
       if (status.isPermanentlyDenied) {
         await _showPermDeniedDialog('Kamera');
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin kamera diperlukan.')),
-        );
+        showTopSnack(context, 'Izin kamera diperlukan.');
       }
       return;
     }
@@ -276,11 +273,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
         }).toList());
         if (result.files.isEmpty) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('❌ File harus berformat dokumen (pdf, docx, xlsx, dll)'),
-              ),
-            );
+            showTopSnack(context, '❌ File harus berformat dokumen (pdf, docx, xlsx, dll)', isError: true);
           }
           return null;
         }
@@ -354,11 +347,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
         }).toList());
         if (result.files.isEmpty) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('❌ File harus berformat kode/teks (dart, py, js, dll)'),
-              ),
-            );
+            showTopSnack(context, '❌ File harus berformat kode/teks (dart, py, js, dll)', isError: true);
           }
           return null;
         }
@@ -438,11 +427,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
         };
         if (!validVideoExts.contains(ext)) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('❌ File harus berformat video (mp4, mkv, mov, dll)'),
-              ),
-            );
+            showTopSnack(context, '❌ File harus berformat video (mp4, mkv, mov, dll)', isError: true);
           }
           return null;
         }

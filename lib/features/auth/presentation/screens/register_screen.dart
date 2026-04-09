@@ -12,6 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kanmongo/core/auth/auth_service.dart';
 import 'package:kanmongo/core/router/app_router.dart';
 import 'package:kanmongo/data/repositories/user_repository.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // REGISTER SCREEN SHELL
@@ -235,15 +236,11 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
       await FirebaseAuth.instance.currentUser?.sendEmailVerification();
       _startResendCountdown();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email verifikasi dikirim ulang!')),
-        );
+        showTopSnack(context, 'Email verifikasi dikirim ulang!')
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal kirim ulang. Coba lagi.')),
-        );
+        showTopSnack(context, 'Gagal kirim ulang. Coba lagi.', isError: true)
       }
     }
   }
@@ -263,13 +260,7 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
         if (mounted) context.go(KmRoutes.home);
       } else if (!silent && mounted) {
         setState(() => _checkingVerif = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('Email belum diverifikasi. Cek kotak masuk kamu.'),
-          backgroundColor: Colors.orange.shade700,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-        ));
+        showTopSnack(context, 'Email belum diverifikasi. Cek kotak masuk kamu.');
       }
     } catch (_) {
       if (!silent && mounted) setState(() => _checkingVerif = false);

@@ -24,6 +24,7 @@ import 'package:kanmongo/data/services/tts_service.dart';
 import 'package:kanmongo/data/services/edge_tts_service.dart';
 import 'package:kanmongo/data/services/wallpaper_service.dart';
 import 'package:kanmongo/shared/widgets/wallpaper_background.dart';
+import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -879,12 +880,7 @@ class _WallpaperSection extends ConsumerWidget {
     await ref.read(wallpaperProvider.notifier).set(cfg);
 
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-        content: const Text('Wallpaper foto berhasil dipasang ✓'),
-        backgroundColor: KmColors.of(ctx).accent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+      showTopSnack(ctx, 'Wallpaper foto berhasil dipasang ✓');
     }
   }
 
@@ -904,24 +900,14 @@ class _WallpaperSection extends ConsumerWidget {
     await ref.read(wallpaperProvider.notifier).set(cfg);
 
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-        content: const Text('Wallpaper video berhasil dipasang ✓'),
-        backgroundColor: KmColors.of(ctx).accent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+      showTopSnack(ctx, 'Wallpaper video berhasil dipasang ✓');
     }
   }
 
   Future<void> _remove(BuildContext ctx, WidgetRef ref) async {
     await ref.read(wallpaperProvider.notifier).clear();
     if (ctx.mounted) {
-      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-        content: const Text('Wallpaper dihapus'),
-        backgroundColor: KmColors.of(ctx).card,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+      showTopSnack(ctx, 'Wallpaper dihapus');
     }
   }
 
