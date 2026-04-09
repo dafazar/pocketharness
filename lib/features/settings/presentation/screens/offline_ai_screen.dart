@@ -17,6 +17,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:kanmongo/core/theme/theme_providers.dart';
 import 'package:kanmongo/core/router/app_router.dart';
 import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';

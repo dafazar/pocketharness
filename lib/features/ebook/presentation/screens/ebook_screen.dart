@@ -310,11 +310,11 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
       await _loadFiles();
       _exitEditMode();
       if (mounted) {
-        showTopSnack(context, 'Berganti nama ke ', duration: const Duration(seconds: 2))
+        showTopSnack(context, 'Berganti nama ke ', duration: const Duration(seconds: 2));
       }
     } catch (e) {
       if (mounted) {
-        showTopSnack(context, 'Gagal rename: $e', isError: true)
+        showTopSnack(context, 'Gagal rename: $e', isError: true);
       }
     }
   }
@@ -373,7 +373,7 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
     _exitEditMode();
 
     if (mounted) {
-      showTopSnack(context, '$count file dihapus', duration: const Duration(seconds: 2))
+      showTopSnack(context, '$count file dihapus', duration: const Duration(seconds: 2));
     }
   }
 
@@ -454,7 +454,7 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
       await _loadFiles();
 
       if (mounted) {
-        showTopSnack(context, '', duration: const Duration(seconds: 2))
+        showTopSnack(context, '', duration: const Duration(seconds: 2));
       }
     }
   }

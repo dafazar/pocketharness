@@ -146,3 +146,23 @@ class ConfirmExitBack extends StatelessWidget {
     );
   }
 }
+
+// ── 3. BackHandler ───────────────────────────────────────────────────────────
+/// Widget pembungkus sederhana yang memungkinkan back navigation normal.
+/// Digunakan sebagai root widget di screen agar konsisten dengan PopScope.
+class BackHandler extends StatelessWidget {
+  final Widget child;
+
+  const BackHandler({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: true,
+      child: child,
+    );
+  }
+}

@@ -678,7 +678,8 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
