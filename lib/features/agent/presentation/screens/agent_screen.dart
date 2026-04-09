@@ -241,7 +241,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
 
     // Validasi: jika ada file error, warn user dan bersihkan
     if (_pendingFile != null && _pendingFile!.error != null) {
-      showTopSnack(context, '⚠️ File bermasalah: ${_pendingFile!.error}\nFile dilepas dari task.', duration: const Duration(seconds: 4), isError: true)
+      showTopSnack(context, '⚠️ File bermasalah: ${_pendingFile!.error}\nFile dilepas dari task.', duration: const Duration(seconds: 4), isError: true);
       setState(() => _pendingFile = null);
       if (task.trim().isEmpty) return;
     }
@@ -1013,9 +1013,8 @@ class _StepCard extends StatelessWidget {
   Future<void> _export(BuildContext ctx, String content, String format) async {
     final result = await ExportService.instance.export(data: content, format: format);
     if (result.isSuccess && ctx.mounted) {
-      showTopSnack(ctx, '✅ Ekspor: ${result.filename}', duration: const Duration(seconds: 4)).instance.shareFile(result.path);
-        }),
-      ));
+      showTopSnack(ctx, '✅ Ekspor: ${result.filename}', duration: const Duration(seconds: 4));
+      await ExportService.instance.shareFile(result.path);
     }
   }
 
