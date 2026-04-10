@@ -118,7 +118,7 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
     await _service.initialize();
     final ram = await _service.getAvailableRamMb();
     if (mounted) {
-      setState(() {
+      if (mounted) setState(() {
         _localModels    = _service.localModels;
         _downloads      = _service.activeDownloads;
         _availableRamMb = ram;
@@ -130,7 +130,7 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
       if (!mounted) return;
       final updatedRam = await _service.getAvailableRamMb();
       if (mounted && updatedRam != _availableRamMb) {
-        setState(() => _availableRamMb = updatedRam);
+        if (mounted) setState(() => _availableRamMb = updatedRam);
       }
     });
   }
@@ -445,7 +445,7 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
 
     if (sourcePath == null && picked.bytes != null) {
       // SAF inline bytes (small file)
-      setState(() { _isImporting = true; _importProgress = -1.0; });
+      if (mounted) setState(() { _isImporting = true; _importProgress = -1.0; });
       _showSnackbar('Memproses file...', color: c.info);
       final tempDir  = await getTemporaryDirectory();
       final tempFile = File(p.join(tempDir.path, picked.name));
@@ -455,7 +455,7 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
     } else if (sourcePath == null && picked.bytes == null) {
       // SAF URI, no path, no bytes → retry with withData: true
       debugPrint('[Import] SAF URI no path/bytes — retrying withData:true');
-      setState(() { _isImporting = true; _importProgress = -1.0; });
+      if (mounted) setState(() { _isImporting = true; _importProgress = -1.0; });
       _showSnackbar('Membaca file dari storage...', color: c.info);
 
       FilePickerResult? retry;
@@ -483,7 +483,7 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
         sourcePath = tempFile.path;
       } else {
         if (mounted) {
-          setState(() { _isImporting = false; _importProgress = -1.0; });
+          if (mounted) setState(() { _isImporting = false; _importProgress = -1.0; });
           _showSnackbar(
             '❌ Tidak dapat mengakses file. Coba salin ke folder Downloads terlebih dahulu.',
             color: c.wrong,
@@ -495,7 +495,7 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
 
     // ── 4. Start import with progress ────────────────────────────────────────
     if (!mounted) return;
-    setState(() { _isImporting = true; _importProgress = 0.0; });
+    if (mounted) setState(() { _isImporting = true; _importProgress = 0.0; });
     _showSnackbar('Mengimport model...', color: c.info);
 
     LocalModelInfo? model;
@@ -512,7 +512,7 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
     }
 
     if (!mounted) return;
-    setState(() { _isImporting = false; _importProgress = -1.0; });
+    if (mounted) setState(() { _isImporting = false; _importProgress = -1.0; });
 
     if (model != null) {
       _showSnackbar('✅ ${model.name} berhasil diimport!', color: c.correct);
@@ -531,19 +531,19 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
     _searchDebounce?.cancel();
 
     if (query.trim().isEmpty) {
-      setState(() {
+      if (mounted) setState(() {
         _searchResults = null;
         _isSearching   = false;
       });
       return;
     }
 
-    setState(() => _isSearching = true);
+    if (mounted) setState(() => _isSearching = true);
 
     _searchDebounce = Timer(const Duration(milliseconds: 500), () async {
       final results = await _service.searchHuggingFace(query.trim());
       if (!mounted) return;
-      setState(() {
+      if (mounted) setState(() {
         _searchResults = results;
         _isSearching   = false;
       });
@@ -906,7 +906,7 @@ class _LocalModelCardState extends State<_LocalModelCard> {
 
   Future<void> _handleLoad() async {
     if (_isLoading) return;
-    setState(() => _isLoading = true);
+    if (mounted) setState(() => _isLoading = true);
     try {
       await Future.microtask(widget.onLoad);
     } finally {

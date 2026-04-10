@@ -57,7 +57,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final engine   = await TtsEnginePrefs.getEngine();
     final jpVoice  = await TtsEnginePrefs.getJpVoice();
     final idVoice  = await TtsEnginePrefs.getIdVoice();
-    setState(() {
+    if (mounted) setState(() {
       _notifications = prefs.getBool(_kNotifications) ?? true;
       _ttsSpeed      = prefs.getDouble(_kTtsSpeed)    ?? 0.8;
       _ttsPitch      = prefs.getDouble(_kTtsPitch)    ?? 1.0;
@@ -132,7 +132,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     // Google TTS option
                     Expanded(child: GestureDetector(
                       onTap: () async {
-                        setState(() => _ttsEngine = 'google');
+                        if (mounted) setState(() => _ttsEngine = 'google');
                         await TtsEnginePrefs.setEngine('google');
                       },
                       child: AnimatedContainer(
@@ -155,7 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     // Edge TTS option
                     Expanded(child: GestureDetector(
                       onTap: () async {
-                        setState(() => _ttsEngine = 'edge');
+                        if (mounted) setState(() => _ttsEngine = 'edge');
                         await TtsEnginePrefs.setEngine('edge');
                       },
                       child: AnimatedContainer(
@@ -207,7 +207,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ]),
                     onChanged: (v) async {
                       if (v == null) return;
-                      setState(() => _edgeJpVoice = v);
+                      if (mounted) setState(() => _edgeJpVoice = v);
                       await TtsEnginePrefs.setJpVoice(v);
                     },
                   )
@@ -231,7 +231,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ]),
                     onChanged: (v) async {
                       if (v == null) return;
-                      setState(() => _edgeIdVoice = v);
+                      if (mounted) setState(() => _edgeIdVoice = v);
                       await TtsEnginePrefs.setIdVoice(v);
                     },
                   )
@@ -243,9 +243,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Row(children: [
                     Expanded(child: OutlinedButton.icon(
                       onPressed: _edgeTesting ? null : () async {
-                        setState(() => _edgeTesting = true);
+                        if (mounted) setState(() => _edgeTesting = true);
                         await EdgeTtsService.instance.speak('Halo! Saya AI asisten kamu.', voice: _edgeJpVoice, isJapanese: false);
-                        setState(() => _edgeTesting = false);
+                        if (mounted) setState(() => _edgeTesting = false);
                       },
                       icon: _edgeTesting ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.play_arrow_rounded, size: 18),
                       label: Text(_edgeTesting ? 'Memutar...' : 'Preview Suara'),
@@ -1201,8 +1201,8 @@ class _WallpaperPreviewState extends State<_WallpaperPreview> {
         FittedBox(
           fit: BoxFit.cover,
           child: SizedBox(
-            width:  _ctrl!.value.size.width,
-            height: _ctrl!.value.size.height,
+            width:  _ctrl?.value.size.width  ?? 1,
+            height: _ctrl?.value.size.height ?? 1,
             child:  VideoPlayer(_ctrl!),
           ),
         )

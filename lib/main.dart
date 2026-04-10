@@ -29,7 +29,6 @@ import 'package:kanmongo/data/services/database_service.dart';
 import 'package:kanmongo/data/services/ai_service.dart';
 import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
 import 'package:kanmongo/data/services/ai_persona_service.dart';
 import 'package:kanmongo/data/services/terminal_service.dart';
 import 'package:kanmongo/data/services/wallpaper_service.dart';
@@ -137,7 +136,7 @@ void main() async {
       // LlamaService is the canonical owner of the native bridge.
       // OfflineAiService settings are loaded for UI state (forceOffline, etc.)
       // but model loading itself is delegated to LlamaService.loadModel().
-      OfflineAiService.instance.loadSettings().then((_) async {
+      LlamaService.instance.loadSettings().then((_) async {
         final active    = ModelManagerService.instance.activeModel;
         final activeRaw = ModelManagerService.instance.activeModelRaw;
         if (active != null) {

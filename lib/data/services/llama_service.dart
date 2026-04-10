@@ -81,7 +81,7 @@ class LlamaService {
   bool _gotFirstToken = false;
 
   /// Broadcast stream untuk perubahan ModelStatus
-  final StreamController<ModelStatus> _statusCtrl =
+  var StreamController<ModelStatus> _statusCtrl =
       StreamController<ModelStatus>.broadcast();
 
   /// Broadcast stream untuk progres pemuatan model (0.0 – 1.0)
@@ -147,7 +147,21 @@ class LlamaService {
 
   /// Muat model ke dalam memori native llama.cpp.
   /// Mengembalikan true jika berhasil, false jika gagal.
+  
+  void _ensureStatusCtrlOpen() {
+    if (_statusCtrl.isClosed) {
+      _statusCtrl = StreamController<ModelStatus>.broadcast();
+    }
+  }
+
+  void _ensureProgressCtrlOpen() {
+    if (_progressCtrl.isClosed) {
+      _progressCtrl = StreamController<double>.broadcast();
+    }
+  }
   Future<bool> loadModel(LlamaModelInfo model, {LlamaModelConfig? config}) async {
+    _ensureStatusCtrlOpen();
+    _ensureProgressCtrlOpen();
     if (_status == ModelStatus.loading) {
       debugPrint('[LlamaService] loadModel() diabaikan — sedang loading');
       return false;

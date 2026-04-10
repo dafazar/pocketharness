@@ -79,7 +79,7 @@ class _OcrScreenState extends ConsumerState<OcrScreen> with TickerProviderStateM
     final picked = await _picker.pickImage(source: source, imageQuality: 90);
     if (picked == null) return;
 
-    setState(() {
+    if (mounted) setState(() {
       _imageFile = File(picked.path);
       _recognizedText = '';
       _tokens = [];
@@ -99,7 +99,7 @@ class _OcrScreenState extends ConsumerState<OcrScreen> with TickerProviderStateM
       recognizer.close();
 
       final text = result.text.trim();
-      setState(() {
+      if (mounted) setState(() {
         _recognizedText = text;
         _tokens         = _tokenize(text);
         _isProcessing   = false;
@@ -111,7 +111,7 @@ class _OcrScreenState extends ConsumerState<OcrScreen> with TickerProviderStateM
         await _analyzeWithGemini(text);
       }
     } catch (e) {
-      setState(() {
+      if (mounted) setState(() {
         _recognizedText = 'Gagal mengenali teks. Coba foto yang lebih jelas.';
         _isProcessing   = false;
       });
@@ -120,7 +120,7 @@ class _OcrScreenState extends ConsumerState<OcrScreen> with TickerProviderStateM
 
   // ── Gemini AI Analysis ───────────────────────────────────────────────────────
   Future<void> _analyzeWithGemini(String scannedText) async {
-    setState(() { _isAnalyzing = true; _analyzeStatus = 'AI sedang menganalisis...'; });
+    if (mounted) setState(() { _isAnalyzing = true; _analyzeStatus = 'AI sedang menganalisis...'; });
 
     try {
       final prompt = '''Analisis teks berikut secara ringkas dan jelas dalam Bahasa Indonesia:
@@ -139,7 +139,7 @@ Berikan respons dalam format JSON SAJA (tanpa markdown, tanpa backtick):
       final parsed = await AiService.instance.generateJson(prompt: prompt);
 
       if (parsed != null) {
-        setState(() {
+        if (mounted) setState(() {
           _aiResult = _AiResult(
             reading: parsed['reading'] as String? ?? '',
             meaning: parsed['meaning'] as String? ?? '',
@@ -153,20 +153,20 @@ Berikan respons dalam format JSON SAJA (tanpa markdown, tanpa backtick):
       } else {
         // Fallback: generate teks biasa
         final rawReply = await AiService.instance.generate(prompt: prompt);
-        setState(() {
+        if (mounted) setState(() {
           _aiResult = _AiResult(reading: '', meaning: rawReply, example: '');
           _isAnalyzing = false;
         });
         _resultCtrl.forward(from: 0);
       }
     } catch (e) {
-      setState(() { _isAnalyzing = false; _analyzeStatus = 'Koneksi gagal. Coba lagi.'; });
+      if (mounted) setState(() { _isAnalyzing = false; _analyzeStatus = 'Koneksi gagal. Coba lagi.'; });
     }
   }
 
   // ── Analisis token yang di-tap ────────────────────────────────────────────────
   Future<void> _analyzeToken(_WordToken token) async {
-    setState(() { _selectedToken = token; _isAnalyzing = true; _aiResult = null; });
+    if (mounted) setState(() { _selectedToken = token; _isAnalyzing = true; _aiResult = null; });
     await _tts.speak(token.text);
     await _analyzeWithGemini(token.text);
   }

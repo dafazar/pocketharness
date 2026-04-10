@@ -693,12 +693,10 @@ class OfflineAiService {
   }
 
   // ── Compatibility stubs ────────────────────────────────────────────────────
-  bool get isGenerating => _genRunning;
+  bool get isGenerating => LlamaService.instance.isGenerating;
   Future<void> stop() => stopGeneration();
 
-  final StreamController<double> _loadingProgressCtrl =
-      StreamController<double>.broadcast();
-  Stream<double> get loadingProgress => _loadingProgressCtrl.stream;
+  Stream<double> get loadingProgress => LlamaService.instance.loadProgressStream;
 
   double _temperature = 0.7;
   double _topP        = 0.9;

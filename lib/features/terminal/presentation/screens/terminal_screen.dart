@@ -81,7 +81,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
   Future<void> _bootstrap() async {
     await _svc.init();
     if (!mounted) return;
-    setState(() => _initialized = true);
+    if (mounted) setState(() => _initialized = true);
 
     final hasTermux = _svc.hasTermux;
     _push(TermEntry(TermType.info,
@@ -176,7 +176,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
 
     // Special commands
     if (input == '/ai') {
-      setState(() => _aiMode = !_aiMode);
+      if (mounted) setState(() => _aiMode = !_aiMode);
       _push(TermEntry(TermType.info,
           _aiMode ? '🤖 Mode AI aktif. Ketik /ai untuk nonaktifkan.'
                   : '💻 Mode Shell aktif.'));
@@ -248,7 +248,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
 
   // ── Streaming shell (untuk long-running commands) ─────────────────────────
   Future<void> _doShellStream(String cmd) async {
-    setState(() => _streaming = true);
+    if (mounted) setState(() => _streaming = true);
     _push(const TermEntry(TermType.output, ''));
 
     final sb = StringBuffer();
@@ -286,7 +286,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
   Future<void> _startEdit(String filename) async {
     try {
       final content = await _svc.readFile(filename);
-      setState(() { _editTarget = filename; _editOrig = content; });
+      if (mounted) setState(() { _editTarget = filename; _editOrig = content; });
       _push(TermEntry(TermType.info,
           '✏️ Edit "$filename" — Tulis instruksi edit kamu:'));
     } catch (e) {
@@ -316,7 +316,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
     }
 
     final edited = sb.toString();
-    setState(() { _pendingSavePath = fn; _pendingSaveContent = edited; });
+    if (mounted) setState(() { _pendingSavePath = fn; _pendingSaveContent = edited; });
     _push(TermEntry(TermType.info, '💾 Simpan ke "$fn"? [yes/no]'));
   }
 
@@ -533,7 +533,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
               label: '⬆️ hist',
               onTap: () {
                 if (_cmdHistory.isEmpty) return;
-                setState(() {
+                if (mounted) setState(() {
                   _histIdx = (_histIdx + 1).clamp(0, _cmdHistory.length - 1);
                   _inputCtrl.text = _cmdHistory[_histIdx];
                   _inputCtrl.selection = TextSelection.collapsed(
@@ -617,7 +617,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
 
                 if (matches.length == 1) {
                   parts[parts.length - 1] = matches.first;
-                  setState(() {
+                  if (mounted) setState(() {
                     _inputCtrl.text = parts.join(' ');
                     _inputCtrl.selection = TextSelection.collapsed(offset: _inputCtrl.text.length);
                   });
@@ -632,7 +632,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
                     final shellMatches = result.stdout.trim().split('\n').where((s) => s.isNotEmpty).toList();
                     if (shellMatches.length == 1) {
                       parts[parts.length - 1] = shellMatches.first;
-                      setState(() {
+                      if (mounted) setState(() {
                         _inputCtrl.text = parts.join(' ');
                         _inputCtrl.selection = TextSelection.collapsed(offset: _inputCtrl.text.length);
                       });
@@ -656,7 +656,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
             GestureDetector(
               onTap: () {
                 // Stop streaming
-                setState(() { _busy = false; _streaming = false; });
+                if (mounted) setState(() { _busy = false; _streaming = false; });
                 _push(const TermEntry(TermType.info, '^C'));
               },
               child: const Text('■',
@@ -767,7 +767,7 @@ class _FileManagerState extends State<_FileManager> {
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    if (mounted) setState(() => _loading = true);
     final f = await widget.svc.listFiles();
     if (mounted) setState(() { _files = f; _loading = false; });
   }

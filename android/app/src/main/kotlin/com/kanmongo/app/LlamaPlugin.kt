@@ -267,7 +267,7 @@ class LlamaPlugin(
             )
             "loading_progress" -> mapOf(
                 "type"     to "loading_progress",
-                "progress" to (promptTokens.toDouble() / 100.0) // progress encoded as promptTokens*100
+                "progress" to tokensPerSec.coerceIn(0.0, 1.0)  // tokensPerSec carries 0.0-1.0 progress value
             )
             "memory_warning" -> mapOf(
                 "type"        to "memory_warning",
@@ -370,7 +370,8 @@ class LlamaPlugin(
         val maxTokens     = call.argument<Int>("maxTokens")         ?: 512
         val seq           = call.argument<Int>("seq")               ?: 0
         val repeatPenalty = (call.argument<Double>("repeatPenalty") ?: 1.1).toFloat()
-        val seed          = call.argument<Int>("seed")              ?: -1
+        val seedRaw       = call.argument<Int>("seed")              ?: -1
+        val seed          = if (seedRaw < 0) (System.currentTimeMillis() and 0xFFFFFFFFL).toInt() else seedRaw
         val mirostatMode  = call.argument<Int>("mirostatMode")      ?: 0
         val mirostatTau   = (call.argument<Double>("mirostatTau")   ?: 5.0).toFloat()
         val mirostatEta   = (call.argument<Double>("mirostatEta")   ?: 0.1).toFloat()

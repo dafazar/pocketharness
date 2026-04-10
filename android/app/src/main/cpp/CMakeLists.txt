@@ -53,44 +53,11 @@ if(EXISTS "${LLAMA_SRC}/CMakeLists.txt")
 
     add_library(kanmongo_llama SHARED llama_jni.cpp)
 
-    # ── Auto-detect KV cache API name (berubah antar build llama.cpp) ─────────
-    # Tier 1: llama_kv_self_clear      → b5000–b10xxx (API "kv_self" era)
-    # Tier 2: llama_kv_cache_clear     → pre-b5000 (API lama)
-    # Tier 3: llama_kv_self_seq_rm     → b3000–b5000 (fallback seq_rm era lama)
-    # Tier 4: llama_memory_seq_rm      → b10xxx+ (API "memory" era terbaru)
-    #          dipanggil (ctx, seq_id=-1, p0=-1, p1=-1) = clear all sequences
-    #
-    # CATATAN: file(STRINGS...) mencari REGEX sebagai substring di tiap baris.
-    # Ini mendeteksi deklarasi fungsi, macro alias, maupun komentar yang mengandung nama tsb.
-    file(STRINGS "${LLAMA_SRC}/include/llama.h" _llama_h_kv_self_clear
-         REGEX "llama_kv_self_clear")
-    file(STRINGS "${LLAMA_SRC}/include/llama.h" _llama_h_kv_cache_clear
-         REGEX "llama_kv_cache_clear")
-    file(STRINGS "${LLAMA_SRC}/include/llama.h" _llama_h_kv_self_seq_rm
-         REGEX "llama_kv_self_seq_rm")
-    file(STRINGS "${LLAMA_SRC}/include/llama.h" _llama_h_memory_seq_rm
-         REGEX "llama_memory_seq_rm")
-
-    if(_llama_h_kv_self_clear)
-        message(STATUS "✅ KV cache API: llama_kv_self_clear (b5000–b10xxx)")
-        target_compile_definitions(kanmongo_llama PRIVATE LLAMA_HAS_KV_SELF_CLEAR=1)
-    elseif(_llama_h_kv_cache_clear)
-        message(STATUS "ℹ️  KV cache API: llama_kv_cache_clear (pre-b5000)")
-        target_compile_definitions(kanmongo_llama PRIVATE LLAMA_HAS_KV_CACHE_CLEAR=1)
-    elseif(_llama_h_kv_self_seq_rm)
-        message(STATUS "ℹ️  KV cache API: llama_kv_self_seq_rm fallback (b3000+)")
-        target_compile_definitions(kanmongo_llama PRIVATE LLAMA_HAS_KV_SELF_SEQ_RM=1)
-    elseif(_llama_h_memory_seq_rm)
-        message(STATUS "ℹ️  KV cache API: llama_memory_seq_rm (b10xxx+ API baru)")
-        target_compile_definitions(kanmongo_llama PRIVATE LLAMA_HAS_MEMORY_SEQ_RM=1)
-    else()
-        message(WARNING
-            "⚠️  Tidak ada API KV cache yang dikenali di llama.h!\n"
-            "   llama_jni.cpp akan pakai llama_memory_seq_rm sebagai last-resort fallback.\n"
-            "   Jika build gagal, periksa llama.h versi ini secara manual.")
-        # last-resort: coba llama_memory_seq_rm (API ter-baru)
-        target_compile_definitions(kanmongo_llama PRIVATE LLAMA_HAS_MEMORY_SEQ_RM=1)
-    endif()
+    # ── Memory API: llama_jni.cpp uses Memory V2 unconditionally (b10350+) ────
+    # llama_get_memory(ctx) + llama_memory_clear() are used directly.
+    # No #ifdef guards needed — requires llama.cpp b10350 or newer.
+    # See: llama_jni.cpp line ~471: llama_memory_clear(llama_get_memory(ctx), true)
+    message(STATUS "ℹ️  Memory API: unconditional Memory V2 (llama.cpp b10350+)")
 
     target_include_directories(kanmongo_llama PRIVATE
         ${LLAMA_SRC}/include

@@ -17,7 +17,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/core/theme/theme_providers.dart';
+import 'package:kanmongo/core/theme/theme_provider.dart';
 import 'package:kanmongo/core/router/app_router.dart';
 import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
@@ -118,7 +118,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
 
   // Tandai ada perubahan yang belum disimpan
   void _markChanged({bool modelConfigChanged = false}) {
-    setState(() {
+    if (mounted) setState(() {
       _hasUnsavedChanges = true;
       if (modelConfigChanged) _modelConfigChanged = true;
     });
@@ -168,7 +168,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
       }
     }
 
-    setState(() {
+    if (mounted) setState(() {
       _hasUnsavedChanges = false;
       _modelConfigChanged = false;
     });
@@ -183,7 +183,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
       if (mounted) showTopSnack(context, 'Muat model dulu sebelum menjalankan benchmark');
       return;
     }
-    setState(() {
+    if (mounted) setState(() {
       _isBenchmarking = true;
       _benchmarkResult = null;
     });
@@ -201,7 +201,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
       final tokenEst = words.length;
       final tps = ms > 0 ? tokenEst / (ms / 1000.0) : 0.0;
       if (mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _benchmarkResult = '~${tps.toStringAsFixed(1)} tok/s  •  '
               '${ms}ms total  •  ~$tokenEst token';
         });
@@ -238,7 +238,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
 
     final defaultInference = InferenceConfig.defaultConfig;
     final defaultModel = LlamaModelConfig.defaultConfig;
-    setState(() {
+    if (mounted) setState(() {
       _localInference = defaultInference;
       _localModelConfig = defaultModel;
       _seedController.text = defaultInference.seed.toString();
@@ -341,7 +341,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         tooltip: 'Kreativitas output AI. Tinggi = lebih kreatif/acak, Rendah = lebih deterministik',
         value: _localInference.temperature, min: 0.0, max: 2.0, decimals: 2,
         onChanged: (v) {
-          setState(() => _localInference = _localInference.copyWith(temperature: v));
+          if (mounted) setState(() => _localInference = _localInference.copyWith(temperature: v));
           _markChanged();
         },
       ),
@@ -354,7 +354,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         tooltip: 'Nucleus sampling. Pilih dari token dengan total probabilitas Top-P',
         value: _localInference.topP, min: 0.0, max: 1.0, decimals: 2,
         onChanged: (v) {
-          setState(() => _localInference = _localInference.copyWith(topP: v));
+          if (mounted) setState(() => _localInference = _localInference.copyWith(topP: v));
           _markChanged();
         },
       ),
@@ -367,7 +367,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         tooltip: 'Batasi pilihan token ke K token probabilitas tertinggi',
         value: _localInference.topK.toDouble(), min: 1, max: 200, decimals: 0,
         onChanged: (v) {
-          setState(() => _localInference = _localInference.copyWith(topK: v.round()));
+          if (mounted) setState(() => _localInference = _localInference.copyWith(topK: v.round()));
           _markChanged();
         },
       ),
@@ -380,7 +380,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         tooltip: 'Probabilitas minimum token relatif terhadap token terbaik',
         value: _localInference.minP, min: 0.0, max: 1.0, decimals: 2,
         onChanged: (v) {
-          setState(() => _localInference = _localInference.copyWith(minP: v));
+          if (mounted) setState(() => _localInference = _localInference.copyWith(minP: v));
           _markChanged();
         },
       ),
@@ -393,7 +393,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         tooltip: 'Penalti pengulangan. Tinggi = lebih sedikit repetisi dalam respons',
         value: _localInference.repeatPenalty, min: 1.0, max: 2.0, decimals: 2,
         onChanged: (v) {
-          setState(() => _localInference = _localInference.copyWith(repeatPenalty: v));
+          if (mounted) setState(() => _localInference = _localInference.copyWith(repeatPenalty: v));
           _markChanged();
         },
       ),
@@ -408,7 +408,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         items: const [64, 128, 256, 512, 1024, 2048, 4096, 8192],
         itemLabel: (v) => v.toString(),
         onChanged: (v) {
-          setState(() => _localInference = _localInference.copyWith(maxNewTokens: v));
+          if (mounted) setState(() => _localInference = _localInference.copyWith(maxNewTokens: v));
           _markChanged();
         },
       ),
@@ -454,7 +454,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
                 onChanged: (v) {
                   final parsed = int.tryParse(v);
                   if (parsed != null) {
-                    setState(() => _localInference = _localInference.copyWith(seed: parsed));
+                    if (mounted) setState(() => _localInference = _localInference.copyWith(seed: parsed));
                     _markChanged();
                   }
                 },
@@ -466,7 +466,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
               onPressed: () {
                 final randomSeed = Random().nextInt(99999);
                 _seedController.text = randomSeed.toString();
-                setState(() => _localInference = _localInference.copyWith(seed: randomSeed));
+                if (mounted) setState(() => _localInference = _localInference.copyWith(seed: randomSeed));
                 _markChanged();
               },
               icon: Icon(Icons.casino_rounded, color: kfc.accent),
@@ -498,7 +498,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
           ButtonSegment(value: 2, label: Text('v2')),
         ],
         onSelectionChanged: (sel) {
-          setState(() => _localInference = _localInference.copyWith(mirostatMode: sel.first));
+          if (mounted) setState(() => _localInference = _localInference.copyWith(mirostatMode: sel.first));
           _markChanged();
         },
       ),
@@ -512,7 +512,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
           tooltip: 'Target entropy untuk Mirostat. Lebih tinggi = output lebih beragam',
           value: _localInference.mirostatTau, min: 1.0, max: 10.0, decimals: 1,
           onChanged: (v) {
-            setState(() => _localInference = _localInference.copyWith(mirostatTau: v));
+            if (mounted) setState(() => _localInference = _localInference.copyWith(mirostatTau: v));
             _markChanged();
           },
         ),
@@ -523,7 +523,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
           tooltip: 'Learning rate Mirostat. Rendah = adaptasi lambat tapi lebih stabil',
           value: _localInference.mirostatEta, min: 0.01, max: 1.0, decimals: 2,
           onChanged: (v) {
-            setState(() => _localInference = _localInference.copyWith(mirostatEta: v));
+            if (mounted) setState(() => _localInference = _localInference.copyWith(mirostatEta: v));
             _markChanged();
           },
         ),
@@ -577,7 +577,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
             DropdownMenuItem(value: v, child: Text('$v tok'))).toList(),
           onChanged: (v) {
             if (v == null) return;
-            setState(() => _localModelConfig = _localModelConfig.copyWith(contextSize: v));
+            if (mounted) setState(() => _localModelConfig = _localModelConfig.copyWith(contextSize: v));
             _markChanged(modelConfigChanged: true);
           },
         ),
@@ -603,7 +603,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
             value: _localModelConfig.gpuLayers.toDouble(),
             min: 0, max: 99, divisions: 99, activeColor: kfc.accent,
             onChanged: _forceCpu ? null : (v) {
-              setState(() => _localModelConfig = _localModelConfig.copyWith(gpuLayers: v.round()));
+              if (mounted) setState(() => _localModelConfig = _localModelConfig.copyWith(gpuLayers: v.round()));
               _markChanged(modelConfigChanged: true);
             },
           ),
@@ -623,7 +623,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         value: _localModelConfig.nThreads.toDouble(),
         min: 1, max: 16, divisions: 15, activeColor: kfc.accent,
         onChanged: (v) {
-          setState(() => _localModelConfig = _localModelConfig.copyWith(nThreads: v.round()));
+          if (mounted) setState(() => _localModelConfig = _localModelConfig.copyWith(nThreads: v.round()));
           _markChanged(modelConfigChanged: true);
         },
       ),
@@ -643,7 +643,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
             DropdownMenuItem(value: v, child: Text(v.toString()))).toList(),
           onChanged: (v) {
             if (v == null) return;
-            setState(() => _localModelConfig = _localModelConfig.copyWith(nBatch: v));
+            if (mounted) setState(() => _localModelConfig = _localModelConfig.copyWith(nBatch: v));
             _markChanged(modelConfigChanged: true);
           },
         ),
@@ -662,7 +662,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         value: _localModelConfig.useFlashAttention,
         activeColor: kfc.accent,
         onChanged: (v) {
-          setState(() => _localModelConfig = _localModelConfig.copyWith(useFlashAttention: v));
+          if (mounted) setState(() => _localModelConfig = _localModelConfig.copyWith(useFlashAttention: v));
           _markChanged(modelConfigChanged: true);
         },
       ),
@@ -679,7 +679,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         value: _localModelConfig.useMemoryLock,
         activeColor: kfc.accent,
         onChanged: (v) {
-          setState(() => _localModelConfig = _localModelConfig.copyWith(useMemoryLock: v));
+          if (mounted) setState(() => _localModelConfig = _localModelConfig.copyWith(useMemoryLock: v));
           _markChanged(modelConfigChanged: true);
         },
       ),
@@ -713,7 +713,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
           DropdownMenuItem(value: key, child: Text(key))).toList(),
         onChanged: (v) {
           if (v == null) return;
-          setState(() {
+          if (mounted) setState(() {
             _selectedPreset = v;
             // Terapkan isi preset jika bukan Kustom
             if (v != 'Kustom') {
@@ -740,7 +740,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         ),
         onChanged: (v) {
           // Beralih ke Kustom jika pengguna mengetik manual
-          setState(() => _selectedPreset = 'Kustom');
+          if (mounted) setState(() => _selectedPreset = 'Kustom');
           _markChanged();
         },
       ),
@@ -754,7 +754,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         ),
         TextButton.icon(
           onPressed: () {
-            setState(() {
+            if (mounted) setState(() {
               _selectedPreset = 'Asisten Umum';
               _systemPromptController.text = _systemPromptPresets['Asisten Umum']!;
             });
@@ -795,7 +795,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
           DropdownMenuItem(value: t, child: Text(_chatTemplateName(t)))).toList(),
         onChanged: (v) {
           if (v == null) return;
-          setState(() => _localModelConfig = _localModelConfig.copyWith(chatTemplate: v));
+          if (mounted) setState(() => _localModelConfig = _localModelConfig.copyWith(chatTemplate: v));
           _markChanged(modelConfigChanged: true);
         },
       ),
@@ -871,7 +871,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         value: _forceCpu,
         activeColor: kfc.accent,
         onChanged: (v) {
-          setState(() {
+          if (mounted) setState(() {
             _forceCpu = v;
             // Paksa GPU layers ke 0 saat mode CPU aktif
             if (v) _localModelConfig = _localModelConfig.copyWith(gpuLayers: 0);
@@ -889,7 +889,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
         value: _memorySaveMode,
         activeColor: kfc.accent,
         onChanged: (v) {
-          setState(() {
+          if (mounted) setState(() {
             _memorySaveMode = v;
             // Turunkan context ke 2048 untuk hemat RAM
             if (v) _localModelConfig = _localModelConfig.copyWith(contextSize: 2048);

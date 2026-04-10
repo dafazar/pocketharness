@@ -91,7 +91,7 @@ class _PersonaTabState extends State<_PersonaTab> {
       builder: (_) => _CustomPersonaDialog(
         onSave: (persona) async {
           await widget.svc.saveCustomPersona(persona);
-          setState(() {});
+          if (mounted) setState(() {});
           widget.onChanged();
         },
       ),
@@ -105,7 +105,7 @@ class _PersonaTabState extends State<_PersonaTab> {
         existing: persona,
         onSave: (p) async {
           await widget.svc.saveCustomPersona(p);
-          setState(() {});
+          if (mounted) setState(() {});
           widget.onChanged();
         },
       ),
@@ -156,7 +156,7 @@ class _PersonaTabState extends State<_PersonaTab> {
             cs: cs,
             onTap: () async {
               await widget.svc.setActive(p.id);
-              setState(() {});
+              if (mounted) setState(() {});
               widget.onChanged();
               if (context.mounted) {
                 showTopSnack(context, '✅ Persona aktif: ${p.emoji} ${p.name}', duration: const Duration(seconds: 2));
@@ -217,13 +217,13 @@ class _PersonaTabState extends State<_PersonaTab> {
               cs: cs,
               onTap: () async {
                 await widget.svc.setActive(p.id);
-                setState(() {});
+                if (mounted) setState(() {});
                 widget.onChanged();
               },
               onEdit: () => _editCustom(p),
               onDelete: () async {
                 await widget.svc.deleteCustomPersona(p.id);
-                setState(() {});
+                if (mounted) setState(() {});
                 widget.onChanged();
               },
             ),

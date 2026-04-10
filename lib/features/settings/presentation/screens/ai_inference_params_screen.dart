@@ -160,7 +160,7 @@ class _AiInferenceParamsScreenState
 
     final config = ref.read(inferenceConfigProvider);
 
-    setState(() {
+    if (mounted) setState(() {
       _testOutput = '';
       _isGenerating = true;
       _totalToken = 0;
@@ -172,7 +172,7 @@ class _AiInferenceParamsScreenState
     // Timer untuk update durasi tiap detik
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_genStart != null && mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _genDuration = DateTime.now().difference(_genStart!);
         });
       }
@@ -184,7 +184,7 @@ class _AiInferenceParamsScreenState
     ).listen(
       (token) {
         if (!mounted) return;
-        setState(() {
+        if (mounted) setState(() {
           _testOutput += token;
           _totalToken++;
           final elapsed =
@@ -205,7 +205,7 @@ class _AiInferenceParamsScreenState
       onDone: () {
         if (!mounted) return;
         _durationTimer?.cancel();
-        setState(() {
+        if (mounted) setState(() {
           _isGenerating = false;
           if (_genStart != null) {
             _genDuration = DateTime.now().difference(_genStart!);
@@ -215,7 +215,7 @@ class _AiInferenceParamsScreenState
       onError: (e) {
         if (!mounted) return;
         _durationTimer?.cancel();
-        setState(() {
+        if (mounted) setState(() {
           _isGenerating = false;
           _testOutput += '\n\n[Error: $e]';
         });

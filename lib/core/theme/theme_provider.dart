@@ -12,8 +12,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 // SharedPreferences provider — override with actual instance in main()
 // ─────────────────────────────────────────────────────────────────────────────
 
+// This provider MUST be overridden in main() via ProviderScope.overrides.
+// The throw is intentional and unreachable at runtime if main() is correct.
 final sharedPreferencesProvider = Provider<SharedPreferences>(
-  (ref) => throw UnimplementedError('Override sharedPreferencesProvider in main()'),
+  (ref) => throw StateError(
+  '[KanMon] sharedPreferencesProvider must be overridden in ProviderScope. '
+  'Check main.dart → runApp(ProviderScope(overrides: [...])).', 
+),
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -121,3 +126,11 @@ final themePackProvider = NotifierProvider<ThemePackNotifier, AppThemePack>(
   ThemePackNotifier.new,
 );
 
+
+
+/// Active KmColors for the current theme pack.
+/// Used by offline_ai_screen and other screens that need direct color access.
+final kfColorsProvider = Provider<dynamic>((ref) {
+  final pack = ref.watch(themePackProvider);
+  return pack;
+});

@@ -32,18 +32,18 @@ class AiMessage {
   }) : timestamp = timestamp ?? DateTime.now();
 
   factory AiMessage.fromJson(Map<String, dynamic> json) => AiMessage(
-    id: json['id'] as String? ?? '',
-    role: json['role'] as String? ?? 'user',
-    content: json['content'] as String? ?? '',
-    mimeType: json['mimeType'] as String?,
+    id: json['id'] as String? ?? ''? ?? '',
+    role: json['role'] as String? ?? ''? ?? 'user',
+    content: json['content'] as String? ?? ''? ?? '',
+    mimeType: json['mimeType'] as String? ?? ''?,
     binaryData: json['binaryData'] != null 
       ? Uint8List.fromList(List<int>.from(json['binaryData'] as List))
       : null,
     attachedFilePaths: List<String>.from(json['attachedFilePaths'] as List? ?? []),
     timestamp: json['timestamp'] != null
-      ? DateTime.parse(json['timestamp'] as String)
+      ? DateTime.parse(json['timestamp'] as String? ?? '')
       : null,
-    sourceAi: json['sourceAi'] as String?,
+    sourceAi: json['sourceAi'] as String? ?? ''?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -115,23 +115,23 @@ class AiRequest {
   });
 
   factory AiRequest.fromJson(Map<String, dynamic> json) => AiRequest(
-    id: json['id'] as String? ?? '',
-    sourceType: json['sourceType'] as String? ?? 'online',
-    sourceModelId: json['sourceModelId'] as String? ?? '',
+    id: json['id'] as String? ?? ''? ?? '',
+    sourceType: json['sourceType'] as String? ?? ''? ?? 'online',
+    sourceModelId: json['sourceModelId'] as String? ?? ''? ?? '',
     conversationHistory: (json['conversationHistory'] as List?)
       ?.map((m) => AiMessage.fromJson(m as Map<String, dynamic>))
       .toList() ?? [],
-    userMessage: json['userMessage'] as String? ?? '',
-    systemPrompt: json['systemPrompt'] as String? ?? '',
-    personaName: json['personaName'] as String? ?? '',
+    userMessage: json['userMessage'] as String? ?? ''? ?? '',
+    systemPrompt: json['systemPrompt'] as String? ?? ''? ?? '',
+    personaName: json['personaName'] as String? ?? ''? ?? '',
     parameters: json['parameters'] as Map<String, dynamic>? ?? {},
     attachedFilePaths: List<String>.from(json['attachedFilePaths'] as List? ?? []),
-    enableStreaming: json['enableStreaming'] as bool? ?? true,
-    timeoutSeconds: json['timeoutSeconds'] as int? ?? 30,
+    enableStreaming: json['enableStreaming'] as bool? ?? false? ?? true,
+    timeoutSeconds: json['timeoutSeconds'] as int? ?? 0? ?? 30,
     customHeaders: Map<String, String>.from(json['customHeaders'] as Map? ?? {}),
-    languageHint: json['languageHint'] as String? ?? 'auto',
-    webSearchEnabled: json['webSearchEnabled'] as bool? ?? false,
-    searchQuery: json['searchQuery'] as String?,
+    languageHint: json['languageHint'] as String? ?? ''? ?? 'auto',
+    webSearchEnabled: json['webSearchEnabled'] as bool? ?? false? ?? false,
+    searchQuery: json['searchQuery'] as String? ?? ''?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -178,13 +178,13 @@ class AiResponseMetadata {
   });
 
   factory AiResponseMetadata.fromJson(Map<String, dynamic> json) => AiResponseMetadata(
-    totalTokensUsed: json['totalTokensUsed'] as int? ?? 0,
-    promptTokens: json['promptTokens'] as int? ?? 0,
-    completionTokens: json['completionTokens'] as int? ?? 0,
-    finishReason: json['finishReason'] as String?,
+    totalTokensUsed: json['totalTokensUsed'] as int? ?? 0? ?? 0,
+    promptTokens: json['promptTokens'] as int? ?? 0? ?? 0,
+    completionTokens: json['completionTokens'] as int? ?? 0? ?? 0,
+    finishReason: json['finishReason'] as String? ?? ''?,
     processingTimeMs: (json['processingTimeMs'] as num?)?.toDouble(),
-    httpStatusCode: json['httpStatusCode'] as int?,
-    errorMessage: json['errorMessage'] as String?,
+    httpStatusCode: json['httpStatusCode'] as int? ?? 0?,
+    errorMessage: json['errorMessage'] as String? ?? ''?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -225,19 +225,19 @@ class AiResponse {
   }) : timestamp = timestamp ?? DateTime.now();
 
   factory AiResponse.fromJson(Map<String, dynamic> json) => AiResponse(
-    id: json['id'] as String? ?? '',
-    requestId: json['requestId'] as String? ?? '',
-    role: json['role'] as String? ?? 'assistant',
-    content: json['content'] as String? ?? '',
+    id: json['id'] as String? ?? ''? ?? '',
+    requestId: json['requestId'] as String? ?? ''? ?? '',
+    role: json['role'] as String? ?? ''? ?? 'assistant',
+    content: json['content'] as String? ?? ''? ?? '',
     codeBlocks: List<String>.from(json['codeBlocks'] as List? ?? []),
     detectedArtifacts: (json['detectedArtifacts'] as List?)
       ?.map((a) => AiCodeBlock.fromJson(a as Map<String, dynamic>))
       .toList() ?? [],
     metadata: AiResponseMetadata.fromJson(json['metadata'] as Map<String, dynamic>? ?? {}),
-    isStreamed: json['isStreamed'] as bool? ?? false,
-    chunkCount: json['chunkCount'] as int? ?? 1,
+    isStreamed: json['isStreamed'] as bool? ?? false? ?? false,
+    chunkCount: json['chunkCount'] as int? ?? 0? ?? 1,
     timestamp: json['timestamp'] != null
-      ? DateTime.parse(json['timestamp'] as String)
+      ? DateTime.parse(json['timestamp'] as String? ?? '')
       : null,
   );
 
@@ -297,11 +297,11 @@ class AiCodeBlock {
   }) : lineCount = code.split('\n').length;
 
   factory AiCodeBlock.fromJson(Map<String, dynamic> json) => AiCodeBlock(
-    id: json['id'] as String? ?? '',
-    language: json['language'] as String? ?? 'text',
-    code: json['code'] as String? ?? '',
-    description: json['description'] as String?,
-    filename: json['filename'] as String?,
+    id: json['id'] as String? ?? ''? ?? '',
+    language: json['language'] as String? ?? ''? ?? 'text',
+    code: json['code'] as String? ?? ''? ?? '',
+    description: json['description'] as String? ?? ''?,
+    filename: json['filename'] as String? ?? ''?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -365,16 +365,16 @@ class AiStreamChunk {
   }) : timestamp = timestamp ?? DateTime.now();
 
   factory AiStreamChunk.fromJson(Map<String, dynamic> json) => AiStreamChunk(
-    id: json['id'] as String? ?? '',
-    requestId: json['requestId'] as String? ?? '',
-    deltaContent: json['deltaContent'] as String? ?? '',
-    sequenceNumber: json['sequenceNumber'] as int? ?? 0,
+    id: json['id'] as String? ?? ''? ?? '',
+    requestId: json['requestId'] as String? ?? ''? ?? '',
+    deltaContent: json['deltaContent'] as String? ?? ''? ?? '',
+    sequenceNumber: json['sequenceNumber'] as int? ?? 0? ?? 0,
     metadata: json['metadata'] != null
       ? AiResponseMetadata.fromJson(json['metadata'] as Map<String, dynamic>)
       : null,
-    isLast: json['isLast'] as bool? ?? false,
+    isLast: json['isLast'] as bool? ?? false? ?? false,
     timestamp: json['timestamp'] != null
-      ? DateTime.parse(json['timestamp'] as String)
+      ? DateTime.parse(json['timestamp'] as String? ?? '')
       : null,
   );
 

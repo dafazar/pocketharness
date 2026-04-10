@@ -144,7 +144,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   }
 
   void _selectSample(String key, String value) {
-    setState(() {
+    if (mounted) setState(() {
       _selectedSample = key;
       if (key == '📝 Teks Bebas') {
         _currentText = _inputCtrl.text;
@@ -198,13 +198,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               icon: const Icon(Icons.text_decrease_rounded),
               tooltip: 'Perkecil teks',
               onPressed: () =>
-                  setState(() => _fontSize = (_fontSize - 2).clamp(12, 32)),
+                  if (mounted) setState(() => _fontSize = (_fontSize - 2).clamp(12, 32)),
             ),
             IconButton(
               icon: const Icon(Icons.text_increase_rounded),
               tooltip: 'Perbesar teks',
               onPressed: () =>
-                  setState(() => _fontSize = (_fontSize + 2).clamp(12, 32)),
+                  if (mounted) setState(() => _fontSize = (_fontSize + 2).clamp(12, 32)),
             ),
             IconButton(
               icon: Icon(
@@ -215,7 +215,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   ? 'Sembunyikan furigana'
                   : 'Tampilkan furigana',
               onPressed: () =>
-                  setState(() => _showFurigana = !_showFurigana),
+                  if (mounted) setState(() => _showFurigana = !_showFurigana),
             ),
             IconButton(
               icon: Icon(Icons.volume_up_rounded, color: c.accent),
@@ -315,7 +315,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                       style: TextStyle(color: c.text, fontSize: 13),
                       onChanged: (_) {
                         if (_selectedSample != '📝 Teks Bebas') {
-                          setState(
+                          if (mounted) setState(
                               () => _selectedSample = '📝 Teks Bebas');
                         }
                       },
@@ -339,7 +339,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () {
-                      setState(() {
+                      if (mounted) setState(() {
                         _currentText    = _inputCtrl.text;
                         _selectedSample = '📝 Teks Bebas';
                       });
@@ -547,7 +547,7 @@ class _JapaneseReaderWidgetState
       if (!isKanji || _cache.containsKey(seg)) continue;
       _FuriganaService.instance.lookup(seg).then((r) {
         if (!mounted || _cache[seg] == r) return;
-        setState(() => _cache[seg] = r);
+        if (mounted) setState(() => _cache[seg] = r);
       });
     }
   }

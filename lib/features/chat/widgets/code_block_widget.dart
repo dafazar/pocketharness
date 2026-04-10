@@ -136,11 +136,13 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
     try {
       if (['python', 'py'].contains(lang)) {
         final tmp = await getTemporaryDirectory();
-        final f   = File('${tmp.path}/run_temp.py')..writeAsStringSync(widget.code);
+        final f   = File('${tmp.path}/run_temp.py')..createSync();
+        await File('${tmp.path}/run_temp.py').writeAsString(widget.code);
         cmd = 'python3 ${f.path}';
       } else if (['js', 'javascript'].contains(lang)) {
         final tmp = await getTemporaryDirectory();
-        final f   = File('${tmp.path}/run_temp.js')..writeAsStringSync(widget.code);
+        final f   = File('${tmp.path}/run_temp.js')..createSync();
+        await File('${tmp.path}/run_temp.js').writeAsString(widget.code);
         cmd = 'node ${f.path}';
       } else if (['sh', 'bash', 'shell'].contains(lang)) {
         cmd = widget.code.split('\n').first.trim();

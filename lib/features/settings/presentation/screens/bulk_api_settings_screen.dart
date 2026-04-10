@@ -34,7 +34,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
     _tab = TabController(length: 2, vsync: this);
     // E-004 fix: listener agar FAB muncul/hilang saat switch tab
     _tab.addListener(() { if (mounted) setState(() {}); });
-    _svc.load().then((_) => setState(() {}));
+    _svc.load().then((_) { if (mounted) setState(() {}); });
   }
 
   @override
@@ -47,13 +47,13 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
 
   // ── Test koneksi per key ──────────────────────────────────────────────────
   Future<void> _testKey(BulkApiKey key) async {
-    setState(() {
+    if (mounted) setState(() {
       _testing[key.id] = true;
       _testResult[key.id] = null;
     });
     try {
       final result = await _svc.testKey(key);
-      setState(() {
+      if (mounted) setState(() {
         _testing[key.id] = false;
         _testSuccess[key.id] = result.success;
         _testResult[key.id] = result.success
@@ -61,7 +61,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
             : _friendlyError(result.error ?? 'Error tidak diketahui');
       });
     } catch (e) {
-      setState(() {
+      if (mounted) setState(() {
         _testing[key.id] = false;
         _testSuccess[key.id] = false;
         _testResult[key.id] = '❌ Exception: ${e.toString()}';
@@ -299,9 +299,11 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
         if (result['mobileSdkAppId']?.isNotEmpty == true)
           lines.add('📱 App ID: ${result['mobileSdkAppId']}');
         if (result['webClientId']?.isNotEmpty == true)
-          lines.add('🌐 Web Client ID: ${result['webClientId']!.substring(0, result['webClientId']!.length.clamp(0, 30))}...');
+          final webId = result['webClientId'] as String? ?? '';
+        if (webId.isNotEmpty) lines.add('🌐 Web Client ID: ${webId.substring(0, webId.length.clamp(0, 30))}...');
         if (result['androidClientId']?.isNotEmpty == true)
-          lines.add('🤖 Android Client ID: ${result['androidClientId']!.substring(0, result['androidClientId']!.length.clamp(0, 30))}...');
+          final andId = result['androidClientId'] as String? ?? '';
+        if (andId.isNotEmpty) lines.add('🤖 Android Client ID: ${andId.substring(0, andId.length.clamp(0, 30))}...');
         if (result['certificateHash']?.isNotEmpty == true)
           lines.add('🔑 SHA-1: ${result['certificateHash']}');
 
@@ -918,7 +920,8 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                               final clip =
                                   await Clipboard.getData('text/plain');
                               if (clip?.text != null) {
-                                setS(() => keyCtrl.text = clip!.text!.trim());
+                                final text = clip?.text?.trim() ?? '';
+        if (text.isNotEmpty) setS(() => keyCtrl.text = text);
                               }
                             },
                           ),
@@ -995,7 +998,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                             );
                             await _svc.updateKey(updated);
                           }
-                          setState(() {});
+                          if (mounted) setState(() {});
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kfc.accent,
@@ -1322,7 +1325,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                   onChanged: (v) async {
                     key.isActive = v;
                     await _svc.updateKey(key);
-                    setState(() {});
+                    if (mounted) setState(() {});
                   },
                 ),
               ],
@@ -1521,7 +1524,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                       await _svc.removeKey(key.id);
                       _testResult.remove(key.id);
                       _testSuccess.remove(key.id);
-                      setState(() {});
+                      if (mounted) setState(() {});
                     }
                   },
                   tooltip: 'Hapus',
@@ -1588,7 +1591,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                 await _svc.setEnabled(v);
                 // Sinkronisasi ke AiSourceSettingsService agar picker ikut update
                 await AiSourceSettingsService.instance.pullBulkFromService();
-                setState(() {});
+                if (mounted) setState(() {});
               },
             ),
           ),
@@ -1610,7 +1613,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                 onChanged: (v) async {
                   if (v != null) {
                     await _svc.setMode(v);
-                    setState(() {});
+                    if (mounted) setState(() {});
                   }
                 },
               ),
@@ -1622,7 +1625,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                   style: TextStyle(color: kfc.textMuted, fontSize: 12)),
               onTap: () async {
                 await _svc.setMode(mode);
-                setState(() {});
+                if (mounted) setState(() {});
               },
             ),
             if (mode != BulkLoadMode.roundRobin)
@@ -1693,7 +1696,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                 style: TextStyle(color: kfc.textMuted, fontSize: 12)),
             onTap: () async {
               await _svc.resetAllLimits();
-              setState(() {});
+              if (mounted) setState(() {});
               if (mounted) {
                 showTopSnack(context, 'Semua rate limit di-reset ✅');
               }
@@ -1732,7 +1735,7 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
                 }
                 _testResult.clear();
                 _testSuccess.clear();
-                setState(() {});
+                if (mounted) setState(() {});
               }
             },
           ),

@@ -14,8 +14,9 @@
 //   • runCommand         → Map<String, Any> { stdout, stderr, exitCode }
 //   • openTermux         → Unit
 //
-// Registrasi: tambahkan di MainActivity.configureFlutterEngine()
-//   TermuxBridgePlugin().apply { register(flutterEngine.dartExecutor.binaryMessenger, this@MainActivity) }
+// Registration: in MainActivity.configureFlutterEngine():
+//   flutterEngine.plugins.add(TermuxBridgePlugin())
+// Do NOT call register() manually — that method no longer exists.
 // =============================================================================
 package com.kanmongo.app
 

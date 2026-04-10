@@ -104,20 +104,18 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/database/
+    - assets/database/   # km_content.db is injected by CI before build (not in git)
     - assets/sounds/
-    - assets/audio/
     - assets/html/
     - assets/icons/
     - assets/icons/logo/
     - assets/theme/
     - assets/theme/original/
     - assets/theme/original/banners/
-    - assets/theme/original/backgrounds/
-    - assets/theme/original/menus/
-    - assets/theme/original/quiz/
-    - assets/theme/original/flashcard/
     - assets/theme/original/notes/
+    - assets/theme/original/quiz/
     - assets/theme/original/swatches/
     - assets/theme/original/kana/
     - assets/theme/original/placeholders/
+    - assets/theme/original/backgrounds/
+    - assets/theme/original/flashcard/

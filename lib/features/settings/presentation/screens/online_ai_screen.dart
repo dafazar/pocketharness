@@ -58,7 +58,7 @@ class _OnlineAiScreenState extends State<OnlineAiScreen>
     // Sinkronisasi ke AiSourceSettingsService agar picker ikut update
     await AiSourceSettingsService.instance.pullOnlineFromService();
     if (mounted) {
-      setState(() {});
+      if (mounted) setState(() {});
       showTopSnack(context, '${model.emoji} ${model.name} dipilih', duration: const Duration(seconds: 2));
     }
   }
@@ -157,7 +157,7 @@ class _OnlineAiScreenState extends State<OnlineAiScreen>
                   await _svc.saveSettings(enabled: v);
                   // Sinkronisasi ke AiSourceSettingsService agar picker ikut update
                   await AiSourceSettingsService.instance.pullOnlineFromService();
-                  setState(() {});
+                  if (mounted) setState(() {});
                 },
                 activeColor: const Color(0xFF6C5CE7),
               ),

@@ -61,6 +61,8 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
 
   Future<void> _saveFile() async {
     if (_state == _SaveState.saving) return;
+    if (!mounted) return;
+    if (_state == _SaveState.saving) return;
     setState(() { _state = _SaveState.saving; _errorMsg = null; });
     try {
       final outDir = await _resolveOutputDirectory();
@@ -83,15 +85,15 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget> {
   Future<Directory> _resolveOutputDirectory() async {
     try {
       final dir = Directory('/storage/emulated/0/Download/KanMonAI');
-      if (!dir.existsSync()) dir.createSync(recursive: true);
-      final t = File(p.join(dir.path, '.wtest'));
-      t.writeAsStringSync('ok');
-      t.deleteSync();
+      if (!dir.existsSync()) await dir.create(recursive: true);
+      final t = File('${dir.path}/.wtest_${DateTime.now().millisecondsSinceEpoch}');
+      await t.writeAsString('ok');
+      await t.delete();
       return dir;
     } catch (_) {
       final docs = await getApplicationDocumentsDirectory();
-      final dir  = Directory(p.join(docs.path, 'exports'));
-      if (!dir.existsSync()) dir.createSync(recursive: true);
+      final dir  = Directory('${docs.path}/exports');
+      if (!dir.existsSync()) await dir.create(recursive: true);
       return dir;
     }
   }

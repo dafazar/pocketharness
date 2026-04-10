@@ -310,7 +310,7 @@ class _AiSourcePickerState extends State<AiSourcePicker>
   }
 }
 
-// ── Stub Dialogs (Bulk & Offline remain stubs until Sessions 3 & 4) ───────────
+// ── Settings Dialogs ────────────────────────────────────────────────────────────
 
 // =============================================================================
 // ONLINE AI SETTINGS POPUP — Session 2

@@ -18,7 +18,7 @@
 # ── LlamaPlugin JNI Bridge — WAJIB agar R8 tidak obfuscate ──────────────────
 # Tanpa ini: GetMethodID("onToken") / "onError" return null di release → crash
 -keep class com.kanmongo.app.LlamaPlugin { *; }
--keep interface com.kanmongo.app.LlamaPlugin$TokenCallback { *; }
+
 -keepclassmembers class com.kanmongo.app.LlamaPlugin$* {
     public *;
 }
@@ -180,3 +180,19 @@
 
 # ── process_run ───────────────────────────────────────────────────────────────
 -dontwarn com.example.process_run.**
+
+# ── LlamaPlugin JNI Bridge — WAJIB agar R8 tidak obfuscate ──────────────────
+-keep class com.kanmongo.app.LlamaPlugin { *; }
+
+# emitEventFromNative is called from C++ via JNI reflection (GetMethodID).
+-keepclassmembers class com.kanmongo.app.LlamaPlugin {
+    public void emitEventFromNative(java.lang.String, java.lang.String, int, int, int, long, long, double, java.lang.String, int);
+}
+
+# External (JNI) native method declarations — keep all
+-keepclasseswithmembernames class com.kanmongo.app.LlamaPlugin {
+    native <methods>;
+}
+
+# ForegroundService — must be kept so Android can instantiate it by class name
+-keep class com.kanmongo.app.LlamaGenerationService { *; }

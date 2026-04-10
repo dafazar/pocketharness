@@ -50,7 +50,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
     super.initState();
     _svc.load();
     _searchCtrl.addListener(() =>
-        setState(() => _search = _searchCtrl.text.trim()));
+        if (mounted) setState(() => _search = _searchCtrl.text.trim()));
   }
 
   @override
@@ -68,7 +68,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
 
   void _startDownload(CatalogModel model) {
     if (_isDownloaded(model) || _isDownloading(model)) return;
-    setState(() => _downloads[model.id] =
+    if (mounted) setState(() => _downloads[model.id] =
         DownloadProgress(taskId: model.id, bytesDownloaded: 0, totalBytes: 0, percent: 0, speedBytesPerSec: 0, etaSeconds: 0));
 
     final sub = _svc.downloadFromUrl(
@@ -82,7 +82,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
           _subs[model.id]?.cancel();
           _subs.remove(model.id);
           if (mounted) {
-            setState(() => _downloads.remove(model.id));
+            if (mounted) setState(() => _downloads.remove(model.id));
             showTopSnack(context, '✅ ${model.name} berhasil didownload!');
           }
         }
@@ -90,7 +90,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
           _subs[model.id]?.cancel();
           _subs.remove(model.id);
           if (mounted) {
-            setState(() => _downloads.remove(model.id));
+            if (mounted) setState(() => _downloads.remove(model.id));
             showTopSnack(context, '❌ Download gagal: ${prog.error}', isError: true);
           }
         }
@@ -119,7 +119,7 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
         langFilter: _langFilter,
         sortBy: _sortBy,
         onApply: (variants, formats, maxSize, maxRam, langs, sortBy) {
-          setState(() {
+          if (mounted) setState(() {
             _variantFilter
               ..clear()
               ..addAll(variants);
@@ -236,37 +236,37 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
               children: [
                 if (_variantFilter.contains(ModelVariant.uncensored))
                   _ActiveChip('🔓 Uncensored', cs, onRemove: () =>
-                      setState(() => _variantFilter.remove(ModelVariant.uncensored))),
+                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.uncensored))),
                 if (_variantFilter.contains(ModelVariant.standard))
                   _ActiveChip('🛡️ Standard', cs, onRemove: () =>
-                      setState(() => _variantFilter.remove(ModelVariant.standard))),
+                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.standard))),
                 if (_variantFilter.contains(ModelVariant.reasoning))
                   _ActiveChip('🧠 Reasoning', cs, onRemove: () =>
-                      setState(() => _variantFilter.remove(ModelVariant.reasoning))),
+                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.reasoning))),
                 if (_variantFilter.contains(ModelVariant.coding))
                   _ActiveChip('💻 Coding', cs, onRemove: () =>
-                      setState(() => _variantFilter.remove(ModelVariant.coding))),
+                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.coding))),
                 if (_variantFilter.contains(ModelVariant.multilingual))
                   _ActiveChip('🌐 Multilingual', cs, onRemove: () =>
-                      setState(() => _variantFilter.remove(ModelVariant.multilingual))),
+                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.multilingual))),
                 if (_variantFilter.contains(ModelVariant.tiny))
                   _ActiveChip('🪶 Ultra Ringan', cs, onRemove: () =>
-                      setState(() => _variantFilter.remove(ModelVariant.tiny))),
+                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.tiny))),
                 if (_variantFilter.contains(ModelVariant.vision))
                   _ActiveChip('👁️ Vision', cs, onRemove: () =>
-                      setState(() => _variantFilter.remove(ModelVariant.vision))),
+                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.vision))),
                 for (final f in _formatFilter)
                   _ActiveChip(f, cs, onRemove: () =>
-                      setState(() => _formatFilter.remove(f))),
+                      if (mounted) setState(() => _formatFilter.remove(f))),
                 if (_maxSize != null)
                   _ActiveChip('Max: ${_maxSize!.name}', cs, onRemove: () =>
-                      setState(() => _maxSize = null)),
+                      if (mounted) setState(() => _maxSize = null)),
                 if (_maxRam != null)
                   _ActiveChip('RAM ≤${_maxRam}GB', cs, onRemove: () =>
-                      setState(() => _maxRam = null)),
+                      if (mounted) setState(() => _maxRam = null)),
                 if (_sortBy != 'popularity')
                   _ActiveChip('Sort: $_sortBy', cs, onRemove: () =>
-                      setState(() => _sortBy = 'popularity')),
+                      if (mounted) setState(() => _sortBy = 'popularity')),
                 if (_filterCount > 1)
                   GestureDetector(
                     onTap: () => setState(() {
@@ -498,7 +498,7 @@ class _CatalogCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: progress!.fraction > 0 ? progress!.fraction : null,
+              value: (progress?.fraction ?? 0) > 0 ? progress!.fraction : null,
               backgroundColor: cs.outline.withValues(alpha: 0.2),
               valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
               minHeight: 5,
@@ -686,7 +686,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   }
 
   void _toggle<T>(Set<T> set, T value) =>
-      setState(() => set.contains(value) ? set.remove(value) : set.add(value));
+      if (mounted) setState(() => set.contains(value) ? set.remove(value) : set.add(value));
 
   @override
   Widget build(BuildContext context) {

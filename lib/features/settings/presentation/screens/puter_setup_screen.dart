@@ -48,7 +48,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
     super.initState();
     _svc.loadSettings().then((_) {
       if (!mounted) return;
-      setState(() {
+      if (mounted) setState(() {
         _apiKeyCtrl.text  = _svc.apiKey;
         _baseUrlCtrl.text = _svc.baseUrl;
         _temperature      = _svc.temperature;
@@ -74,7 +74,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
+    if (mounted) setState(() => _saving = true);
     await _svc.saveSettings(
       enabled:       _enabled,
       apiKey:        _apiKeyCtrl.text.trim(),
@@ -87,18 +87,18 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
     );
     // Sinkronisasi balik ke AiSourceSettingsService agar picker ikut update
     await AiSourceSettingsService.instance.pullOnlineFromService();
-    setState(() => _saving = false);
+    if (mounted) setState(() => _saving = false);
     if (mounted) {
       showTopSnack(context, '✅ Pengaturan tersimpan');
     }
   }
 
   Future<void> _testConnection() async {
-    setState(() { _testing = true; _testResult = null; _testMessage = ''; });
+    if (mounted) setState(() { _testing = true; _testResult = null; _testMessage = ''; });
     try {
       final ok = await _svc.testConnection();
       if (mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _testing = false;
           _testResult = ok;
           _testMessage = ok ? 'Koneksi berhasil! API key valid.' : 'Koneksi gagal. Periksa API key.';
@@ -106,7 +106,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() { _testing = false; _testResult = false; _testMessage = 'Error: $e'; });
+        if (mounted) setState(() { _testing = false; _testResult = false; _testMessage = 'Error: $e'; });
       }
     }
   }
@@ -185,7 +185,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                   onPressed: () async {
                     final data = await Clipboard.getData(Clipboard.kTextPlain);
                     if (data?.text != null && mounted) {
-                      setState(() => _apiKeyCtrl.text = data!.text!.trim());
+                      if (mounted) setState(() => _apiKeyCtrl.text = data!.text!.trim());
                       showTopSnack(context, '✅ Key ditempel dari clipboard');
                     }
                   },
@@ -410,7 +410,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                 value: _bulk.enabled,
                 onChanged: (v) async {
                   await _bulk.setEnabled(v);
-                  setState(() {});
+                  if (mounted) setState(() {});
                 },
                 activeColor: const Color(0xFF6C5CE7),
               ),
@@ -431,7 +431,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                   child: GestureDetector(
                     onTap: () async {
                       await _bulk.setMode(m);
-                      setState(() {});
+                      if (mounted) setState(() {});
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -608,7 +608,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                     _bulkLabelCtrl.clear();
                     _bulkUrlCtrl.clear();
                     _bulkModelCtrl.clear();
-                    setState(() {});
+                    if (mounted) setState(() {});
                     if (mounted) showTopSnack(context, '✅ API Key berhasil ditambahkan');
                   },
                   icon: const Icon(Icons.add_rounded, size: 18),
@@ -641,7 +641,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
                   TextButton.icon(
                     onPressed: () async {
                       await _bulk.resetAllLimits();
-                      setState(() {});
+                      if (mounted) setState(() {});
                       if (mounted) showTopSnack(context, '✅ Semua limit di-reset');
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 14),
@@ -800,7 +800,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
             GestureDetector(
               onTap: () async {
                 await _bulk.setSelectedKey(key.id);
-                setState(() {});
+                if (mounted) setState(() {});
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -820,9 +820,9 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
           // Test button
           GestureDetector(
             onTap: _bulkTesting ? null : () async {
-              setState(() { _bulkTesting = true; _bulkTestMsg = ''; });
+              if (mounted) setState(() { _bulkTesting = true; _bulkTestMsg = ''; });
               final result = await _bulk.testKey(key);
-              setState(() {
+              if (mounted) setState(() {
                 _bulkTesting = false;
                 _bulkTestMsg = result.success ? '✅ ${key.displayLabel}: OK' : '❌ ${result.error ?? 'Failed'}';
               });
@@ -841,7 +841,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
           GestureDetector(
             onTap: () async {
               await _bulk.removeKey(key.id);
-              setState(() {});
+              if (mounted) setState(() {});
             },
             child: Container(
               padding: const EdgeInsets.all(4),
@@ -858,7 +858,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
             onChanged: (v) async {
               key.isActive = v;
               await _bulk.updateKey(key);
-              setState(() {});
+              if (mounted) setState(() {});
             },
             activeColor: const Color(0xFF6C5CE7),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

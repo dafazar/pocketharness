@@ -540,7 +540,7 @@ class TerminalService {
       if (!file.existsSync()) return 'cat: $filename: No such file or directory';
       final size = file.lengthSync();
       if (size > 5 * 1024 * 1024) return '[File terlalu besar: ${_fmtSize(size)}. Gunakan head/tail]';
-      return file.readAsStringSync();
+      return await file.readAsString();
     } catch (e) { return 'cat: $e'; }
   }
 
@@ -610,7 +610,7 @@ class TerminalService {
 
     String grepFile(String path) {
       try {
-        final content = File(path).readAsStringSync();
+        final content = await File(path).readAsString();
         final lines   = content.split('\n');
         final results = <String>[];
         for (int i = 0; i < lines.length; i++) {

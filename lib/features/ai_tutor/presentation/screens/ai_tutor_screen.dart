@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
+import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/services/puter_ai_service.dart';
 import 'package:kanmongo/data/services/file_processor_service.dart';
 import 'package:kanmongo/data/services/ai_persona_service.dart';
@@ -212,7 +212,7 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
   void initState() {
     super.initState();
     _inputCtrl.addListener(() {
-      setState(() => _canSend = _inputCtrl.text.trim().isNotEmpty);
+      if (mounted) setState(() => _canSend = _inputCtrl.text.trim().isNotEmpty);
     });
     // ── Auto-send initialQuery jika ada (dari Reader/screen lain) ────────
     if (widget.initialQuery != null && widget.initialQuery!.trim().isNotEmpty) {
@@ -224,7 +224,7 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
     // ── Auto-load model aktif saat screen pertama kali dibuka ─────────────
     // Jika OfflineAiService belum siap tapi ada model aktif, muat sekarang.
     if (!OfflineAiService.instance.isReady) {
-      OfflineAiService.instance.loadSettings().then((_) {
+      LlamaService.instance.loadSettings().then((_) {
         if (ModelManagerService.instance.activeModel != null) {
           OfflineAiService.instance.initActiveModel().then((_) {
             if (mounted) setState(() {});
@@ -246,11 +246,11 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
 
   // ── Cooldown — blokir kiriman selama N detik ─────────────────────────────────
   void _startCooldown(int seconds) {
-    setState(() { _cooldownSec = seconds; _canSend = false; });
+    if (mounted) setState(() { _cooldownSec = seconds; _canSend = false; });
     _cooldownTimer?.cancel();
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
-      setState(() {
+      if (mounted) setState(() {
         _cooldownSec--;
         if (_cooldownSec <= 0) {
           _cooldownSec = 0;
@@ -290,10 +290,10 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
   }
 
   Future<void> _processFile(String path) async {
-    setState(() => _processingFile = true);
+    if (mounted) setState(() => _processingFile = true);
     final processed = await FileProcessorService.instance.process(path);
     if (mounted) {
-      setState(() {
+      if (mounted) setState(() {
         _pendingFile     = processed;
         _processingFile  = false;
         _canSend         = true;
@@ -366,12 +366,12 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
     if (text.trim().isEmpty && _pendingFile == null) return;
     final inputText = text.trim().isNotEmpty ? text : ''; 
     _inputCtrl.clear();
-    setState(() => _canSend = false);
+    if (mounted) setState(() => _canSend = false);
 
     final notifier    = ref.read(chatMessagesProvider.notifier);
     final subject     = ref.read(aiSubjectProvider);
     final attachment  = _pendingFile;
-    setState(() => _pendingFile = null); // clear sebelum send
+    if (mounted) setState(() => _pendingFile = null); // clear sebelum send
 
     notifier.addUserMessage(inputText, attachment: attachment);
     notifier.addLoadingBubble();   // loading spinner dulu
@@ -1156,7 +1156,7 @@ class _ChatBubble extends StatelessWidget {
           }),
         // Tombol download file hasil edit
         if (msg.hasFileOutput && msg.outputFilePath != null)
-          _FileOutputButton(filePath: msg.outputFilePath!),
+          _FileOutputButton(filePath: msg.outputFilePath ?? ""),
       ],
     );
   }

@@ -147,19 +147,19 @@ class _EmailResetTabState extends ConsumerState<_EmailResetTab> {
 
   Future<void> _sendReset() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       await ref.read(authServiceProvider)
           .resetPassword(_emailCtrl.text.trim());
-      setState(() { _sent = true; _loading = false; });
+      if (mounted) setState(() { _sent = true; _loading = false; });
       _startResendCountdown();
     } on FirebaseAuthException catch (e) {
-      setState(() {
+      if (mounted) setState(() {
         _error = AuthService.mapError(e.code);
         _loading = false;
       });
     } catch (_) {
-      setState(() {
+      if (mounted) setState(() {
         _error = 'Terjadi kesalahan. Coba lagi.';
         _loading = false;
       });
@@ -167,7 +167,7 @@ class _EmailResetTabState extends ConsumerState<_EmailResetTab> {
   }
 
   Future<void> _resend() async {
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       await ref.read(authServiceProvider)
           .resetPassword(_emailCtrl.text.trim());
@@ -185,11 +185,11 @@ class _EmailResetTabState extends ConsumerState<_EmailResetTab> {
   }
 
   void _startResendCountdown() {
-    setState(() => _resendCountdown = 60);
+    if (mounted) setState(() => _resendCountdown = 60);
     _resendTimer?.cancel();
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
-      setState(() {
+      if (mounted) setState(() {
         if (_resendCountdown > 0) {
           _resendCountdown--;
         } else {
@@ -481,16 +481,16 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
   // ── Step 1: Kirim OTP ke nomor HP ────────────────────────────────────────
   Future<void> _sendOtp() async {
     if (_phoneCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Masukkan nomor HP terlebih dahulu.');
+      if (mounted) setState(() => _error = 'Masukkan nomor HP terlebih dahulu.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
 
     await ref.read(authServiceProvider).sendOtp(
       phoneNumber: _fullPhone,
       onCodeSent: (vid) {
         if (!mounted) return;
-        setState(() {
+        if (mounted) setState(() {
           _verificationId  = vid;
           _step            = _PhoneResetStep.inputOtp;
           _loading         = false;
@@ -500,12 +500,12 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
       },
       onError: (msg) {
         if (!mounted) return;
-        setState(() { _error = msg; _loading = false; });
+        if (mounted) setState(() { _error = msg; _loading = false; });
       },
       onAutoVerified: (credential) async {
         if (!mounted) return;
         _credential = credential;
-        setState(() { _step = _PhoneResetStep.inputNewPassword; _loading = false; });
+        if (mounted) setState(() { _step = _PhoneResetStep.inputNewPassword; _loading = false; });
       },
     );
   }
@@ -514,7 +514,7 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
     _resendTimer?.cancel();
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
-      setState(() {
+      if (mounted) setState(() {
         if (_resendCountdown > 0) _resendCountdown--;
         else t.cancel();
       });
@@ -524,10 +524,10 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
   // ── Step 2: Verifikasi OTP ────────────────────────────────────────────────
   Future<void> _verifyOtp() async {
     if (_otpCtrl.text.trim().length < 6) {
-      setState(() => _error = 'Masukkan 6 digit kode OTP.');
+      if (mounted) setState(() => _error = 'Masukkan 6 digit kode OTP.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       _credential = PhoneAuthProvider.credential(
         verificationId: _verificationId!,
@@ -536,13 +536,13 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
       // Test credential dengan sign in sementara
       await FirebaseAuth.instance.signInWithCredential(_credential!);
       if (mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _step    = _PhoneResetStep.inputNewPassword;
           _loading = false;
         });
       }
     } on FirebaseAuthException catch (e) {
-      setState(() {
+      if (mounted) setState(() {
         _error   = AuthService.mapError(e.code);
         _loading = false;
       });
@@ -552,26 +552,26 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
   // ── Step 3: Update password baru ─────────────────────────────────────────
   Future<void> _updatePassword() async {
     if (_pass1Ctrl.text.length < 6) {
-      setState(() => _error = 'Password minimal 6 karakter.');
+      if (mounted) setState(() => _error = 'Password minimal 6 karakter.');
       return;
     }
     if (_pass1Ctrl.text != _pass2Ctrl.text) {
-      setState(() => _error = 'Password tidak sama.');
+      if (mounted) setState(() => _error = 'Password tidak sama.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('Sesi habis, coba ulang.');
       await user.updatePassword(_pass1Ctrl.text);
       if (mounted) setState(() { _step = _PhoneResetStep.done; _loading = false; });
     } on FirebaseAuthException catch (e) {
-      setState(() {
+      if (mounted) setState(() {
         _error   = AuthService.mapError(e.code);
         _loading = false;
       });
     } catch (e) {
-      setState(() {
+      if (mounted) setState(() {
         _error   = e.toString();
         _loading = false;
       });
@@ -777,7 +777,7 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
                         color: cs.onSurface.withValues(alpha: 0.5)))
                 : TextButton(
                     onPressed: () {
-                      setState(() => _step = _PhoneResetStep.inputPhone);
+                      if (mounted) setState(() => _step = _PhoneResetStep.inputPhone);
                       Future.microtask(_sendOtp);
                     },
                     child: const Text('Kirim ulang kode OTP',
@@ -872,7 +872,7 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
                         : Icons.visibility_outlined,
                     size: 20),
                 onPressed: () =>
-                    setState(() => _obscure1 = !_obscure1),
+                    if (mounted) setState(() => _obscure1 = !_obscure1),
               ),
               filled: true,
               fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -906,7 +906,7 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
                         : Icons.visibility_outlined,
                     size: 20),
                 onPressed: () =>
-                    setState(() => _obscure2 = !_obscure2),
+                    if (mounted) setState(() => _obscure2 = !_obscure2),
               ),
               filled: true,
               fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),

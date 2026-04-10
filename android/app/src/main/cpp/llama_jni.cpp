@@ -338,6 +338,30 @@ Java_com_kanmongo_app_LlamaPlugin_nativeLoadModel(
     LOGI("nativeLoadModel: context ready ctx=%d threads=%d",
          (int)contextSize, (int)cparams.n_threads);
 
+    
+
+    // Emit loading_progress=1.0 (100% complete) before model_loaded event
+    {
+        bool nd3 = false;
+        JNIEnv* pe = jni_attach(nd3);
+        if (pe) {
+            emit_to_kotlin(pe, "loading_progress", "", 0, 0, 0, 0, 0, 1.0, "", 0);
+            if (nd3) g_jvm->DetachCurrentThread();
+        }
+    }
+    // Emit model_loaded event so LlamaService.dart can transition to ModelStatus.loaded
+    {
+        bool nd2 = false;
+        JNIEnv* evEnv = jni_attach(nd2);
+        if (evEnv) {
+            char nameStr[256] = "unknown";
+            llama_model_meta_val_str(g_state.model, "general.name", nameStr, sizeof(nameStr));
+            emit_to_kotlin(evEnv, "model_loaded", nameStr, (int)contextSize,
+                           0, 0, 0, 0, 0.0, "", 0);
+            if (nd2) g_jvm->DetachCurrentThread();
+        }
+    }
+
     return reinterpret_cast<jlong>(g_state.model);
 }
 
@@ -640,11 +664,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetModelInfo(
     if (ret >= 0) ctxLen = atoll(buf);
 
     // Estimate param count from tensor info if available
-    ret = llama_model_meta_val_str(tmpModel, "llama.rope.dimension_count", buf, sizeof(buf));
-    // paramCount is an estimate — not always directly available
-    // Use n_params if the API is available; otherwise leave as 0
-    // llama_model_n_params is available in some builds:
-    // paramCount = llama_model_n_params(tmpModel);
+    paramCount = (long long)llama_model_n_params(tmpModel);
 
     llama_model_free(tmpModel);
 

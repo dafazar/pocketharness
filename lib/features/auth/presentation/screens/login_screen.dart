@@ -156,7 +156,7 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       await ref.read(authServiceProvider).loginWithEmail(
         email: _emailCtrl.text.trim(),
@@ -164,7 +164,7 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
       );
       if (mounted) context.go(KmRoutes.home);
     } on FirebaseAuthException catch (e) {
-      setState(() => _error = AuthService.mapError(e.code));
+      if (mounted) setState(() => _error = AuthService.mapError(e.code));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -240,7 +240,7 @@ class _GoogleTabState extends ConsumerState<_GoogleTab> {
   String? _error;
 
   Future<void> _loginGoogle() async {
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final auth   = ref.read(authServiceProvider);
       final result = await auth.loginWithGoogle();
@@ -254,9 +254,9 @@ class _GoogleTabState extends ConsumerState<_GoogleTab> {
       }
       if (mounted) context.go(KmRoutes.home);
     } on FirebaseAuthException catch (e) {
-      setState(() => _error = AuthService.mapError(e.code));
+      if (mounted) setState(() => _error = AuthService.mapError(e.code));
     } catch (_) {
-      setState(() => _error = 'Login Google gagal. Coba lagi.');
+      if (mounted) setState(() => _error = 'Login Google gagal. Coba lagi.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -350,16 +350,16 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
 
   Future<void> _sendOtp() async {
     if (_phoneCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Masukkan nomor HP terlebih dahulu.');
+      if (mounted) setState(() => _error = 'Masukkan nomor HP terlebih dahulu.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
 
     await ref.read(authServiceProvider).sendOtp(
       phoneNumber: _fullPhone,
       onCodeSent: (vid) {
         if (!mounted) return;
-        setState(() {
+        if (mounted) setState(() {
           _verificationId  = vid;
           _otpSent         = true;
           _loading         = false;
@@ -369,7 +369,7 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
       },
       onError: (msg) {
         if (!mounted) return;
-        setState(() { _error = msg; _loading = false; });
+        if (mounted) setState(() { _error = msg; _loading = false; });
       },
       onAutoVerified: (credential) async {
         if (!mounted) return;
@@ -387,10 +387,10 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
 
   Future<void> _verifyOtp() async {
     if (_otpCtrl.text.trim().length < 6) {
-      setState(() => _error = 'Masukkan 6 digit kode OTP.');
+      if (mounted) setState(() => _error = 'Masukkan 6 digit kode OTP.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final result = await ref.read(authServiceProvider).verifyOtp(
         verificationId: _verificationId!,
@@ -405,12 +405,12 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
       }
       if (mounted) context.go(KmRoutes.home);
     } on FirebaseAuthException catch (e) {
-      setState(() { _error = AuthService.mapError(e.code); _loading = false; });
+      if (mounted) setState(() { _error = AuthService.mapError(e.code); _loading = false; });
     }
   }
 
   Future<void> _signIn(PhoneAuthCredential credential) async {
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final result =
           await FirebaseAuth.instance.signInWithCredential(credential);
@@ -423,7 +423,7 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
       }
       if (mounted) context.go(KmRoutes.home);
     } on FirebaseAuthException catch (e) {
-      setState(() { _error = AuthService.mapError(e.code); _loading = false; });
+      if (mounted) setState(() { _error = AuthService.mapError(e.code); _loading = false; });
     }
   }
 
@@ -552,7 +552,7 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
                           color: cs.onSurface.withValues(alpha: 0.5)))
                   : TextButton(
                       onPressed: () {
-                        setState(() { _otpSent = false; });
+                        if (mounted) setState(() { _otpSent = false; });
                         Future.microtask(_sendOtp);
                       },
                       child: const Text('Kirim ulang kode OTP',

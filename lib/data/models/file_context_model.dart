@@ -36,18 +36,18 @@ class FileContext {
   }) : uploadedAt = uploadedAt ?? DateTime.now();
 
   factory FileContext.fromJson(Map<String, dynamic> json) => FileContext(
-    id: json['id'] as String? ?? '',
-    filename: json['filename'] as String? ?? '',
-    filepath: json['filepath'] as String? ?? '',
-    mimeType: json['mimeType'] as String? ?? 'text/plain',
-    fileSizeBytes: json['fileSizeBytes'] as int? ?? 0,
-    contentPreview: json['contentPreview'] as String? ?? '',
-    language: json['language'] as String?,
+    id: json['id'] as String? ?? ''? ?? '',
+    filename: json['filename'] as String? ?? ''? ?? '',
+    filepath: json['filepath'] as String? ?? ''? ?? '',
+    mimeType: json['mimeType'] as String? ?? ''? ?? 'text/plain',
+    fileSizeBytes: json['fileSizeBytes'] as int? ?? 0? ?? 0,
+    contentPreview: json['contentPreview'] as String? ?? ''? ?? '',
+    language: json['language'] as String? ?? ''?,
     uploadedAt: json['uploadedAt'] != null
-      ? DateTime.parse(json['uploadedAt'] as String)
+      ? DateTime.parse(json['uploadedAt'] as String? ?? '')
       : null,
-    uploadedBy: json['uploadedBy'] as String? ?? 'user',
-    isEditable: json['isEditable'] as bool? ?? true,
+    uploadedBy: json['uploadedBy'] as String? ?? ''? ?? 'user',
+    isEditable: json['isEditable'] as bool? ?? false? ?? true,
     metadata: json['metadata'] as Map<String, dynamic>? ?? {},
     edits: (json['edits'] as List?)
       ?.map((e) => FileEdit.fromJson(e as Map<String, dynamic>))
@@ -95,17 +95,17 @@ class FileEdit {
   }) : editedAt = editedAt ?? DateTime.now();
 
   factory FileEdit.fromJson(Map<String, dynamic> json) => FileEdit(
-    id: json['id'] as String? ?? '',
-    fileContextId: json['fileContextId'] as String? ?? '',
-    lineStart: json['lineStart'] as int? ?? 0,
-    lineEnd: json['lineEnd'] as int? ?? 0,
-    oldContent: json['oldContent'] as String? ?? '',
-    newContent: json['newContent'] as String? ?? '',
-    editedBy: json['editedBy'] as String? ?? 'user',
+    id: json['id'] as String? ?? ''? ?? '',
+    fileContextId: json['fileContextId'] as String? ?? ''? ?? '',
+    lineStart: json['lineStart'] as int? ?? 0? ?? 0,
+    lineEnd: json['lineEnd'] as int? ?? 0? ?? 0,
+    oldContent: json['oldContent'] as String? ?? ''? ?? '',
+    newContent: json['newContent'] as String? ?? ''? ?? '',
+    editedBy: json['editedBy'] as String? ?? ''? ?? 'user',
     editedAt: json['editedAt'] != null
-      ? DateTime.parse(json['editedAt'] as String)
+      ? DateTime.parse(json['editedAt'] as String? ?? '')
       : null,
-    reason: json['reason'] as String?,
+    reason: json['reason'] as String? ?? ''?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -142,15 +142,15 @@ class FileDiff {
   });
 
   factory FileDiff.fromJson(Map<String, dynamic> json) => FileDiff(
-    fileId: json['fileId'] as String? ?? '',
-    filename: json['filename'] as String? ?? '',
-    beforeContent: json['beforeContent'] as String? ?? '',
-    afterContent: json['afterContent'] as String? ?? '',
+    fileId: json['fileId'] as String? ?? ''? ?? '',
+    filename: json['filename'] as String? ?? ''? ?? '',
+    beforeContent: json['beforeContent'] as String? ?? ''? ?? '',
+    afterContent: json['afterContent'] as String? ?? ''? ?? '',
     lines: (json['lines'] as List?)
       ?.map((l) => DiffLine.fromJson(l as Map<String, dynamic>))
       .toList() ?? [],
-    linesAdded: json['linesAdded'] as int? ?? 0,
-    linesRemoved: json['linesRemoved'] as int? ?? 0,
+    linesAdded: json['linesAdded'] as int? ?? 0? ?? 0,
+    linesRemoved: json['linesRemoved'] as int? ?? 0? ?? 0,
   );
 
   Map<String, dynamic> toJson() => {
@@ -177,9 +177,9 @@ class DiffLine {
   });
 
   factory DiffLine.fromJson(Map<String, dynamic> json) => DiffLine(
-    lineNumber: json['lineNumber'] as int? ?? 0,
-    type: json['type'] as String? ?? 'context',
-    content: json['content'] as String? ?? '',
+    lineNumber: json['lineNumber'] as int? ?? 0? ?? 0,
+    type: json['type'] as String? ?? ''? ?? 'context',
+    content: json['content'] as String? ?? ''? ?? '',
   );
 
   Map<String, dynamic> toJson() => {

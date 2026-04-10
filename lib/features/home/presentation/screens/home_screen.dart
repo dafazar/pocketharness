@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/theme/km_colors.dart';
 import '../../../../core/router/app_router.dart';
-// import '../../../../core/membership/premium_gate.dart'; // TODO: uncomment pre-release
+import 'package:kanmongo/core/membership/premium_gate.dart';
 
 // ── Menu items ────────────────────────────────────────────────────────────────
 class _MenuItem {

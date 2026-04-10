@@ -83,7 +83,7 @@ class _PermissionOnboardingScreenState
     for (int i = 0; i < _items.length; i++) {
       final already = await PermissionService.instance.isAlreadyGranted(_items[i].permission);
       if (already && mounted) {
-        setState(() => _statuses[i] = PermissionStatus.granted);
+        if (mounted) setState(() => _statuses[i] = PermissionStatus.granted);
       }
     }
     // Jika SEMUA sudah granted, langsung selesai
@@ -102,7 +102,7 @@ class _PermissionOnboardingScreenState
   void _animateToNext() async {
     await _cardCtrl.reverse();
     if (!mounted) return;
-    setState(() {
+    if (mounted) setState(() {
       if (_currentIndex < _items.length - 1) {
         _currentIndex++;
       } else {
@@ -120,13 +120,13 @@ class _PermissionOnboardingScreenState
 
   Future<void> _requestPermission() async {
     if (_requesting) return;
-    setState(() => _requesting = true);
+    if (mounted) setState(() => _requesting = true);
     SfxService.instance.play(Sfx.tap);
 
     final item = _items[_currentIndex];
     final status = await PermissionService.instance.request(item.permission);
 
-    setState(() {
+    if (mounted) setState(() {
       _statuses[_currentIndex] = status;
       _requesting = false;
     });

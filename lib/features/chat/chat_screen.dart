@@ -31,7 +31,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:kanmongo/core/ai/llama_context.dart' as llama;
+import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/chat_models.dart' as chat_models;
@@ -51,7 +51,7 @@ import 'package:kanmongo/features/chat/providers/chat_session_provider.dart';
 import 'package:kanmongo/features/chat/widgets/artifact_panel.dart';
 import 'package:kanmongo/features/chat/widgets/code_block_widget.dart';
 import 'package:kanmongo/features/chat/widgets/file_edit_response_widget.dart';
-
+import 'package:kanmongo/data/models/chat_models.dart' as new_models;
 import 'package:kanmongo/data/services/history_service.dart';
 import 'package:kanmongo/features/chat/widgets/web_research_sources_card.dart';
 import 'package:kanmongo/data/services/web_research_service.dart';
@@ -64,7 +64,7 @@ import 'package:uuid/uuid.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ChatScreen extends ConsumerStatefulWidget {
-  final chat_models.ChatSession? initialSession;
+  final new_models.ChatSession? initialSession;
   const ChatScreen({super.key, this.initialSession});
 
   @override
@@ -80,7 +80,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   final _focusNode   = FocusNode();
 
   // Sesi aktif untuk drawer (model baru ChatSession)
-  chat_models.ChatSession _currentSession = chat_models.ChatSession.empty();
+  new_models.ChatSession _currentSession = new_models.ChatSession.empty();
 
   // ── Speech to Text ────────────────────────────────────────────────────────
   final _speech     = SpeechToText();
@@ -161,7 +161,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final arg = ModalRoute.of(context)?.settings.arguments;
-    if (arg is chat_models.ChatSession && !_sessionLoaded) {
+    if (arg is new_models.ChatSession && !_sessionLoaded) {
       _sessionLoaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(chatSessionProvider.notifier).loadSession(arg);
@@ -202,7 +202,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
-    final messages  = ref.watch(chatSessionProvider).messages;
+    final messages  = ref.watch(chatSessionProvider);
     final aiMode    = ref.watch(aiSourceProvider);
     final isOffline = (aiMode?.mode ?? AiService.instance.currentMode) == AiMode.offline;
     final modelLoaded = LlamaService.instance.isModelLoaded;
@@ -348,7 +348,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildContextUsageBar() {
-    final messages   = ref.watch(chatSessionProvider).messages;
+    final messages   = ref.watch(chatSessionProvider);
     final modelConfig = ref.watch(modelConfigProvider);
     final usage = ref
         .read(chatSessionProvider.notifier)
@@ -385,7 +385,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // MESSAGE LIST
   // ─────────────────────────────────────────────────────────────────────────
 
-  Widget _buildMessageList(List<chat_models.ChatMessage> messages) {
+  Widget _buildMessageList(List<ChatMessage> messages) {
     if (messages.isEmpty) {
       return _EmptyStateChat(
         onAnalyzeImage: _showAttachmentPicker,
@@ -412,15 +412,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           );
         }
         final msg = messages[index];
-        final isLastAssistant = msg.role == 'assistant' &&
-            messages.where((m) => m.role == 'assistant').last.id == msg.id;
+        final isLastAssistant = msg.role == ChatRole.assistant &&
+            messages.where((m) => m.role == ChatRole.assistant).last.id == msg.id;
 
         final bubble = _MessageBubble(
           message:        msg,
           showRawText:    _showRawText,
           attachments:    _messageAttachments[msg.id] ?? const [],
-          isLastUser:     msg.role == 'user' &&
-              messages.where((m) => m.role == 'user').last.id == msg.id,
+          isLastUser:     msg.role == ChatRole.user &&
+              messages.where((m) => m.role == ChatRole.user).last.id == msg.id,
           isLastAssistant: isLastAssistant,
           onDelete:       () => _deleteMessage(msg.id),
           onResend:       () => _resendMessage(msg),
@@ -797,13 +797,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ── Helper: ganti pesan asisten terakhir ─────────────────────────────────
   void _replaceLastWith(String content) {
     ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-      chat_models.ChatMessage(
-        id: const Uuid().v4(),
-        role: 'assistant',
-        content: content,
-        createdAt: DateTime.now(),
-        isError: true,
-      ),
+      content,
+      stopReason: StopReason.error,
     );
   }
 
@@ -866,12 +861,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final String augmentedText = effectiveText;
 
     // ── 1. User message ──────────────────────────────────────────────────────
-    final userMsg = chat_models.ChatMessage(
-      id: const Uuid().v4(),
-      role: 'user',
-      content: augmentedText,
-      createdAt: DateTime.now(),
-    );
+    final userMsg = ChatMessage.user(augmentedText);
     ref.read(chatSessionProvider.notifier).addMessage(userMsg);
 
     if (attachmentsSnapshot.isNotEmpty) {
@@ -879,19 +869,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     }
 
     // ── 2. Placeholder AI (streaming) ────────────────────────────────────────
-    ref.read(chatSessionProvider.notifier).addMessage(chat_models.ChatMessage(
-      id: const Uuid().v4(),
-      role: 'assistant',
-      content: '',
-      createdAt: DateTime.now(),
-      isStreaming: true,
-    ));
+    ref.read(chatSessionProvider.notifier).addMessage(ChatMessage.assistant(''));
     _scrollToBottom();
 
     // ── 3. Pilih mode & build history ────────────────────────────────────────
     final choice  = ref.read(aiSourceProvider);
-    final history = ref.read(chatSessionProvider).messages
-        .where((m) => m.content.isNotEmpty && m.role != 'system')
+    final history = ref.read(chatSessionProvider)
+        .where((m) => m.content.isNotEmpty && m.role != ChatRole.system)
         .toList()
         .reversed
         .skip(2)            // skip placeholder + user terbaru
@@ -899,7 +883,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         .reversed
         .take(10)
         .map((m) => <String, dynamic>{
-              'role':    m.role == 'user' ? 'user' : 'assistant',
+              'role':    m.role == ChatRole.user ? 'user' : 'assistant',
               'content': m.content,
             })
         .toList();
@@ -949,11 +933,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       if (mounted) setState(() => _isGenerating = false);
 
       // ── Auto-generate title dari pesan pertama ───────────────────────────
-      final msgs = ref.read(chatSessionProvider).messages;
+      final msgs = ref.read(chatSessionProvider);
       if ((_currentSession.title == 'Chat Baru' || _currentSession.title.isEmpty) &&
           msgs.length >= 2) {
         final firstUser = msgs.firstWhere(
-          (m) => m.role == 'user' && m.content.isNotEmpty,
+          (m) => m.role == ChatRole.user && m.content.isNotEmpty,
           orElse: () => msgs.first,
         );
         final raw   = firstUser.content.trim().replaceAll('\n', ' ');
@@ -962,19 +946,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       }
 
       // ── Auto-save ────────────────────────────────────────────────────────
-      unawaited(_autoSaveCurrentSession(ref.read(chatSessionProvider).messages));
+      unawaited(_autoSaveCurrentSession(ref.read(chatSessionProvider)));
     }
   }
 
   // ─── Helper: build AI history from current session ────────────────────────
 
   List<Map<String, String>> _buildHistoryForAi() {
-    final messages = ref.read(chatSessionProvider).messages;
+    final messages = ref.read(chatSessionProvider);
     return messages
-        .where((m) => m.role != 'system' && m.content.isNotEmpty)
+        .where((m) => m.role != ChatRole.system && m.content.isNotEmpty)
         .take(12)
         .map((m) => <String, String>{
-              'role':    m.role == 'user' ? 'user' : 'assistant',
+              'role':    m.role == ChatRole.user ? 'user' : 'assistant',
               'content': m.content,
             })
         .toList();
@@ -990,12 +974,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (!mounted) return;
 
     // Add user message to chat
-    final userMsg = chat_models.ChatMessage(
-      id: const Uuid().v4(),
-      role: 'user',
-      content: userRequest,
-      createdAt: DateTime.now(),
-    );
+    final userMsg = ChatMessage.user(userRequest);
     ref.read(chatSessionProvider.notifier).addMessage(userMsg);
     if (attachments.isNotEmpty) {
       _messageAttachments[userMsg.id] = attachments;
@@ -1008,13 +987,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _scrollToBottom();
 
     // Add placeholder assistant message
-    ref.read(chatSessionProvider.notifier).addMessage(chat_models.ChatMessage(
-      id: const Uuid().v4(),
-      role: 'assistant',
-      content: '',
-      createdAt: DateTime.now(),
-      isStreaming: true,
-    ));
+    ref.read(chatSessionProvider.notifier).addMessage(ChatMessage.assistant(''));
 
     final buffer = StringBuffer();
 
@@ -1060,13 +1033,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           case AdaptiveEditPhase.error:
             final errText = event.errorText ?? '❌ Unknown error';
             ref.read(chatSessionProvider.notifier)
-                .replaceLastAssistantMessage(chat_models.ChatMessage(
-                id: const Uuid().v4(),
-                role: 'assistant',
-                content: errText,
-                createdAt: DateTime.now(),
-                isError: true,
-              ));
+                .replaceLastAssistantMessage(errText, stopReason: StopReason.error);
             setState(() {
               _adaptivePhase  = null;
               _adaptiveStatus = '';
@@ -1089,7 +1056,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       if (mounted && _isGenerating) {
         setState(() => _isGenerating = false);
       }
-      unawaited(_autoSaveCurrentSession(ref.read(chatSessionProvider).messages));
+      unawaited(_autoSaveCurrentSession(ref.read(chatSessionProvider)));
     }
   }
 
@@ -1101,13 +1068,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     dynamic sourceChoice,
   ) async {
     try {
-      final messages     = ref.read(chatSessionProvider).messages;
+      final messages     = ref.read(chatSessionProvider);
       final systemPrompt = ref.read(systemPromptProvider) ?? '';
       final history = messages
           .where((m) => m.content.isNotEmpty &&
               messages.indexOf(m) < messages.length - 2)
           .map((m) => {
-                'role': m.role == 'user' ? 'user' : 'assistant',
+                'role': m.role == ChatRole.user ? 'user' : 'assistant',
                 'content': m.content,
               })
           .toList();
@@ -1134,18 +1101,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           if (!mounted) return;
           setState(() { _isGenerating = false; });
           _genSub = null;
-          _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
+          _autoSaveCurrentSession(ref.read(chatSessionProvider));
         },
         onError: (Object e) {
           if (!mounted) return;
           ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-            chat_models.ChatMessage(
-              id: const Uuid().v4(),
-              role: 'assistant',
-              content: '❌ Vision error: $e',
-              createdAt: DateTime.now(),
-              isError: true,
-            ),
+            '❌ Vision error: $e',
+            stopReason: StopReason.error,
           );
           setState(() { _isGenerating = false; });
           _genSub = null;
@@ -1155,14 +1117,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       debugPrint('[ChatScreen] _generateWithVision error: $e');
       if (!mounted) return;
       ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-          chat_models.ChatMessage(
-            id: const Uuid().v4(),
-            role: 'assistant',
-            content: '❌ Error: $e',
-            createdAt: DateTime.now(),
-            isError: true,
-          ),
-        );
+        '❌ Error: $e',
+        stopReason: StopReason.error,
+      );
       setState(() { _isGenerating = false; });
     }
   }
@@ -1176,21 +1133,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     List<ResearchSource> receivedSources = [];
 
     try {
-      final messages     = ref.read(chatSessionProvider).messages;
+      final messages     = ref.read(chatSessionProvider);
       final aiMode         = sourceChoice?.mode ?? AiService.instance.currentMode;
       final forceBulkKeyId = sourceChoice?.bulkKeyId;
       final forceProvider  = sourceChoice?.bulkProvider;
 
       // Build history: semua pesan kecuali 2 terakhir (user baru + placeholder)
       final allMsgs = messages
-          .where((m) => m.role != 'system')
+          .where((m) => m.role != ChatRole.system)
           .toList();
       final histList = allMsgs.length > 2
           ? allMsgs.sublist(0, allMsgs.length - 2)
-          : <chat_models.ChatMessage>[];
+          : <ChatMessage>[];
       final historyMaps = histList
           .map((m) => {
-                'role': m.role == 'user' ? 'user' : 'assistant',
+                'role': m.role == ChatRole.user ? 'user' : 'assistant',
                 'content': m.content,
               })
           .toList();
@@ -1229,7 +1186,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             break;
 
           case WebResearchEventType.done:
-            final currentMessages = ref.read(chatSessionProvider).messages;
+            final currentMessages = ref.read(chatSessionProvider);
             final lastIdx = currentMessages.length - 1;
             if (lastIdx >= 0 && receivedSources.isNotEmpty) {
               setState(() {
@@ -1240,7 +1197,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               _researchStatus = '';
               _isGenerating   = false;
             });
-            _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
+            _autoSaveCurrentSession(ref.read(chatSessionProvider));
             break;
         }
       }
@@ -1249,13 +1206,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       debugPrint('[ChatScreen] _generateWithWebResearch timeout: $e');
       if (mounted) {
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-          chat_models.ChatMessage(
-            id: const Uuid().v4(),
-            role: 'assistant',
-            content: '⏰ Web research timeout. Silakan coba lagi.',
-            createdAt: DateTime.now(),
-            isError: false,
-          ),
+          '⏰ Web research timeout. Silakan coba lagi.',
+          stopReason: StopReason.timeout,
         );
         setState(() {
           _researchStatus = '';
@@ -1266,13 +1218,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       debugPrint('[ChatScreen] _generateWithWebResearch error: $e');
       if (mounted) {
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-          chat_models.ChatMessage(
-            id: const Uuid().v4(),
-            role: 'assistant',
-            content: '❌ Web research error: $e',
-            createdAt: DateTime.now(),
-            isError: true,
-          ),
+          '❌ Web research error: $e',
+          stopReason: StopReason.error,
         );
         setState(() {
           _researchStatus = '';
@@ -1287,69 +1234,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     // If model is still loading (e.g., auto-load in progress at startup),
     // wait up to 30 seconds for it to finish before giving up.
     if (!LlamaService.instance.isModelLoaded) {
-      if (LlamaService.instance.status == llama.ModelStatus.loading) {
+      if (LlamaService.instance.status == ModelStatus.loading) {
         debugPrint('[ChatScreen] _generateOffline: model is loading — waiting up to 30s');
         bool didLoad = false;
         for (int i = 0; i < 60; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 500));
           if (!mounted) return;
           if (LlamaService.instance.isModelLoaded) { didLoad = true; break; }
-          if (LlamaService.instance.status == llama.ModelStatus.error) break;
+          if (LlamaService.instance.status == ModelStatus.error) break;
         }
         if (!didLoad) {
           if (mounted) {
             ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-          chat_models.ChatMessage(
-            id: const Uuid().v4(),
-            role: 'assistant',
-            content: '⚠️ Model AI gagal dimuat.\n\nBuka Settings → Model Manager untuk memilih model .gguf.',
-            createdAt: DateTime.now(),
-            isError: true,
-          ),
-        );
+              '⚠️ Model AI gagal dimuat.\n\nBuka Settings → Model Manager untuk memilih model .gguf.',
+              stopReason: StopReason.error,
+            );
             setState(() { _isGenerating = false; });
           }
           return;
         }
       } else {
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-          chat_models.ChatMessage(
-            id: const Uuid().v4(),
-            role: 'assistant',
-            content: '⚠️ Model AI belum dimuat.\n\nBuka Settings → Model Manager untuk memilih dan memuat model.',
-            createdAt: DateTime.now(),
-            isError: true,
-          ),
+          '⚠️ Model AI belum dimuat.\n\nBuka Settings → Model Manager untuk memilih dan memuat model.',
+          stopReason: StopReason.error,
         );
         setState(() { _isGenerating = false; });
         return;
       }
     }
 
-    final messages     = ref.read(chatSessionProvider).messages;
+    final messages     = ref.read(chatSessionProvider);
     final config       = ref.read(inferenceConfigProvider);
     final systemPrompt = ref.read(systemPromptProvider);
 
     // Inject file context into the last user message if payloads present
-    // Convert chat_models.ChatMessage → llama.ChatMessage for LlamaService
-    List<llama.ChatMessage> msgToSend = messages
-        .where((m) => m.role != 'assistant' || m.content.isNotEmpty)
-        .map((m) => llama.ChatMessage(
-              id: m.id,
-              role: m.role == 'user' ? llama.ChatRole.user
-                  : m.role == 'system' ? llama.ChatRole.system
-                  : llama.ChatRole.assistant,
-              content: m.content,
-              timestamp: m.createdAt,
-            ))
+    List<ChatMessage> msgToSend = messages
+        .where((m) => m.role != ChatRole.assistant || m.content.isNotEmpty)
         .toList();
 
     if (payloads.isNotEmpty) {
       final fileContext = _buildOfflineFileContext(payloads);
-      final lastUserIdx = msgToSend.lastIndexWhere((m) => m.role == llama.ChatRole.user);
+      final lastUserIdx = msgToSend.lastIndexWhere((m) => m.role == ChatRole.user);
       if (lastUserIdx >= 0 && fileContext.isNotEmpty) {
         final orig = msgToSend[lastUserIdx];
-        msgToSend = List<llama.ChatMessage>.from(msgToSend);
+        msgToSend = List<ChatMessage>.from(msgToSend);
         msgToSend[lastUserIdx] = orig.copyWith(
           content: '$fileContext${orig.content}',
         );
@@ -1369,7 +1297,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
-        _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
+        _autoSaveCurrentSession(ref.read(chatSessionProvider));
 
         // ── File edit result detection ───────────────────────────────────────
         // If text-based files were attached, offer to save the AI response as a file.
@@ -1388,15 +1316,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                 ? first.filename.split('.').last.toLowerCase()
                 : 'txt';
             if (textExts.contains(ext)) {
-              final currentMsgs = ref.read(chatSessionProvider).messages;
+              final currentMsgs = ref.read(chatSessionProvider);
               final lastAi = currentMsgs.lastWhere(
-                (m) => m.role == 'assistant',
-                orElse: () => chat_models.ChatMessage(
-                  id: const Uuid().v4(),
-                  role: 'assistant',
-                  content: '',
-                  createdAt: DateTime.now(),
-                ),
+                (m) => m.role == ChatRole.assistant,
+                orElse: () => ChatMessage.assistant(''),
               );
               if (lastAi.content.isNotEmpty && mounted) {
                 setState(() {
@@ -1415,13 +1338,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       onError: (Object e) {
         if (!mounted) return;
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-          chat_models.ChatMessage(
-            id: const Uuid().v4(),
-            role: 'assistant',
-            content: '❌ Error: $e',
-            createdAt: DateTime.now(),
-            isError: true,
-          ),
+          '❌ Error: $e',
+          stopReason: StopReason.error,
         );
         setState(() { _isGenerating = false; });
         _genSub = null;
@@ -1432,21 +1350,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─── Online: via PuterAiService ───────────────────────────────────────────
 
   Future<void> _generateOnline(String userText) async {
-    final messages     = ref.read(chatSessionProvider).messages;
+    final messages     = ref.read(chatSessionProvider);
     final systemPrompt = ref.read(systemPromptProvider) ?? '';
 
     // Bangun history dari messages (kecuali 2 terakhir: user baru + placeholder)
     final history = messages
-        .where((m) => m.role != 'system')
+        .where((m) => m.role != ChatRole.system)
         .toList();
     // Hapus 2 terakhir (user baru + placeholder asisten)
     final historyForApi = history.length > 2
         ? history.sublist(0, history.length - 2)
-        : <chat_models.ChatMessage>[];
+        : <ChatMessage>[];
 
     final historyMaps = historyForApi
         .map((m) => {
-              'role': m.role == 'user' ? 'user' : 'assistant',
+              'role': m.role == ChatRole.user ? 'user' : 'assistant',
               'content': m.content,
             })
         .toList();
@@ -1464,18 +1382,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
-        _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
+        _autoSaveCurrentSession(ref.read(chatSessionProvider));
       },
       onError: (Object e) {
         if (!mounted) return;
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-          chat_models.ChatMessage(
-            id: const Uuid().v4(),
-            role: 'assistant',
-            content: '❌ Error online: $e',
-            createdAt: DateTime.now(),
-            isError: true,
-          ),
+          '❌ Error online: $e',
+          stopReason: StopReason.error,
         );
         setState(() { _isGenerating = false; });
         _genSub = null;
@@ -1491,16 +1404,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     List<ChatAttachmentPayload> payloads = const [],
   }) async {
     final systemPrompt = ref.read(systemPromptProvider) ?? '';
-    final messages     = ref.read(chatSessionProvider).messages;
+    final messages     = ref.read(chatSessionProvider);
 
     final historyForApi = messages
-        .where((m) => m.role != 'system')
+        .where((m) => m.role != ChatRole.system)
         .toList();
     final histMaps = historyForApi.length > 2
         ? historyForApi
             .sublist(0, historyForApi.length - 2)
             .map((m) => {
-                  'role': m.role == 'user' ? 'user' : 'assistant',
+                  'role': m.role == ChatRole.user ? 'user' : 'assistant',
                   'content': m.content,
                 })
             .toList()
@@ -1521,18 +1434,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         if (!mounted) return;
         setState(() { _isGenerating = false; });
         _genSub = null;
-        _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
+        _autoSaveCurrentSession(ref.read(chatSessionProvider));
       },
       onError: (Object e) {
         if (!mounted) return;
         ref.read(chatSessionProvider.notifier).replaceLastAssistantMessage(
-          chat_models.ChatMessage(
-            id: const Uuid().v4(),
-            role: 'assistant',
-            content: '❌ Error Bulk API: $e',
-            createdAt: DateTime.now(),
-            isError: true,
-          ),
+          '❌ Error Bulk API: $e',
+          stopReason: StopReason.error,
         );
         setState(() { _isGenerating = false; });
         _genSub = null;
@@ -1726,8 +1634,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // B-009: Cek context limit sebelum generate offline
   // ─────────────────────────────────────────────────────────────────────────
 
-  Future<bool> _checkContextLimitBeforeGenerate(List<chat_models.ChatMessage> messages) async {
-    final params = ref.read(modelConfigProvider);
+  Future<bool> _checkContextLimitBeforeGenerate(List<new_models.ChatMessage> messages) async {
+    final params = ref.read(inferenceParamsProvider);
     final maxCtx = params.contextSize;
 
     // Estimasi: 1 token ≈ 3.5 karakter
@@ -1798,7 +1706,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         action: SnackBarAction(
           label: 'UNDO',
           onPressed: () {
-            final currentMsgs = List<chat_models.ChatMessage>.from(
+            final currentMsgs = List<new_models.ChatMessage>.from(
               ref.read(chatSessionProvider).messages,
             );
             final insertAt = deletedIndex.clamp(0, currentMsgs.length);
@@ -1844,10 +1752,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   String _getPreviousUserMessage(int assistantMsgIndex) {
-    final messages = ref.read(chatSessionProvider).messages;
+    final messages = ref.read(chatSessionProvider);
     if (assistantMsgIndex > 0 && assistantMsgIndex < messages.length) {
       final prev = messages[assistantMsgIndex - 1];
-      if (prev.role == 'user') {
+      if (prev.role == ChatRole.user) {
         return prev.content;
       }
     }
@@ -1862,11 +1770,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _resendMessage(_unused) async {
-    final messages = ref.read(chatSessionProvider).messages;
+    final messages = ref.read(chatSessionProvider);
     if (messages.isEmpty) return;
     // Ambil pesan user terakhir
     final lastUser = messages.lastWhere(
-      (m) => m.role == 'user',
+      (m) => m.role == ChatRole.user,
       orElse: () => messages.last,
     );
     _inputCtrl.text = lastUser.content;
@@ -1875,22 +1783,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _regenerateLast() async {
-    final messages = ref.read(chatSessionProvider).messages;
+    final messages = ref.read(chatSessionProvider);
     if (messages.isEmpty) return;
     // Hapus pesan asisten terakhir
     final lastAssistant = messages.lastWhere(
-      (m) => m.role == 'assistant',
+      (m) => m.role == ChatRole.assistant,
       orElse: () => messages.last,
     );
     ref.read(chatSessionProvider.notifier).deleteMessage(lastAssistant.id);
     // Tambah ulang placeholder
-    final placeholder = chat_models.ChatMessage(
-      id: const Uuid().v4(),
-      role: 'assistant',
-      content: '',
-      createdAt: DateTime.now(),
-      isStreaming: true,
-    );
+    final placeholder = ChatMessage.assistant('');
     ref.read(chatSessionProvider.notifier).addMessage(placeholder);
     setState(() { _isGenerating = true; });
     await _generateOffline();
@@ -2046,7 +1948,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   // Mulai chat baru: auto-save session aktif jika ada pesan, lalu reset
   Future<void> _startNewChat() async {
-    final msgs = ref.read(chatSessionProvider).messages;
+    final msgs = ref.read(chatSessionProvider);
     if (msgs.isNotEmpty) {
       await _autoSaveCurrentSession(msgs);
     }
@@ -2057,7 +1959,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       _messageWebSources.clear();
       setState(() {
         _pendingAttachments = [];
-        _currentSession = chat_models.ChatSession.empty();
+        _currentSession = new_models.ChatSession.empty();
       });
       _inputCtrl.clear();
     }
@@ -2065,22 +1967,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   // Auto-save session aktif ke DB menggunakan model baru ChatSession
   // D-008 fix: debounce 2 detik agar tidak flood DB saat streaming
-  Future<void> _autoSaveCurrentSession(List<chat_models.ChatMessage> msgs) async {
+  Future<void> _autoSaveCurrentSession(List<ChatMessage> msgs) async {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = Timer(const Duration(seconds: 2), () async {
       await _doAutoSave(msgs);
     });
   }
 
-  Future<void> _doAutoSave(List<chat_models.ChatMessage> msgs) async {
+  Future<void> _doAutoSave(List<ChatMessage> msgs) async {
     try {
       final now = DateTime.now();
+      final converted = msgs.map((m) => new_models.ChatMessage(
+        id: m.id,
+        role: m.role == ChatRole.user ? 'user' : m.role == ChatRole.assistant ? 'assistant' : 'system',
+        content: m.content,
+        createdAt: now,
+      )).toList();
       final title = _currentSession.title == 'Chat Baru' && msgs.isNotEmpty
           ? _generateTitleFromMessages(msgs)
           : _currentSession.title;
       final updated = _currentSession.copyWith(
         title: title,
-        messages: msgs,
+        messages: converted,
         updatedAt: now,
       );
       await HistoryService.instance.saveChatSession(updated);
@@ -2090,9 +1998,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     }
   } // end _doAutoSave
 
-  String _generateTitleFromMessages(List<chat_models.ChatMessage> msgs) {
+  String _generateTitleFromMessages(List<ChatMessage> msgs) {
     final firstUser = msgs.firstWhere(
-      (m) => m.role == 'user' && m.content.isNotEmpty,
+      (m) => m.role == ChatRole.user && m.content.isNotEmpty,
       orElse: () => msgs.first,
     );
     final raw = firstUser.content.trim().replaceAll('\n', ' ');
@@ -2100,7 +2008,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   // Load sesi dari history drawer ke chat aktif
-  Future<void> _loadSessionFromHistory(chat_models.ChatSession session) async {
+  Future<void> _loadSessionFromHistory(new_models.ChatSession session) async {
     // E-002: guard concurrent load
     if (_isLoadingSession) return;
     if (!mounted) return;
@@ -2155,12 +2063,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _exportTxt() async {
-    final messages = ref.read(chatSessionProvider).messages;
+    final messages = ref.read(chatSessionProvider);
     if (messages.isEmpty) return;
     final sb = StringBuffer();
     for (final m in messages) {
-      final peran = m.role == 'user' ? 'Kamu' : 'AI';
-      final waktu = DateFormat('HH:mm').format(m.createdAt);
+      final peran = m.role == ChatRole.user ? 'Kamu' : 'AI';
+      final waktu = DateFormat('HH:mm').format(m.timestamp);
       sb.writeln('[$waktu] $peran: ${m.content}');
       sb.writeln();
     }
@@ -2168,13 +2076,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _exportMd() async {
-    final messages = ref.read(chatSessionProvider).messages;
+    final messages = ref.read(chatSessionProvider);
     if (messages.isEmpty) return;
     final sb = StringBuffer();
     sb.writeln('# Chat Export — KanMon GO\n');
     for (final m in messages) {
-      final peran  = m.role == 'user' ? '**Kamu**' : '**AI**';
-      final waktu  = DateFormat('HH:mm').format(m.createdAt);
+      final peran  = m.role == ChatRole.user ? '**Kamu**' : '**AI**';
+      final waktu  = DateFormat('HH:mm').format(m.timestamp);
       sb.writeln('### $peran [$waktu]\n');
       sb.writeln('${m.content}\n');
       sb.writeln('---\n');
@@ -2183,11 +2091,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   void _copyAll() {
-    final messages = ref.read(chatSessionProvider).messages;
+    final messages = ref.read(chatSessionProvider);
     if (messages.isEmpty) return;
     final sb = StringBuffer();
     for (final m in messages) {
-      final peran = m.role == 'user' ? 'Kamu' : 'AI';
+      final peran = m.role == ChatRole.user ? 'Kamu' : 'AI';
       sb.writeln('$peran: ${m.content}');
     }
     Clipboard.setData(ClipboardData(text: sb.toString()));
@@ -2456,12 +2364,12 @@ class _ModelStatusChip extends ConsumerWidget {
     Widget? loading;
 
     switch (status) {
-      case llama.ModelStatus.loaded:
-      case llama.ModelStatus.generating:
+      case ModelStatus.loaded:
+      case ModelStatus.generating:
         label    = model?.name ?? 'Model Aktif';
         dotColor = Colors.green;
         break;
-      case llama.ModelStatus.loading:
+      case ModelStatus.loading:
         label    = 'Memuat...';
         dotColor = Colors.orange;
         loading  = SizedBox(
@@ -2473,11 +2381,11 @@ class _ModelStatusChip extends ConsumerWidget {
           ),
         );
         break;
-      case llama.ModelStatus.error:
+      case ModelStatus.error:
         label    = 'Error Model';
         dotColor = Colors.red;
         break;
-      case llama.ModelStatus.notLoaded:
+      case ModelStatus.notLoaded:
       default:
         label    = 'Belum ada model';
         dotColor = Colors.grey;
@@ -2835,7 +2743,7 @@ class _EmptyModelWidget extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MessageBubble extends StatelessWidget {
-  final chat_models.ChatMessage message;
+  final ChatMessage message;
   final bool showRawText;
   final bool isLastUser;
   final bool isLastAssistant;
@@ -2866,7 +2774,7 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kfc    = KmColors.of(context);
-    final isUser = message.role == 'user';
+    final isUser = message.role == ChatRole.user;
 
     return GestureDetector(
       onLongPress: () => _showMessageSheet(context, kfc),
@@ -2969,7 +2877,7 @@ class _MessageBubble extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          DateFormat('HH:mm').format(message.createdAt),
+                          DateFormat('HH:mm').format(message.timestamp),
                           style: TextStyle(
                             color: isUser
                                 ? Colors.white70

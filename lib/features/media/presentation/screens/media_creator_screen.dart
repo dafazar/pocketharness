@@ -76,13 +76,13 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
     );
     if (xfile == null) return;
     final file = File(xfile.path);
-    setState(() {
+    if (mounted) setState(() {
       _currentImage = file;
       _currentVideo = null;
       _aiResult     = '';
     });
     _gallery.insert(0, _MediaItem(file: file, type: MediaType.photo));
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   // ── Ambil foto dari galeri ────────────────────────────────────────────────
@@ -90,13 +90,13 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
     final xfile = await _picker.pickImage(source: ImageSource.gallery);
     if (xfile == null) return;
     final file = File(xfile.path);
-    setState(() {
+    if (mounted) setState(() {
       _currentImage = file;
       _currentVideo = null;
       _aiResult     = '';
     });
     _gallery.insert(0, _MediaItem(file: file, type: MediaType.photo));
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   // ── Rekam video ───────────────────────────────────────────────────────────
@@ -107,13 +107,13 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
     );
     if (xfile == null) return;
     final file = File(xfile.path);
-    setState(() {
+    if (mounted) setState(() {
       _currentVideo = file;
       _currentImage = null;
       _aiResult     = '';
     });
     _gallery.insert(0, _MediaItem(file: file, type: MediaType.video));
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   // ── Pilih video dari galeri ───────────────────────────────────────────────
@@ -121,24 +121,24 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
     final xfile = await _picker.pickVideo(source: ImageSource.gallery);
     if (xfile == null) return;
     final file = File(xfile.path);
-    setState(() {
+    if (mounted) setState(() {
       _currentVideo = file;
       _currentImage = null;
       _aiResult     = '';
     });
     _gallery.insert(0, _MediaItem(file: file, type: MediaType.video));
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   // ── Analisis dengan AI ────────────────────────────────────────────────────
   Future<void> _analyzeWithAi({String? customPrompt}) async {
     final imageFile = _currentImage;
     if (imageFile == null) {
-      setState(() => _aiResult = '⚠️ Pilih atau ambil foto dulu.');
+      if (mounted) setState(() => _aiResult = '⚠️ Pilih atau ambil foto dulu.');
       return;
     }
 
-    setState(() { _analyzing = true; _aiResult = ''; });
+    if (mounted) setState(() { _analyzing = true; _aiResult = ''; });
 
     try {
       final bytes = await imageFile.readAsBytes();
@@ -164,7 +164,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
           '4. Saran jika gambar ini perlu diperbaiki';
 
       final sb = StringBuffer();
-      setState(() => _aiResult = '🤔 AI menganalisis...');
+      if (mounted) setState(() => _aiResult = '🤔 AI menganalisis...');
 
       await for (final token in _ai.sendChatWithFileStream(
         systemPrompt: 'Kamu adalah AI visual analyst yang detail dan membantu. '
@@ -175,12 +175,12 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
         maxTokens: 1024,
       )) {
         sb.write(token);
-        setState(() => _aiResult = sb.toString());
+        if (mounted) setState(() => _aiResult = sb.toString());
       }
     } catch (e) {
-      setState(() => _aiResult = '❌ Error: $e');
+      if (mounted) setState(() => _aiResult = '❌ Error: $e');
     } finally {
-      setState(() => _analyzing = false);
+      if (mounted) setState(() => _analyzing = false);
     }
   }
 
@@ -188,7 +188,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
   Future<void> _saveToGallery() async {
     final file = _currentImage ?? _currentVideo;
     if (file == null) return;
-    setState(() { _saving = true; _saveMsg = null; });
+    if (mounted) setState(() { _saving = true; _saveMsg = null; });
 
     try {
       final fileName = 'kanmon_${DateTime.now().millisecondsSinceEpoch}${file.path.contains('.') ? file.path.substring(file.path.lastIndexOf('.')) : ''}';
@@ -199,14 +199,14 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
         skipIfExists: false,
       );
       if (result.isSuccess) {
-        setState(() => _saveMsg = '✅ Tersimpan ke galeri!');
+        if (mounted) setState(() => _saveMsg = '✅ Tersimpan ke galeri!');
       } else {
-        setState(() => _saveMsg = '❌ Gagal menyimpan: ${result.errorMessage}');
+        if (mounted) setState(() => _saveMsg = '❌ Gagal menyimpan: ${result.errorMessage}');
       }
     } catch (e) {
-      setState(() => _saveMsg = '❌ Error: $e');
+      if (mounted) setState(() => _saveMsg = '❌ Error: $e');
     } finally {
-      setState(() => _saving = false);
+      if (mounted) setState(() => _saving = false);
       if (mounted) {
         showTopSnack(context, _saveMsg ?? '', isError: _saveMsg?.startsWith('✅') != true);
       }
@@ -562,11 +562,11 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
   Future<void> _analyzeVideo() async {
     final videoFile = _currentVideo;
     if (videoFile == null) return;
-    setState(() { _analyzing = true; _aiResult = ''; });
+    if (mounted) setState(() { _analyzing = true; _aiResult = ''; });
     try {
       final bytes = await videoFile.readAsBytes();
       if (bytes.length > 19 * 1024 * 1024) {
-        setState(() => _aiResult = '⚠️ Video terlalu besar (maks 19MB untuk analisis langsung). '
+        if (mounted) setState(() => _aiResult = '⚠️ Video terlalu besar (maks 19MB untuk analisis langsung). '
             'Potong video dulu atau gunakan OCR screen.');
         return;
       }
@@ -586,12 +586,12 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
         file: processed,
       )) {
         sb.write(token);
-        setState(() => _aiResult = sb.toString());
+        if (mounted) setState(() => _aiResult = sb.toString());
       }
     } catch (e) {
-      setState(() => _aiResult = '❌ Error: $e');
+      if (mounted) setState(() => _aiResult = '❌ Error: $e');
     } finally {
-      setState(() => _analyzing = false);
+      if (mounted) setState(() => _analyzing = false);
     }
   }
 
@@ -652,7 +652,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
                 allowMultiple: false,
               );
               if (result != null && result.files.single.path != null) {
-                setState(() {
+                if (mounted) setState(() {
                   _editInputFile = File(result.files.single.path!);
                   _editResult = '';
                   _editOutputPath = null;
@@ -668,7 +668,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
             onTap: () async {
               final xfile = await ImagePicker().pickImage(source: ImageSource.camera);
               if (xfile != null) {
-                setState(() {
+                if (mounted) setState(() {
                   _editInputFile = File(xfile.path);
                   _editResult = '';
                   _editOutputPath = null;
@@ -992,30 +992,30 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
     final inputFile = _editInputFile;
     if (inputFile == null) return;
 
-    setState(() { _editing = true; _editResult = ''; _editOutputPath = null; });
+    if (mounted) setState(() { _editing = true; _editResult = ''; _editOutputPath = null; });
 
     try {
       // 1. Cek dan install tool
-      setState(() => _editResult = '🔍 Memeriksa tool...');
+      if (mounted) setState(() => _editResult = '🔍 Memeriksa tool...');
       final toolCheck = await ToolInstallerService.instance.ensureToolForOperation(_editOperation);
       if (!toolCheck.success) {
-        setState(() => _editResult = '⬇️ Menginstall ffmpeg...');
+        if (mounted) setState(() => _editResult = '⬇️ Menginstall ffmpeg...');
         bool installOk = false;
         await for (final chunk in ToolInstallerService.instance.installToolStream('ffmpeg')) {
-          setState(() => _editResult = '⬇️ $chunk');
+          if (mounted) setState(() => _editResult = '⬇️ $chunk');
           if (chunk.contains('✅') || chunk.contains('berhasil')) installOk = true;
         }
         if (!installOk) {
           final recheck = await ToolInstallerService.instance.ensureToolForOperation(_editOperation);
           if (!recheck.success) {
-            setState(() => _editResult = '❌ ffmpeg tidak berhasil diinstall.\n${recheck.installHint ?? ''}');
+            if (mounted) setState(() => _editResult = '❌ ffmpeg tidak berhasil diinstall.\n${recheck.installHint ?? ''}');
             return;
           }
         }
       }
 
       // 2. Jalankan edit
-      setState(() => _editResult = '⚙️ Memproses file...');
+      if (mounted) setState(() => _editResult = '⚙️ Memproses file...');
       final result = await MediaEditService.instance.edit(
         inputPath: inputFile.path,
         operation: _editOperation,
@@ -1023,17 +1023,17 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
       );
 
       if (result.success) {
-        setState(() {
+        if (mounted) setState(() {
           _editResult = '✅ Edit selesai!\n${result.details}\n\nOutput: ${result.outputPath}';
           _editOutputPath = result.outputPath;
         });
       } else {
-        setState(() => _editResult = '❌ Gagal: ${result.error}');
+        if (mounted) setState(() => _editResult = '❌ Gagal: ${result.error}');
       }
     } catch (e) {
-      setState(() => _editResult = '❌ Error: $e');
+      if (mounted) setState(() => _editResult = '❌ Error: $e');
     } finally {
-      setState(() => _editing = false);
+      if (mounted) setState(() => _editing = false);
     }
   }
 
@@ -1066,7 +1066,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
         final item = _gallery[i];
         return GestureDetector(
           onTap: () {
-            setState(() {
+            if (mounted) setState(() {
               if (item.type == MediaType.photo) {
                 _currentImage = item.file;
                 _currentVideo = null;

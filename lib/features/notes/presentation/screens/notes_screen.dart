@@ -67,7 +67,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   Future<void> _loadLastColor() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
-      setState(() {
+      if (mounted) setState(() {
         _lastColorIndex = (prefs.getInt(_kLastColorKey) ?? 0)
             .clamp(0, _noteColors.length - 1);
       });
@@ -103,7 +103,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
 
   Future<void> _loadNotes() async {
     final maps = await _db!.query('notes', orderBy: 'updatedAt DESC');
-    setState(() => _notes = maps.map(NoteModel.fromMap).toList());
+    if (mounted) setState(() => _notes = maps.map(NoteModel.fromMap).toList());
   }
 
   Future<void> _saveNote(NoteModel note) async {
@@ -471,7 +471,7 @@ class _NoteEditorScreenState extends ConsumerState<_NoteEditorScreen> {
     final newStr = str.substring(0, pos) + text + str.substring(pos);
     ctrl.text = newStr;
     ctrl.selection = TextSelection.collapsed(offset: pos + text.length - cursorBack);
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override
@@ -537,7 +537,7 @@ class _NoteEditorScreenState extends ConsumerState<_NoteEditorScreen> {
               itemBuilder: (_, i) => GestureDetector(
                 onTap: () {
                   // Terapkan warna dulu, tutup picker setelah frame berikutnya
-                  setState(() => _selectedColor = i);
+                  if (mounted) setState(() => _selectedColor = i);
                   Future.delayed(const Duration(milliseconds: 150), () {
                     if (mounted) setState(() => _showColorPicker = false);
                   });

@@ -177,10 +177,10 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_agreeTerms) {
-      setState(() => _errorMsg = 'Kamu harus menyetujui syarat & ketentuan.');
+      if (mounted) setState(() => _errorMsg = 'Kamu harus menyetujui syarat & ketentuan.');
       return;
     }
-    setState(() { _loading = true; _errorMsg = null; });
+    if (mounted) setState(() { _loading = true; _errorMsg = null; });
     try {
       final auth = ref.read(authServiceProvider);
       final result = await auth.registerWithEmail(
@@ -192,7 +192,7 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
       // Akun berhasil dibuat, email verifikasi sudah dikirim otomatis
       // Sekarang tampilkan halaman tunggu verifikasi
       if (mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _waitingVerification = true;
           _registeredEmail = result.user?.email ?? _emailCtrl.text.trim();
           _loading = false;
@@ -201,9 +201,9 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
         _startAutoCheck();
       }
     } on FirebaseAuthException catch (e) {
-      setState(() { _errorMsg = AuthService.mapError(e.code); _loading = false; });
+      if (mounted) setState(() { _errorMsg = AuthService.mapError(e.code); _loading = false; });
     } catch (_) {
-      setState(() { _errorMsg = 'Terjadi kesalahan. Coba lagi.'; _loading = false; });
+      if (mounted) setState(() { _errorMsg = 'Terjadi kesalahan. Coba lagi.'; _loading = false; });
     }
   }
 
@@ -216,11 +216,11 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
 
   // ── Countdown resend ─────────────────────────────────────────────────────
   void _startResendCountdown() {
-    setState(() => _resendCountdown = 60);
+    if (mounted) setState(() => _resendCountdown = 60);
     _resendTimer?.cancel();
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) { t.cancel(); return; }
-      setState(() {
+      if (mounted) setState(() {
         if (_resendCountdown > 0) {
           _resendCountdown--;
         } else {
@@ -259,7 +259,7 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
         _resendTimer?.cancel();
         if (mounted) context.go(KmRoutes.home);
       } else if (!silent && mounted) {
-        setState(() => _checkingVerif = false);
+        if (mounted) setState(() => _checkingVerif = false);
         showTopSnack(context, 'Email belum diverifikasi. Cek kotak masuk kamu.');
       }
     } catch (_) {
@@ -276,7 +276,7 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
     _autoCheckTimer?.cancel();
     _resendTimer?.cancel();
     if (mounted) {
-      setState(() {
+      if (mounted) setState(() {
         _waitingVerification = false;
         _emailCtrl.clear();
         _passwordCtrl.clear();
@@ -564,7 +564,7 @@ class _GoogleTabState extends ConsumerState<_GoogleTab> {
   String? _error;
 
   Future<void> _registerGoogle() async {
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final auth   = ref.read(authServiceProvider);
       final result = await auth.loginWithGoogle();
@@ -578,9 +578,9 @@ class _GoogleTabState extends ConsumerState<_GoogleTab> {
       }
       if (mounted) context.go(KmRoutes.home);
     } on FirebaseAuthException catch (e) {
-      setState(() => _error = AuthService.mapError(e.code));
+      if (mounted) setState(() => _error = AuthService.mapError(e.code));
     } catch (_) {
-      setState(() => _error = 'Daftar dengan Google gagal. Coba lagi.');
+      if (mounted) setState(() => _error = 'Daftar dengan Google gagal. Coba lagi.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -700,15 +700,15 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
 
   Future<void> _sendOtp() async {
     if (_phoneCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Masukkan nomor HP terlebih dahulu.');
+      if (mounted) setState(() => _error = 'Masukkan nomor HP terlebih dahulu.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     await ref.read(authServiceProvider).sendOtp(
       phoneNumber: _fullPhone,
       onCodeSent: (vid) {
         if (!mounted) return;
-        setState(() {
+        if (mounted) setState(() {
           _verificationId  = vid;
           _otpSent         = true;
           _loading         = false;
@@ -718,7 +718,7 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
       },
       onError: (msg) {
         if (!mounted) return;
-        setState(() { _error = msg; _loading = false; });
+        if (mounted) setState(() { _error = msg; _loading = false; });
       },
       onAutoVerified: (credential) async {
         if (!mounted) return;
@@ -736,10 +736,10 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
 
   Future<void> _verifyOtp() async {
     if (_otpCtrl.text.trim().length < 6) {
-      setState(() => _error = 'Masukkan 6 digit kode OTP.');
+      if (mounted) setState(() => _error = 'Masukkan 6 digit kode OTP.');
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final result = await ref.read(authServiceProvider).verifyOtp(
         verificationId: _verificationId!,
@@ -754,12 +754,12 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
       }
       if (mounted) context.go(KmRoutes.home);
     } on FirebaseAuthException catch (e) {
-      setState(() { _error = AuthService.mapError(e.code); _loading = false; });
+      if (mounted) setState(() { _error = AuthService.mapError(e.code); _loading = false; });
     }
   }
 
   Future<void> _signIn(PhoneAuthCredential credential) async {
-    setState(() { _loading = true; _error = null; });
+    if (mounted) setState(() { _loading = true; _error = null; });
     try {
       final result =
           await FirebaseAuth.instance.signInWithCredential(credential);
@@ -772,7 +772,7 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
       }
       if (mounted) context.go(KmRoutes.home);
     } on FirebaseAuthException catch (e) {
-      setState(() { _error = AuthService.mapError(e.code); _loading = false; });
+      if (mounted) setState(() { _error = AuthService.mapError(e.code); _loading = false; });
     }
   }
 
@@ -948,7 +948,7 @@ class _PhoneTabState extends ConsumerState<_PhoneTab> {
                           color: cs.onSurface.withValues(alpha: 0.5)))
                   : TextButton(
                       onPressed: () {
-                        setState(() => _otpSent = false);
+                        if (mounted) setState(() => _otpSent = false);
                         Future.microtask(_sendOtp);
                       },
                       child: const Text('Kirim ulang kode OTP',

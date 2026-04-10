@@ -77,7 +77,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
     super.initState();
     _svc.loadConfig();
     _inputCtrl.addListener(() =>
-        setState(() => _canSend = _inputCtrl.text.trim().isNotEmpty && !_processingFile));
+        if (mounted) setState(() => _canSend = _inputCtrl.text.trim().isNotEmpty && !_processingFile));
   }
 
   @override
@@ -90,7 +90,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
   }
 
   void _addStep(AgentStep s) {
-    setState(() {
+    if (mounted) setState(() {
       _steps.add(s);
       _statusText = _stepLabel(s);
     });
@@ -140,7 +140,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
 
   Future<void> _processFile(String path) async {
     final filename = p.basename(path);
-    setState(() {
+    if (mounted) setState(() {
       _processingFile     = true;
       _processingFileName = filename;
       _canSend            = false;
@@ -156,7 +156,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
             error: 'Timeout: file terlalu besar untuk diproses',
           ));
       if (mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _pendingFile        = processed;
           _processingFile     = false;
           _processingFileName = '';
@@ -166,7 +166,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _processingFile     = false;
           _processingFileName = '';
           _canSend            = _inputCtrl.text.trim().isNotEmpty;
@@ -241,14 +241,14 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
 
     // Validasi: jika ada file error, warn user dan bersihkan
     if (_pendingFile != null && _pendingFile!.error != null) {
-      showTopSnack(context, '⚠️ File bermasalah: ${_pendingFile!.error}\nFile dilepas dari task.', duration: const Duration(seconds: 4), isError: true);
-      setState(() => _pendingFile = null);
+      showTopSnack(context, '⚠️ File bermasalah: ${_pendingFile!.error}\nFile dilepas dari task.', duration: const Duration(seconds: 4), isError: true)
+      if (mounted) setState(() => _pendingFile = null);
       if (task.trim().isEmpty) return;
     }
 
     String fullTask = task.trim();
     final file = _pendingFile;
-    setState(() {
+    if (mounted) setState(() {
       _pendingFile  = null;
       _running      = true;
       _canSend      = false;
@@ -259,7 +259,8 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
       final header = '\n\n=== FILE: ${file.filename} ===\n\n';
       final body   = file.hasText && file.textContent != null
           ? (file.textContent!.length > 8000
-              ? '${file.textContent!.substring(0, 8000)}\n... [terpotong]'
+              ? '${(file.textContent ?? "").substring(0, (file.textContent?.length ?? 0).clamp(0, 8000))}
+... [terpotong]'
               : file.textContent!)
           : '[File: ${file.filename} — ${file.sizeLabel}]';
       fullTask = fullTask.isNotEmpty
@@ -299,14 +300,14 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
     _sub?.cancel();
     // Reset flag di AgentService agar run() berikutnya tidak melihat sisa flag
     AgentService.instance.forceStop();
-    setState(() { _running = false; _statusText = ''; });
+    if (mounted) setState(() { _running = false; _statusText = ''; });
     _addStep(AgentStep(type: AgentStepType.error,
         content: '⛔ Agent dihentikan oleh user.', time: DateTime.now()));
   }
 
   void _newTask() {
     _stop();
-    setState(() {
+    if (mounted) setState(() {
       _steps.clear();
       _statusText  = '';
       _pendingFile = null;
@@ -317,7 +318,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
   void _loadHistory(_TaskRecord record) {
     // Drawer sudah menutup dirinya sendiri sebelum memanggil callback ini.
     // Jangan panggil Navigator.pop lagi — akan menyebabkan AgentScreen ikut ter-pop.
-    setState(() {
+    if (mounted) setState(() {
       _steps
         ..clear()
         ..addAll(record.steps);
@@ -961,7 +962,7 @@ class _StepCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: GestureDetector(
-              onTap: () => _shareFile(context, step.outputFilePath!),
+              onTap: () => _shareFile(context, step.outputFilePath ?? ""),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
@@ -972,7 +973,7 @@ class _StepCard extends StatelessWidget {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.download_rounded, size: 14, color: Colors.white),
                   const SizedBox(width: 6),
-                  Text(step.outputFilePath!.split('/').last,
+                  Text((step.outputFilePath ?? '').split('/').last,
                       style: const TextStyle(fontSize: 12, color: Colors.white,
                           fontWeight: FontWeight.w600)),
                 ]),
@@ -1013,8 +1014,9 @@ class _StepCard extends StatelessWidget {
   Future<void> _export(BuildContext ctx, String content, String format) async {
     final result = await ExportService.instance.export(data: content, format: format);
     if (result.isSuccess && ctx.mounted) {
-      showTopSnack(ctx, '✅ Ekspor: ${result.filename}', duration: const Duration(seconds: 4));
-      await ExportService.instance.shareFile(result.path);
+      showTopSnack(ctx, '✅ Ekspor: ${result.filename}', duration: const Duration(seconds: 4)).instance.shareFile(result.path);
+        }),
+      ));
     }
   }
 
@@ -1304,7 +1306,7 @@ class _AgentSettingsState extends State<AgentSettingsScreen> {
                 onChanged: (v) {
                   final tools = List<String>.from(_cfg.enabledTools);
                   if (v) tools.add(entry.key); else tools.remove(entry.key);
-                  setState(() => _cfg = _cfg.copyWith(enabledTools: tools));
+                  if (mounted) setState(() => _cfg = _cfg.copyWith(enabledTools: tools));
                 },
               ),
               if (entry.key != _allTools.keys.last)
@@ -1343,7 +1345,7 @@ class _AgentSettingsState extends State<AgentSettingsScreen> {
                     onPressed: () {
                       final keys = Map<String, String>.from(_cfg.apiKeys);
                       keys.remove(entry.key);
-                      setState(() => _cfg = _cfg.copyWith(apiKeys: keys));
+                      if (mounted) setState(() => _cfg = _cfg.copyWith(apiKeys: keys));
                     },
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
@@ -1397,7 +1399,7 @@ class _AgentSettingsState extends State<AgentSettingsScreen> {
                   if (name.isEmpty || key.isEmpty) return;
                   final keys = Map<String, String>.from(_cfg.apiKeys);
                   keys[name] = key;
-                  setState(() => _cfg = _cfg.copyWith(apiKeys: keys));
+                  if (mounted) setState(() => _cfg = _cfg.copyWith(apiKeys: keys));
                   _apiNameCtrl.clear(); _apiKeyCtrl.clear();
                 },
                 child: Container(width: 36, height: 36,

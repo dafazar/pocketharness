@@ -208,21 +208,21 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
   // ── Edit Mode: enter / exit / select / rename / delete selected ──────────
   void _enterEditMode(String initialPath) {
     HapticFeedback.heavyImpact();
-    setState(() {
+    if (mounted) setState(() {
       _editMode = true;
       _selected.add(initialPath);
     });
   }
 
   void _exitEditMode() {
-    setState(() {
+    if (mounted) setState(() {
       _editMode = false;
       _selected.clear();
     });
   }
 
   void _toggleSelect(String path) {
-    setState(() {
+    if (mounted) setState(() {
       if (_selected.contains(path)) {
         _selected.remove(path);
         if (_selected.isEmpty) _editMode = false;
@@ -233,7 +233,7 @@ class _EbookScreenState extends ConsumerState<EbookScreen> {
   }
 
   void _selectAll() {
-    setState(() {
+    if (mounted) setState(() {
       _selected.addAll(_filteredFiles.map((f) => f['path']!));
     });
   }
@@ -987,13 +987,13 @@ class _PdfViewerScreenState extends State<_PdfViewerScreen> {
                   File(widget.path),
                   controller: _pdfCtrl,
                   onDocumentLoaded: (d) {
-                    setState(() {
+                    if (mounted) setState(() {
                       _totalPages = d.document.pages.count;
                       _loading = false;
                     });
                   },
                   onPageChanged: (d) {
-                    setState(() => _currentPage = d.newPageNumber);
+                    if (mounted) setState(() => _currentPage = d.newPageNumber);
                     _scrollThumbToPage(d.newPageNumber);
                   },
                 ),
@@ -1339,7 +1339,7 @@ class _AudioPlayerScreenState extends State<_AudioPlayerScreen>
                 return GestureDetector(
                   onTap: () async {
                     await _player.setPlaybackRate(s);
-                    setState(() => _speed = s);
+                    if (mounted) setState(() => _speed = s);
                   },
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 4),
@@ -1419,7 +1419,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
     _ctrl = VideoPlayerController.file(File(widget.path))
       ..initialize().then((_) {
         if (mounted) {
-          setState(() => _initialized = true);
+          if (mounted) setState(() => _initialized = true);
           _ctrl.play();
           _startAutoHide();
         }
@@ -1467,7 +1467,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
       if (!mounted) return;
       if (DateTime.now().difference(_lastInteraction).inSeconds >= 3 &&
           _ctrl.value.isPlaying) {
-        setState(() => _showControls = false);
+        if (mounted) setState(() => _showControls = false);
       }
       if (_showControls && _ctrl.value.isPlaying) _startAutoHide();
     });
@@ -1476,7 +1476,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
   void _touch() {
     _lastInteraction = DateTime.now();
     if (!_showControls) {
-      setState(() => _showControls = true);
+      if (mounted) setState(() => _showControls = true);
       _startAutoHide();
     }
   }
@@ -1489,7 +1489,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
       _ctrl.play();
       _startAutoHide();
     }
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   String _fmt(Duration d) {
@@ -1500,7 +1500,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
   }
 
   void _toggleFullscreen() {
-    setState(() => _isFullscreen = !_isFullscreen);
+    if (mounted) setState(() => _isFullscreen = !_isFullscreen);
     if (_isFullscreen) {
       SystemChrome.setPreferredOrientations(
           [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
@@ -1511,7 +1511,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
   }
 
   void _showGesture(String text, IconData icon, {Duration dur = const Duration(milliseconds: 800)}) {
-    setState(() {
+    if (mounted) setState(() {
       _showGestureHint = true;
       _gestureHintText = text;
       _gestureHintIcon = icon;
@@ -1528,10 +1528,10 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
     final newPos = pos + Duration(seconds: secs);
     _ctrl.seekTo(newPos.isNegative ? Duration.zero : newPos > dur ? dur : newPos);
     if (secs < 0) {
-      setState(() { _showLeftSeek = true; });
+      if (mounted) setState(() { _showLeftSeek = true; });
       Future.delayed(const Duration(milliseconds: 600), () { if (mounted) setState(() => _showLeftSeek = false); });
     } else {
-      setState(() { _showRightSeek = true; });
+      if (mounted) setState(() { _showRightSeek = true; });
       Future.delayed(const Duration(milliseconds: 600), () { if (mounted) setState(() => _showRightSeek = false); });
     }
     _touch();
@@ -1541,14 +1541,14 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
     _touch();
     final idx = _speeds.indexOf(_speed);
     final next = _speeds[(idx + 1) % _speeds.length];
-    setState(() => _speed = next);
+    if (mounted) setState(() => _speed = next);
     _ctrl.setPlaybackSpeed(next);
     _showGesture('${next}x', Icons.speed_rounded);
   }
 
   void _toggleFill() {
     _touch();
-    setState(() => _fillScreen = !_fillScreen);
+    if (mounted) setState(() => _fillScreen = !_fillScreen);
     _showGesture(_fillScreen ? 'Fill' : 'Fit', Icons.fit_screen_rounded);
   }
 
@@ -1681,7 +1681,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
                 _touch();
                 if (v == 'loop') {
                   _ctrl.setLooping(!_ctrl.value.isLooping);
-                  setState(() {});
+                  if (mounted) setState(() {});
                   _showGesture(_ctrl.value.isLooping ? 'Loop ON' : 'Loop OFF', Icons.loop_rounded);
                 }
               },
@@ -1756,14 +1756,14 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
                       max: durMs > 0 ? durMs / 1000.0 : 1.0,
                       onChangeStart: (v) {
                         _touch();
-                        setState(() { _isSeeking = true; _seekPreviewSeconds = v; });
+                        if (mounted) setState(() { _isSeeking = true; _seekPreviewSeconds = v; });
                       },
                       onChanged: (v) {
-                        setState(() => _seekPreviewSeconds = v);
+                        if (mounted) setState(() => _seekPreviewSeconds = v);
                       },
                       onChangeEnd: (v) {
                         _ctrl.seekTo(Duration(seconds: v.toInt()));
-                        setState(() => _isSeeking = false);
+                        if (mounted) setState(() => _isSeeking = false);
                       },
                     ),
                   ),
@@ -1781,7 +1781,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
                   onPressed: () {
                     _touch();
                     final newVol = _volume > 0 ? 0.0 : 1.0;
-                    setState(() => _volume = newVol);
+                    if (mounted) setState(() => _volume = newVol);
                     _ctrl.setVolume(newVol);
                   },
                 ),
@@ -1800,7 +1800,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
                       min: 0, max: 1,
                       onChanged: (v) {
                         _touch();
-                        setState(() => _volume = v);
+                        if (mounted) setState(() => _volume = v);
                         _ctrl.setVolume(v);
                       },
                     ),
@@ -1894,7 +1894,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
         child: GestureDetector(
           onTap: () {
             if (_isLocked) return;
-            setState(() => _showControls = !_showControls);
+            if (mounted) setState(() => _showControls = !_showControls);
             if (_showControls) _startAutoHide();
           },
           // Double tap left/right = seek ±10s
@@ -1915,7 +1915,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
             if (d.localPosition.dx > w / 2) {
               // Right side = volume
               final newVol = (_volume + delta).clamp(0.0, 1.0);
-              setState(() => _volume = newVol);
+              if (mounted) setState(() => _volume = newVol);
               _ctrl.setVolume(newVol);
               final pct = (newVol * 100).round();
               _showGesture('Volume \$pct%',
@@ -1926,7 +1926,7 @@ class _VideoPlayerScreenState extends State<_VideoPlayerScreen>
             } else {
               // Left side = brightness (visual only)
               final newBri = (_brightness + delta).clamp(0.0, 1.0);
-              setState(() => _brightness = newBri);
+              if (mounted) setState(() => _brightness = newBri);
               final pct = (newBri * 100).round();
               _showGesture('Brightness \$pct%',
                   newBri < 0.33 ? Icons.brightness_low_rounded
@@ -2196,7 +2196,7 @@ class _DocxViewerScreenState extends State<_DocxViewerScreen> {
               tooltip: 'Reset Zoom',
               onPressed: () {
                 _docTransformCtrl.value = Matrix4.identity();
-                setState(() => _docZoomed = false);
+                if (mounted) setState(() => _docZoomed = false);
               },
             ),
           IconButton(
@@ -2339,7 +2339,7 @@ class _XlsxViewerScreenState extends State<_XlsxViewerScreen>
       ctrl.addListener(() {
         final zoomed = ctrl.value.getMaxScaleOnAxis() > 1.01;
         if (_sheetZoomed[sheetIndex] != zoomed && mounted) {
-          setState(() => _sheetZoomed[sheetIndex] = zoomed);
+          if (mounted) setState(() => _sheetZoomed[sheetIndex] = zoomed);
         }
       });
       return ctrl;
@@ -2504,7 +2504,7 @@ class _XlsxViewerScreenState extends State<_XlsxViewerScreen>
       final rawBytes = await File(widget.path).readAsBytes();
       final sheets = await compute(_parseXlsx, rawBytes);
       if (mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _sheets  = sheets;
           _loading = false;
           _tabCtrl = TabController(
@@ -2515,7 +2515,7 @@ class _XlsxViewerScreenState extends State<_XlsxViewerScreen>
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
+        if (mounted) setState(() {
           _error   = 'Gagal membaca file XLSX: ${e.toString().split(".").first}';
           _loading = false;
         });
@@ -2549,7 +2549,7 @@ class _XlsxViewerScreenState extends State<_XlsxViewerScreen>
               onPressed: () {
                 final idx = _tabCtrl.index;
                 _sheetTransformCtrls[idx]?.value = Matrix4.identity();
-                setState(() => _sheetZoomed[idx] = false);
+                if (mounted) setState(() => _sheetZoomed[idx] = false);
               },
             ),
         ],
@@ -2752,7 +2752,7 @@ class _XlsxViewerScreenState extends State<_XlsxViewerScreen>
             child: GestureDetector(
               onTap: () {
                 transformCtrl.value = Matrix4.identity();
-                setState(() => _sheetZoomed[sheetIndex] = false);
+                if (mounted) setState(() => _sheetZoomed[sheetIndex] = false);
               },
               child: Container(
                 padding:
@@ -3054,7 +3054,7 @@ class _PptxViewerScreenState extends State<_PptxViewerScreen> {
                 tooltip: 'Reset Zoom',
                 onPressed: () {
                   _transformControllers[_current]?.value = Matrix4.identity();
-                  setState(() => _isZoomed = false);
+                  if (mounted) setState(() => _isZoomed = false);
                 },
               ),
             if (_slides.isNotEmpty)
@@ -3089,7 +3089,7 @@ class _PptxViewerScreenState extends State<_PptxViewerScreen> {
                               : const PageScrollPhysics(),
                           itemCount: _slides.length,
                           onPageChanged: (i) {
-                            setState(() => _current = i);
+                            if (mounted) setState(() => _current = i);
                             // Reset zoom slide sebelumnya saat pindah slide
                             final prev = i > 0 ? i - 1 : (i < _slides.length - 1 ? i + 1 : -1);
                             if (prev >= 0 && _transformControllers.containsKey(prev)) {
