@@ -54,7 +54,7 @@ class MediaEditService {
       }
 
       debugPrint('[MediaEdit] Command: $cmd');
-      final result = await TerminalService.instance.run(['sh', '-c', cmd],
+      final result = await TerminalService.instance.run(cmd,
         timeout: const Duration(minutes: 10),
       );
 

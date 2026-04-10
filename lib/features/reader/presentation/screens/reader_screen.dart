@@ -197,14 +197,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             IconButton(
               icon: const Icon(Icons.text_decrease_rounded),
               tooltip: 'Perkecil teks',
-              onPressed: () =>
-                  if (mounted) setState(() => _fontSize = (_fontSize - 2).clamp(12, 32)),
+              onPressed: () {
+                if (mounted) setState(() => _fontSize = (_fontSize - 2).clamp(12, 32));
+              },
             ),
             IconButton(
               icon: const Icon(Icons.text_increase_rounded),
               tooltip: 'Perbesar teks',
-              onPressed: () =>
-                  if (mounted) setState(() => _fontSize = (_fontSize + 2).clamp(12, 32)),
+              onPressed: () {
+                if (mounted) setState(() => _fontSize = (_fontSize + 2).clamp(12, 32));
+              },
             ),
             IconButton(
               icon: Icon(
@@ -214,8 +216,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               tooltip: _showFurigana
                   ? 'Sembunyikan furigana'
                   : 'Tampilkan furigana',
-              onPressed: () =>
-                  if (mounted) setState(() => _showFurigana = !_showFurigana),
+              onPressed: () {
+                if (mounted) setState(() => _showFurigana = !_showFurigana);
+              },
             ),
             IconButton(
               icon: Icon(Icons.volume_up_rounded, color: c.accent),

@@ -871,8 +871,9 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
                     size: 20),
-                onPressed: () =>
-                    if (mounted) setState(() => _obscure1 = !_obscure1),
+                onPressed: () {
+                    if (mounted) setState(() => _obscure1 = !_obscure1);
+                  },
               ),
               filled: true,
               fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -905,8 +906,9 @@ class _PhoneResetTabState extends ConsumerState<_PhoneResetTab> {
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
                     size: 20),
-                onPressed: () =>
-                    if (mounted) setState(() => _obscure2 = !_obscure2),
+                onPressed: () {
+                    if (mounted) setState(() => _obscure2 = !_obscure2);
+                  },
               ),
               filled: true,
               fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
