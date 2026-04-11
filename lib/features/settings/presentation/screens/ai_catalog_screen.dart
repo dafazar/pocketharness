@@ -235,38 +235,49 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 if (_variantFilter.contains(ModelVariant.uncensored))
-                  _ActiveChip('🔓 Uncensored', cs, onRemove: () =>
-                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.uncensored))),
+                  _ActiveChip('🔓 Uncensored', cs, onRemove: () {
+                    if (mounted) setState(() => _variantFilter.remove(ModelVariant.uncensored));
+                  }),
                 if (_variantFilter.contains(ModelVariant.standard))
-                  _ActiveChip('🛡️ Standard', cs, onRemove: () =>
-                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.standard))),
+                  _ActiveChip('🛡️ Standard', cs, onRemove: () {
+                    if (mounted) setState(() => _variantFilter.remove(ModelVariant.standard));
+                  }),
                 if (_variantFilter.contains(ModelVariant.reasoning))
-                  _ActiveChip('🧠 Reasoning', cs, onRemove: () =>
-                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.reasoning))),
+                  _ActiveChip('🧠 Reasoning', cs, onRemove: () {
+                    if (mounted) setState(() => _variantFilter.remove(ModelVariant.reasoning));
+                  }),
                 if (_variantFilter.contains(ModelVariant.coding))
-                  _ActiveChip('💻 Coding', cs, onRemove: () =>
-                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.coding))),
+                  _ActiveChip('💻 Coding', cs, onRemove: () {
+                    if (mounted) setState(() => _variantFilter.remove(ModelVariant.coding));
+                  }),
                 if (_variantFilter.contains(ModelVariant.multilingual))
-                  _ActiveChip('🌐 Multilingual', cs, onRemove: () =>
-                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.multilingual))),
+                  _ActiveChip('🌐 Multilingual', cs, onRemove: () {
+                    if (mounted) setState(() => _variantFilter.remove(ModelVariant.multilingual));
+                  }),
                 if (_variantFilter.contains(ModelVariant.tiny))
-                  _ActiveChip('🪶 Ultra Ringan', cs, onRemove: () =>
-                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.tiny))),
+                  _ActiveChip('🪶 Ultra Ringan', cs, onRemove: () {
+                    if (mounted) setState(() => _variantFilter.remove(ModelVariant.tiny));
+                  }),
                 if (_variantFilter.contains(ModelVariant.vision))
-                  _ActiveChip('👁️ Vision', cs, onRemove: () =>
-                      if (mounted) setState(() => _variantFilter.remove(ModelVariant.vision))),
+                  _ActiveChip('👁️ Vision', cs, onRemove: () {
+                    if (mounted) setState(() => _variantFilter.remove(ModelVariant.vision));
+                  }),
                 for (final f in _formatFilter)
-                  _ActiveChip(f, cs, onRemove: () =>
-                      if (mounted) setState(() => _formatFilter.remove(f))),
+                  _ActiveChip(f, cs, onRemove: () {
+                    if (mounted) setState(() => _formatFilter.remove(f));
+                  }),
                 if (_maxSize != null)
-                  _ActiveChip('Max: ${_maxSize!.name}', cs, onRemove: () =>
-                      if (mounted) setState(() => _maxSize = null)),
+                  _ActiveChip('Max: ${_maxSize!.name}', cs, onRemove: () {
+                    if (mounted) setState(() => _maxSize = null);
+                  }),
                 if (_maxRam != null)
-                  _ActiveChip('RAM ≤${_maxRam}GB', cs, onRemove: () =>
-                      if (mounted) setState(() => _maxRam = null)),
+                  _ActiveChip('RAM ≤${_maxRam}GB', cs, onRemove: () {
+                    if (mounted) setState(() => _maxRam = null);
+                  }),
                 if (_sortBy != 'popularity')
-                  _ActiveChip('Sort: $_sortBy', cs, onRemove: () =>
-                      if (mounted) setState(() => _sortBy = 'popularity')),
+                  _ActiveChip('Sort: $_sortBy', cs, onRemove: () {
+                    if (mounted) setState(() => _sortBy = 'popularity');
+                  }),
                 if (_filterCount > 1)
                   GestureDetector(
                     onTap: () => setState(() {
