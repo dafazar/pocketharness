@@ -145,10 +145,11 @@ class ChatAttachment {
         break;
     }
 
-    // Thumbnail: prefer downscaled thumbnail, fall back to rawBytes for images
+    // Thumbnail: hanya pakai thumbnailBytes yang sudah di-compress.
+    // JANGAN fallback ke rawBytes — bisa puluhan MB → OOM / force close.
     Uint8List? thumb;
     if (pf.category == FileCategory.image) {
-      thumb = pf.thumbnailBytes ?? pf.rawBytes;
+      thumb = pf.thumbnailBytes;   // null jika compress gagal → aman
     } else if (pf.category == FileCategory.video) {
       thumb = pf.thumbnailBytes;
     }

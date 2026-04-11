@@ -780,8 +780,14 @@ class AiService {
     BulkApiProvider? forceProvider,
   }) async* {
     try {
+      // Hanya ambil image attachment yang punya thumbnail valid & tidak terlalu besar.
+      // Batas 4 MB pada thumbnailBytes — cegah OOM saat base64Encode + HTTP body.
+      const _maxThumbBytes = 4 * 1024 * 1024;
       final imageAtts = attachments
-          .where((a) => a.type == cm.AttachmentType.image && a.thumbnailBytes != null)
+          .where((a) =>
+              a.type == cm.AttachmentType.image &&
+              a.thumbnailBytes != null &&
+              a.thumbnailBytes!.lengthInBytes <= _maxThumbBytes)
           .toList();
       final textAtts = attachments.where((a) => a.hasText).toList();
 

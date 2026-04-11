@@ -1558,9 +1558,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final payloads = <ChatAttachmentPayload>[];
     for (final att in attachments) {
       final file = File(att.path);
-      if (!file.existsSync()) continue;
-
-      final bytes = await file.readAsBytes();
       final mimeType = att.mimeType ?? _guessMime(att.path);
       final isImg = mimeType.startsWith('image/');
       final isTxt = ['text/', 'application/json', 'application/xml']
@@ -1569,22 +1566,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       final isVideo = mimeType.startsWith('video/');
 
       String? textContent;
-      if (isVideo) {
+      String? base64Data;
+
+      if (isImg) {
+        // Gunakan thumbnailBytes yang sudah di-compress (JPEG ≤4 MB).
+        // JANGAN readAsBytes dari file asli — bisa puluhan MB → OOM.
+        final thumb = att.thumbnailBytes;
+        if (thumb != null && thumb.lengthInBytes <= 4 * 1024 * 1024) {
+          base64Data = base64Encode(thumb);
+        }
+      } else if (isVideo) {
         textContent =
-            '[Video file: ${att.filename}, ${_formatSize(bytes.length)}. '
+            '[Video file: ${att.filename}, ${_formatSize(att.sizeBytes)}. '
             'Video playback is not supported in AI chat. '
             'Please describe what you need.]';
-      } else if (isTxt) {
+      } else if (isTxt && file.existsSync()) {
+        final bytes = await file.readAsBytes();
         textContent = utf8.decode(bytes, allowMalformed: true);
       }
 
       payloads.add(ChatAttachmentPayload(
         filename: att.filename,
         mimeType: mimeType,
-        base64Data:
-            isImg && bytes.length <= 5 * 1024 * 1024 ? base64Encode(bytes) : null,
+        base64Data: base64Data,
         textContent: textContent,
-        sizeBytes: bytes.length,
+        sizeBytes: att.sizeBytes,
       ));
     }
     return payloads;

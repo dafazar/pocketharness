@@ -11,15 +11,21 @@
 //   - Archive size guard (> 200 MB skips extraction, returns listing only)
 //   - Extended extension map: .bz2, .xz, .opus, .3gp, .kts, .tsx, .jsx etc.
 //   - Chunked readAsBytes for large files to avoid isolate freeze
+// Fixes applied in Session 7 (force close / OOM fix):
+//   - _maxInlineBytes diturunkan dari 19 MB → 4 MB
+//   - rawBytes tidak lagi disimpan untuk image/video (hemat RAM)
+//   - _generateImageThumbnail dipindah ke compute() (off UI thread)
+//   - Output thumbnail ganti PNG → JPEG via flutter_image_compress
+//   - Ukuran thumbnail dikecilkan 400×300 → 512 (max) JPEG q=80
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -98,12 +104,36 @@ enum FileCategory {
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
+// ── Top-level helper untuk compute() ─────────────────────────────────────────
+// Harus di luar class agar bisa dipakai oleh compute() (Dart isolate).
+// Membaca file dari path, lalu compress ke JPEG 512px menggunakan
+// flutter_image_compress (tidak memblokir UI thread).
+Future<Uint8List?> _thumbnailFromPath(String filePath) async {
+  try {
+    final file = File(filePath);
+    if (!file.existsSync()) return null;
+    final rawBytes = await file.readAsBytes();
+    return await FlutterImageCompress.compressWithList(
+      rawBytes,
+      minWidth  : 512,
+      minHeight : 512,
+      quality   : 80,
+      format    : CompressFormat.jpeg,
+    );
+  } catch (e) {
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class FileProcessorService {
   FileProcessorService._();
   static final FileProcessorService instance = FileProcessorService._();
 
-  // 19 MB — Gemini inline limit
-  static const int _maxInlineBytes = 19 * 1024 * 1024;
+  // 4 MB — batas aman untuk readAsBytes & base64 encoding di memori terbatas
+  // (diturunkan dari 19 MB untuk mencegah OOM / force close)
+  static const int _maxInlineBytes = 4 * 1024 * 1024;
   // 200 MB — max archive to attempt full extraction
   static const int _maxArchiveExtractBytes = 200 * 1024 * 1024;
 
@@ -149,17 +179,18 @@ class FileProcessorService {
               category    : category,
               sizeBytes   : size,
               originalPath: filePath,
-              error       : 'Gambar terlalu besar (${_fmtBytes(size)}, maks 19 MB). '
+              error       : 'Gambar terlalu besar (${_fmtBytes(size)}, maks 4 MB). '
                             'Compress gambar terlebih dahulu.',
             );
           }
-          final imgBytes = await file.readAsBytes();
-          final imgThumb = await _generateImageThumbnail(imgBytes);
+          // Thumbnail di-generate di isolate terpisah (compute) agar tidak
+          // memblokir UI thread → mencegah ANR / force close pada device lambat.
+          // rawBytes TIDAK disimpan — gunakan originalPath jika butuh bytes asli.
+          final imgThumb = await compute(_thumbnailFromPath, filePath);
           return ProcessedFile(
             filename       : filename,
             mimeType       : mime,
             category       : category,
-            rawBytes       : imgBytes,
             thumbnailBytes : imgThumb,
             sizeBytes      : size,
             originalPath   : filePath,
@@ -279,11 +310,11 @@ class FileProcessorService {
               category    : category,
               sizeBytes   : size,
               originalPath: filePath,
-              error       : 'Video terlalu besar (${_fmtBytes(size)}, maks 19 MB). '
+              error       : 'Video terlalu besar (${_fmtBytes(size)}, maks 4 MB). '
                             'Coba kompres atau potong video.',
             );
           }
-          final videoBytes   = await file.readAsBytes();
+          // rawBytes video TIDAK disimpan — terlalu besar, cukup thumbnail & path.
           final videoThumb   = await _extractVideoThumbnail(filePath);
           final videoDurStr  = await _getVideoDuration(filePath);
           final videoMeta    = <String, dynamic>{
@@ -293,7 +324,6 @@ class FileProcessorService {
             filename       : filename,
             mimeType       : mime,
             category       : category,
-            rawBytes       : videoBytes,
             thumbnailBytes : videoThumb,
             sizeBytes      : size,
             originalPath   : filePath,
@@ -349,24 +379,24 @@ class FileProcessorService {
   }
 
   // ── Image thumbnail generator ─────────────────────────────────────────────
+  // Dipanggil via compute() — berjalan di isolate terpisah, tidak block UI thread.
+  // Output: JPEG q=80 max 512px (jauh lebih kecil dari PNG sebelumnya).
 
   Future<Uint8List?> _generateImageThumbnail(
     Uint8List rawBytes, {
-    int maxWidth  = 400,
-    int maxHeight = 300,
+    int maxWidth  = 512,
+    int maxHeight = 512,
   }) async {
+    // Wrapper tetap ada untuk backward-compat, tapi sekarang pakai
+    // flutter_image_compress yang jalannya off UI thread secara internal.
     try {
-      final codec = await ui.instantiateImageCodec(
+      return await FlutterImageCompress.compressWithList(
         rawBytes,
-        targetWidth : maxWidth,
-        targetHeight: maxHeight,
+        minWidth  : maxWidth,
+        minHeight : maxHeight,
+        quality   : 80,
+        format    : CompressFormat.jpeg,
       );
-      final frame    = await codec.getNextFrame();
-      final byteData = await frame.image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      frame.image.dispose();
-      return byteData?.buffer.asUint8List();
     } catch (e) {
       debugPrint('[FileProcessor] image thumbnail error: $e');
       return null;
