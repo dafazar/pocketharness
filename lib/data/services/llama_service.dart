@@ -85,7 +85,7 @@ class LlamaService {
       StreamController<ModelStatus>.broadcast();
 
   /// Broadcast stream untuk progres pemuatan model (0.0 – 1.0)
-  final StreamController<double> _loadProgressCtrl =
+  StreamController<double> _loadProgressCtrl =
       StreamController<double>.broadcast();
 
   /// Prompt sistem yang sedang aktif
@@ -155,8 +155,8 @@ class LlamaService {
   }
 
   void _ensureProgressCtrlOpen() {
-    if (_progressCtrl.isClosed) {
-      _progressCtrl = StreamController<double>.broadcast();
+    if (_loadProgressCtrl.isClosed) {
+      _loadProgressCtrl = StreamController<double>.broadcast();
     }
   }
   Future<bool> loadModel(LlamaModelInfo model, {LlamaModelConfig? config}) async {

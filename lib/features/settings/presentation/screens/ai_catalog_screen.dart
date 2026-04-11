@@ -49,8 +49,9 @@ class _AiCatalogScreenState extends State<AiCatalogScreen> {
   void initState() {
     super.initState();
     _svc.load();
-    _searchCtrl.addListener(() =>
-        if (mounted) setState(() => _search = _searchCtrl.text.trim()));
+    _searchCtrl.addListener(() {
+      if (mounted) setState(() => _search = _searchCtrl.text.trim());
+    });
   }
 
   @override
