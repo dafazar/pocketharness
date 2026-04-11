@@ -260,8 +260,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
       final header = '\n\n=== FILE: ${file.filename} ===\n\n';
       final body   = file.hasText && file.textContent != null
           ? (file.textContent!.length > 8000
-              ? '${(file.textContent ?? "").substring(0, (file.textContent?.length ?? 0).clamp(0, 8000))}
-... [terpotong]'
+              ? '${(file.textContent ?? "").substring(0, (file.textContent?.length ?? 0).clamp(0, 8000))}\n... [terpotong]'
               : file.textContent!)
           : '[File: ${file.filename} — ${file.sizeLabel}]';
       fullTask = fullTask.isNotEmpty

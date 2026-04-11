@@ -298,12 +298,14 @@ class _BulkApiSettingsScreenState extends State<BulkApiSettingsScreen>
           lines.add('📦 Package: ${result['packageName']}');
         if (result['mobileSdkAppId']?.isNotEmpty == true)
           lines.add('📱 App ID: ${result['mobileSdkAppId']}');
-        if (result['webClientId']?.isNotEmpty == true)
+        if (result['webClientId']?.isNotEmpty == true) {
           final webId = result['webClientId'] as String? ?? '';
-        if (webId.isNotEmpty) lines.add('🌐 Web Client ID: ${webId.substring(0, webId.length.clamp(0, 30))}...');
-        if (result['androidClientId']?.isNotEmpty == true)
+          if (webId.isNotEmpty) lines.add('🌐 Web Client ID: ${webId.substring(0, webId.length.clamp(0, 30))}...');
+        }
+        if (result['androidClientId']?.isNotEmpty == true) {
           final andId = result['androidClientId'] as String? ?? '';
-        if (andId.isNotEmpty) lines.add('🤖 Android Client ID: ${andId.substring(0, andId.length.clamp(0, 30))}...');
+          if (andId.isNotEmpty) lines.add('🤖 Android Client ID: ${andId.substring(0, andId.length.clamp(0, 30))}...');
+        }
         if (result['certificateHash']?.isNotEmpty == true)
           lines.add('🔑 SHA-1: ${result['certificateHash']}');
 

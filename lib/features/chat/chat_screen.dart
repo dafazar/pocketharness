@@ -1737,8 +1737,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   // ─────────────────────────────────────────────────────────────────────────
 
   Future<bool> _checkContextLimitBeforeGenerate(List<new_models.ChatMessage> messages) async {
-    final params = ref.read(inferenceConfigProvider);
-    final maxCtx = params.contextSize;
+    final maxCtx = ref.read(modelConfigProvider).contextSize;
 
     // Estimasi: 1 token ≈ 3.5 karakter
     final totalChars = messages.fold<int>(0, (sum, m) => sum + m.content.length);
@@ -1775,7 +1774,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
               final kept = currentMsgs.length > 4
                   ? currentMsgs.sublist(currentMsgs.length - 4)
                   : currentMsgs;
-              final currentSession = ref.read(chatSessionProvider).messages;
+              final currentSession = ref.read(chatSessionProvider);
               ref.read(chatSessionProvider.notifier)
                   .loadSession(currentSession.copyWith(messages: kept));
               Navigator.pop(ctx, true);
@@ -2987,14 +2986,7 @@ class _MessageBubble extends StatelessWidget {
                             fontSize: 10,
                           ),
                         ),
-                        if (!isUser && message.tokenCount != null) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            '${message.tokenCount} tok',
-                            style: TextStyle(
-                                color: kfc.textMuted, fontSize: 10),
-                          ),
-                        ],
+
                       ],
                     ),
                   ],
