@@ -685,8 +685,9 @@ class _FilterSheetState extends State<_FilterSheet> {
     _sortBy   = widget.sortBy;
   }
 
-  void _toggle<T>(Set<T> set, T value) =>
-      if (mounted) setState(() => set.contains(value) ? set.remove(value) : set.add(value));
+  void _toggle<T>(Set<T> set, T value) {
+    if (mounted) setState(() => set.contains(value) ? set.remove(value) : set.add(value));
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -81,7 +81,7 @@ class LlamaService {
   bool _gotFirstToken = false;
 
   /// Broadcast stream untuk perubahan ModelStatus
-  var StreamController<ModelStatus> _statusCtrl =
+  StreamController<ModelStatus> _statusCtrl =
       StreamController<ModelStatus>.broadcast();
 
   /// Broadcast stream untuk progres pemuatan model (0.0 – 1.0)
