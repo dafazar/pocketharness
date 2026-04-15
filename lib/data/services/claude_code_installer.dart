@@ -147,6 +147,10 @@ class ClaudeCodeInstaller {
     );
 
     await svc.init();
+    // BUG FIX: Force re-check Termux via PackageManager, bukan cache lama.
+    // Ini penting jika app sudah berjalan sebelum Termux diinstall.
+    await svc.resetTermuxState();
+
     if (!svc.hasTermux) {
       yield const ClaudeInstallEvent(
         step: ClaudeInstallStep.error,

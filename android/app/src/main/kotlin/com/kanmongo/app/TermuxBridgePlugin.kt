@@ -201,7 +201,23 @@ class TermuxBridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         var exitCode      = -1
 
         // Jalankan proses via sh -c agar pipeline, redirect, dll bekerja
-        val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
+        // BUG FIX: Inject Termux PATH agar binary Termux bisa diakses
+        val termuxPrefix = "/data/data/com.termux/files/usr"
+        val termuxBin    = "$termuxPrefix/bin"
+        val systemPath   = "/system/bin:/system/xbin"
+        val fullPath     = "$termuxBin:$systemPath"
+
+        val pb = ProcessBuilder("sh", "-c", command)
+        pb.environment().apply {
+            put("PATH", fullPath)
+            put("PREFIX", termuxPrefix)
+            put("LD_LIBRARY_PATH", "$termuxPrefix/lib")
+            put("HOME", "/data/data/com.termux/files/home")
+            put("TMPDIR", "$termuxPrefix/../tmp")
+            put("LANG", "en_US.UTF-8")
+            put("TERM", "xterm-256color")
+        }
+        val process = pb.start()
 
         // Dua Thread reader — berjalan paralel, hindari deadlock buffer
         val stdoutThread = Thread {
@@ -266,13 +282,18 @@ class TermuxBridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     /**
      * Mengecek keberadaan package [TERMUX_PACKAGE] via PackageManager.
-     * Menggunakan `GET_META_DATA = 0` agar tidak membutuhkan permission ekstra.
+     * Handle deprecated API di Android 13+ (API 33).
      */
     private fun isTermuxInstalled(context: Context): Boolean {
         return try {
-            // getPackageInfo lempar PackageManager.NameNotFoundException jika tidak ada
-            @Suppress("DEPRECATION")
-            context.packageManager.getPackageInfo(TERMUX_PACKAGE, 0)
+            val pm = context.packageManager
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                // API 33+ — gunakan PackageInfoFlags
+                pm.getPackageInfo(TERMUX_PACKAGE, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(TERMUX_PACKAGE, 0)
+            }
             true
         } catch (_: PackageManager.NameNotFoundException) {
             false

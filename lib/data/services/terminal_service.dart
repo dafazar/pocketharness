@@ -126,6 +126,11 @@ class TerminalService {
     _cwd = Directory('${docs.path}/workspace');
     if (!_cwd.existsSync()) _cwd.createSync(recursive: true);
 
+    // BUG FIX: Cek Termux via MethodChannel/PackageManager DULU (reliable di
+    // Android 11+ karena tidak perlu akses filesystem Termux langsung).
+    // _detectEnvironment() lalu menggunakan hasil ini sebagai override.
+    await initialize();
+
     await _detectEnvironment();
     await _startShellSession();
     _initialized = true;
@@ -149,20 +154,53 @@ class TerminalService {
     }
   }
 
+  /// Reset dan re-cek status Termux. Berguna jika Termux baru diinstall
+  /// setelah app sudah berjalan.
+  Future<void> resetTermuxState() async {
+    _termuxChecked = false;
+    _termuxAvailable = false;
+    _termuxPrefix = null;
+    await initialize();
+    await _detectEnvironment();
+    debugPrint('[TerminalService] Termux state reset — available: $_termuxAvailable');
+  }
+
   // ── Deteksi environment ───────────────────────────────────────────────────
   Future<void> _detectEnvironment() async {
-    // Cek Termux
+    // BUG FIX: Jika initialize() sudah konfirmasi Termux via PackageManager,
+    // jangan override _termuxAvailable dengan hasil filesystem check yang
+    // tidak reliable di Android 11+ (app sandbox mencegah akses path Termux).
+    //
+    // Jika PackageManager bilang Termux ada (_termuxAvailable == true dari
+    // initialize()), kita tetap cari prefix-nya tapi TIDAK set false jika
+    // directory tidak bisa diakses.
+    final termuxConfirmedByPM = _termuxAvailable; // hasil dari initialize()
+
     final termuxPaths = [
       '/data/data/com.termux/files/usr',
       '/data/user/0/com.termux/files/usr',
+      '/data/user/999/com.termux/files/usr', // secondary user
     ];
 
     for (final prefix in termuxPaths) {
-      if (Directory(prefix).existsSync()) {
-        _termuxAvailable = true;
-        _termuxPrefix = prefix;
-        break;
+      try {
+        if (Directory(prefix).existsSync()) {
+          _termuxAvailable = true;
+          _termuxPrefix = prefix;
+          break;
+        }
+      } catch (_) {
+        // Sandbox / permission error — bisa terjadi di Android 11+
       }
+    }
+
+    // BUG FIX: Jika PackageManager konfirmasi Termux ada tapi kita tidak bisa
+    // akses direktorinya (karena sandbox), set prefix ke default path dan
+    // tetap anggap Termux tersedia.
+    if (termuxConfirmedByPM && _termuxPrefix == null) {
+      _termuxAvailable = true;
+      _termuxPrefix = '/data/data/com.termux/files/usr';
+      debugPrint('[Terminal] Termux confirmed by PackageManager but prefix not directly accessible. Using default path.');
     }
 
     // Cari shell yang tersedia
@@ -1090,8 +1128,8 @@ class TerminalService {
       yield '✅ Internet tersedia. Melanjutkan instalasi...\n';
     }
 
-    // Sinkronisasi status Termux via TermuxBridge
-    await initialize();
+    // Sinkronisasi status Termux sudah dilakukan di init() — tidak perlu ulang.
+    // await initialize(); // sudah dipanggil di init()
 
     if (_termuxAvailable) {
       yield '⏳ Menjalankan di Termux...\n';
