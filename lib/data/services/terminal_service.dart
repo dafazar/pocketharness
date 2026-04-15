@@ -16,6 +16,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'termux_bridge.dart';
+import 'package:kanmongo/data/services/llama_http_server.dart';
+import 'package:kanmongo/data/services/claude_code_installer.dart';
 
 // ── Output dari satu perintah ─────────────────────────────────────────────────
 class CommandResult {
@@ -485,7 +487,67 @@ class TerminalService {
       case 'pkg':
         return _handlePkgCommand(full, cmd, args);
 
+      case 'install-claude':
+        return await _handleInstallClaude(args);
+
+      case 'claude-status':
+        return await _handleClaudeStatus();
+
+      case 'llama-server':
+      case 'kanmon-server':
+        return await _handleLlamaServer(args);
+
       default:       return null; // lanjut ke Process.run
+    }
+  }
+
+  // ── Built-in: install-claude ──────────────────────────────────────────────
+  Future<String> _handleInstallClaude(List<String> args) async {
+    final sb = StringBuffer();
+    await for (final event in ClaudeCodeInstaller.instance.install()) {
+      sb.writeln('[${event.step.name}] ${event.message}');
+      if (event.isError) sb.writeln('❌ Install failed.');
+      if (event.step == ClaudeInstallStep.done) sb.writeln('✅ Done!');
+    }
+    return sb.toString();
+  }
+
+  // ── Built-in: claude-status ───────────────────────────────────────────────
+  Future<String> _handleClaudeStatus() async {
+    final installed = await ClaudeCodeInstaller.instance.checkInstalled();
+    if (!installed) {
+      return '🔴 Claude Code not installed.\nRun: install-claude';
+    }
+    final path       = ClaudeCodeInstaller.instance.claudeCodePath;
+    final port       = LlamaHttpServer.instance.port;
+    final serverRunning = LlamaHttpServer.instance.isRunning;
+    return '🟢 Claude Code installed\n'
+        '   Path: ${path ?? "auto-detect"}\n'
+        '   Server: ${serverRunning ? "running on port $port" : "stopped (run: llama-server start)"}\n'
+        '   Launch: ${ClaudeCodeInstaller.instance.getLaunchCommand(serverPort: port ?? 8080)}';
+  }
+
+  // ── Built-in: llama-server ────────────────────────────────────────────────
+  Future<String> _handleLlamaServer(List<String> args) async {
+    final sub = args.isEmpty ? 'status' : args[0].toLowerCase();
+    switch (sub) {
+      case 'start':
+        final port = await LlamaHttpServer.instance.start();
+        return '✅ llama.cpp HTTP server started on port $port\n'
+               'Endpoint: http://localhost:$port/v1/chat/completions\n'
+               'Models:   http://localhost:$port/v1/models';
+      case 'stop':
+        await LlamaHttpServer.instance.stop();
+        return '⏹ llama.cpp HTTP server stopped.';
+      case 'status':
+        final s = LlamaHttpServer.instance;
+        if (s.isRunning) {
+          return '🟢 Running on port ${s.port}\n'
+                 '   http://localhost:${s.port}/v1/chat/completions';
+        }
+        return '🔴 Not running. Use: llama-server start';
+      default:
+        return 'Usage: llama-server [start|stop|status]';
     }
   }
 
@@ -1146,6 +1208,9 @@ AI COMMANDS:
   /edit <file>       Edit file dengan AI
   /script <task>     AI buat & jalankan script
   /download <url>    Download dengan progress
+  install-claude    Install Claude Code CLI
+  claude-status     Check Claude Code status
+  kanmon-claude     Launch Claude Code (after install)
 ''';
 }
 

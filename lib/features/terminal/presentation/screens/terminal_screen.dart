@@ -61,14 +61,16 @@ class _TerminalState extends ConsumerState<TerminalScreen>
   bool   _initialized = false;
 
   static const _quickCmds = [
-    ('ls -la',     '📂 ls'),
-    ('pwd',        '📍 pwd'),
-    ('env',        '🌍 env'),
-    ('ps',         '⚙️ ps'),
-    ('df -h',      '💾 df'),
-    ('free',       '🧠 free'),
-    ('uname -a',   '🖥️ uname'),
-    ('id',         '👤 id'),
+    ('ls -la',             '📂 ls'),
+    ('pwd',                '📍 pwd'),
+    ('env',                '🌍 env'),
+    ('ps',                 '⚙️ ps'),
+    ('df -h',              '💾 df'),
+    ('free',               '🧠 free'),
+    ('uname -a',           '🖥️ uname'),
+    ('id',                 '👤 id'),
+    ('llama-server start', '🤖 AI srv'),
+    ('claude-status',      '🔍 claude'),
   ];
 
   @override
@@ -271,6 +273,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
         'CWD: ${_svc.cwdRelative}\nFiles: $fl\n'
         'Shell: ${_svc.shellInfo}\n'
         '${hasTermux ? "Termux tersedia — bisa gunakan apt/pkg, git, python, npm, dll.\n" : ""}'
+        '${hasTermux ? "Claude Code tersedia — gunakan kanmon-claude untuk AI coding agent.\n" : ""}'
         'Format perintah dalam ```sh code block```. Jawab Bahasa Indonesia.';
 
     _push(const TermEntry(TermType.ai, ''));

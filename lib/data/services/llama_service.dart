@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
 import 'package:kanmongo/core/ai/native_event_dispatcher.dart';
+import 'package:kanmongo/data/services/llama_http_server.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KUNCI SharedPreferences
@@ -977,6 +978,14 @@ class LlamaService {
     } catch (_) {}
     debugPrint('[LlamaService] Status → ${newStatus.name}');
   }
+
+  // ── HTTP Server companion ──────────────────────────────────────────────────
+
+  /// Apakah HTTP server companion sedang berjalan. Digunakan UI untuk menampilkan status.
+  bool get isHttpServerRunning => LlamaHttpServer.instance.isRunning;
+
+  /// Port yang digunakan HTTP server. Null jika server tidak berjalan.
+  int? get httpServerPort => LlamaHttpServer.instance.port;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
