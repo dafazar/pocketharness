@@ -124,6 +124,19 @@ class LlamaService {
   /// Stream progres pemuatan model (broadcast)
   Stream<double> get loadProgressStream => _loadProgressCtrl.stream;
 
+  // ── Last Loaded Model Persistence ─────────────────────────────────────────
+  static const _kLastModelPath = 'llama_last_model_path';
+  static const _kLastModelId   = 'llama_last_model_id';
+
+  String? _lastLoadedModelPath;
+  String? _lastLoadedModelId;
+
+  /// Path model terakhir yang berhasil dimuat (persisted)
+  String? get lastLoadedModelPath => _lastLoadedModelPath;
+
+  /// ID model terakhir yang berhasil dimuat (persisted)
+  String? get lastLoadedModelId => _lastLoadedModelId;
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   /// Inisialisasi service: muat settings, pastikan stream aktif

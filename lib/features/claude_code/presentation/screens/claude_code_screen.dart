@@ -604,12 +604,16 @@ class _ClaudeCodeScreenState extends ConsumerState<ClaudeCodeScreen> {
   }
 
   String _stepEmoji(ClaudeInstallStep step) => switch (step) {
-        ClaudeInstallStep.checkingBundle       => '🔍',
-        ClaudeInstallStep.extractingBundle     => '📦',
-        ClaudeInstallStep.writingSettings      => '⚙️',
-        ClaudeInstallStep.verifying            => '✔️',
-        ClaudeInstallStep.done                 => '✅',
-        ClaudeInstallStep.error                => '❌',
+        ClaudeInstallStep.checkingTermux       => '🔍',
+        ClaudeInstallStep.checkingNode         => '🔍',
+        ClaudeInstallStep.installingNode       => '📦',
+        ClaudeInstallStep.checkingNpm          => '🔍',
+        ClaudeInstallStep.installingClaudeCode => '🤖',
+        ClaudeInstallStep.writingWrapperScript  => '📝',
+        ClaudeInstallStep.writingSettings       => '⚙️',
+        ClaudeInstallStep.verifying             => '✔️',
+        ClaudeInstallStep.done                  => '✅',
+        ClaudeInstallStep.error                 => '❌',
       };
 
   // ── Needs Prereqs ─────────────────────────────────────────────────────────────
