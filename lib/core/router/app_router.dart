@@ -34,6 +34,8 @@ import 'package:kanmongo/features/membership/presentation/screens/paywall_screen
 import 'package:kanmongo/features/membership/presentation/screens/membership_status_screen.dart';
 import 'package:kanmongo/shared/widgets/main_scaffold.dart';
 import 'package:kanmongo/shared/widgets/wallpaper_menu_shell.dart';
+import 'package:kanmongo/features/claude_code/presentation/screens/claude_code_screen.dart';
+import 'package:kanmongo/features/vscode/presentation/screens/vscode_screen.dart';
 
 class KmRoutes {
   static const login           = '/auth/login';
@@ -65,6 +67,8 @@ class KmRoutes {
   static const paywall         = '/membership';
   static const membershipStatus = '/membership/status';
   static const agent           = '/agent';
+  static const claudeCode      = '/claude-code';
+  static const vsCode          = '/vscode';
   static const privacy         = '/privacy';
 }
 
@@ -163,6 +167,8 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/chat',     pageBuilder: (c, s) => _fade(const ChatScreen())),
     GoRoute(path: '/agent',    pageBuilder: (c, s) => _fade(const AgentScreen())),
     GoRoute(path: '/media',    pageBuilder: (c, s) => _fade(const MediaCreatorScreen())),
+    GoRoute(path: '/claude-code', pageBuilder: (c, s) => _fade(const ClaudeCodeScreen())),
+    GoRoute(path: '/vscode',      pageBuilder: (c, s) => _fade(const VsCodeScreen())),
     // C-005 fix: Privacy Policy screen
     GoRoute(
       path: '/privacy',

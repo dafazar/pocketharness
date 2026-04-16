@@ -53,7 +53,7 @@ extension BulkApiProviderX on BulkApiProvider {
 
   String get defaultModel {
     switch (this) {
-      case BulkApiProvider.anthropic:  return 'claude-3-haiku-20240307';
+      case BulkApiProvider.anthropic:  return 'claude-haiku-4-5-20251001';
       case BulkApiProvider.groq:       return 'llama-3.3-70b-versatile';
       case BulkApiProvider.gemini:     return 'gemini-1.5-flash';
       case BulkApiProvider.openai:     return 'gpt-4o-mini';

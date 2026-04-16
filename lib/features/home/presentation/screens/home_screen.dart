@@ -96,6 +96,20 @@ const _menuItems = [
     color: Color(0xFF7C3AED),
     icon: Icons.smart_toy_rounded,
   ),
+  _MenuItem(
+    label: 'Claude Code',
+    subtitle: 'Coding AI · CLI · Lokal',
+    route: '/claude-code',
+    color: Color(0xFF2563EB),
+    icon: Icons.code_rounded,
+  ),
+  _MenuItem(
+    label: 'VS Code',
+    subtitle: 'IDE · code-server · Browser',
+    route: '/vscode',
+    color: Color(0xFF0EA5E9),
+    icon: Icons.web_rounded,
+  ),
 ];
 
 // ── Home Screen ───────────────────────────────────────────────────────────────

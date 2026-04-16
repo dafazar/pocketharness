@@ -162,6 +162,23 @@ jobs:
           echo "llama_tag=$RESOLVED" >> "$GITHUB_OUTPUT"
           echo "LLAMA_EXTERNAL_DIR=/tmp/llama_src" >> "$GITHUB_ENV"
 
+      - name: "💻 Resolve code-server version"
+        id: resolve-codeserver
+        run: |
+          CS_VERSION=$(curl -sf https://registry.npmjs.org/code-server/latest \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
+          if [ -z "$CS_VERSION" ]; then
+            CS_VERSION="4.93.1"
+          fi
+          echo "  📌 code-server version: $CS_VERSION"
+          echo "cs_version=$CS_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: "💾 Cache code-server npm package"
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm/_npx
+          key: code-server-npm-${{ steps.resolve-codeserver.outputs.cs_version }}
+
       - name: "💾 Cache llama.cpp source"
         id: cache-llama-src
         uses: actions/cache@v4
@@ -267,7 +284,7 @@ jobs:
       - name: "🔨 Build APK Debug"
         if: github.event.inputs.build_target == 'apk-debug'
         run: |
-          flutter build apk --debug
+          flutter build apk --debug --dart-define=CODE_SERVER_VERSION=${{ steps.resolve-codeserver.outputs.cs_version }}
           echo "  📦 $(du -sh build/app/outputs/flutter-apk/app-debug.apk | cut -f1)  app-debug.apk"
 
       - name: "📤 Upload APK Debug → GitHub Release"
@@ -297,7 +314,7 @@ jobs:
           OBFSTR=""
           [ "${{ github.event.inputs.enable_obfuscation }}" != "false" ] && [ -n "$KEYSTORE_PATH" ] \
             && OBFSTR="--obfuscate --split-debug-info=build/debug-info" || true
-          flutter build apk --release --target-platform android-arm64 $OBFSTR
+          flutter build apk --release --target-platform android-arm64 $OBFSTR --dart-define=CODE_SERVER_VERSION=${{ steps.resolve-codeserver.outputs.cs_version }}
           echo "  📦 $(du -sh build/app/outputs/flutter-apk/app-release.apk | cut -f1)  app-release.apk"
 
       - name: "📤 Upload APK Release → GitHub Release"
@@ -326,7 +343,7 @@ jobs:
           OBFSTR=""
           [ "${{ github.event.inputs.enable_obfuscation }}" != "false" ] && [ -n "$KEYSTORE_PATH" ] \
             && OBFSTR="--obfuscate --split-debug-info=build/debug-info-arm64" || true
-          flutter build apk --release --target-platform android-arm64 $OBFSTR
+          flutter build apk --release --target-platform android-arm64 $OBFSTR --dart-define=CODE_SERVER_VERSION=${{ steps.resolve-codeserver.outputs.cs_version }}
           echo "  📦 $(du -sh build/app/outputs/flutter-apk/app-release.apk | cut -f1)  app-release-arm64.apk"
 
       - name: "📤 Upload APK Release arm64 → GitHub Release"
@@ -356,7 +373,7 @@ jobs:
           OBFSTR=""
           [ "${{ github.event.inputs.enable_obfuscation }}" != "false" ] && [ -n "$KEYSTORE_PATH" ] \
             && OBFSTR="--obfuscate --split-debug-info=build/debug-info-split" || true
-          flutter build apk --release --split-per-abi $OBFSTR
+          flutter build apk --release --split-per-abi $OBFSTR --dart-define=CODE_SERVER_VERSION=${{ steps.resolve-codeserver.outputs.cs_version }}
 
       - name: "📤 Upload Split APKs → GitHub Release"
         if: |
@@ -389,7 +406,7 @@ jobs:
           OBFSTR=""
           [ "${{ github.event.inputs.enable_obfuscation }}" != "false" ] && [ -n "$KEYSTORE_PATH" ] \
             && OBFSTR="--obfuscate --split-debug-info=build/debug-info-aab" || true
-          flutter build appbundle --release $OBFSTR
+          flutter build appbundle --release $OBFSTR --dart-define=CODE_SERVER_VERSION=${{ steps.resolve-codeserver.outputs.cs_version }}
           echo "  📦 $(du -sh build/app/outputs/bundle/release/app-release.aab | cut -f1)  app-release.aab"
 
       - name: "📤 Upload AAB → GitHub Release"
@@ -493,7 +510,7 @@ jobs:
 
       - name: "🏗️ Build iOS — no codesign"
         if: steps.ios_sign.outputs.signed != 'true'
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --dart-define=CODE_SERVER_VERSION=${{ steps.resolve-codeserver.outputs.cs_version }}
 
       - name: "📤 Upload iOS (no-sign) → GitHub Release"
         if: steps.ios_sign.outputs.signed != 'true'
@@ -515,7 +532,7 @@ jobs:
           OBFSTR=""
           [ "${{ github.event.inputs.enable_obfuscation }}" != "false" ] \
             && OBFSTR="--obfuscate --split-debug-info=build/debug-info-ios" || true
-          flutter build ipa --release $OBFSTR
+          flutter build ipa --release $OBFSTR --dart-define=CODE_SERVER_VERSION=${{ steps.resolve-codeserver.outputs.cs_version }}
 
       - name: "📤 Upload IPA → GitHub Release"
         if: steps.ios_sign.outputs.signed == 'true'
