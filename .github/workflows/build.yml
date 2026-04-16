@@ -123,6 +123,185 @@ jobs:
       - name: "📦 flutter pub get"
         run: flutter pub get
 
+      # ── SESSION_01: Bundle Node.js + Claude Code CLI + code-server ────────────
+
+      - name: "🟢 Resolve Node.js LTS version"
+        id: resolve-nodejs
+        run: |
+          NODE_VERSION=$(curl -sf https://nodejs.org/dist/index.json \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); lts=[v for v in d if v.get('lts') and v['version'].startswith('v22')]; print(lts[0]['version'].lstrip('v'))" \
+            2>/dev/null || echo "22.14.0")
+          echo "node_version=$NODE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "  📌 Node.js: $NODE_VERSION"
+
+      - name: "🔍 Determine ABIs for build target"
+        id: abis
+        run: |
+          TARGET="${{ github.event.inputs.build_target }}"
+          case "$TARGET" in
+            apk-release-arm64|apk-debug)
+              ABIS="arm64-v8a"
+              ;;
+            apk-split-abi|all-android|apk-release)
+              ABIS="arm64-v8a x86_64"
+              ;;
+            aab)
+              ABIS="arm64-v8a"
+              ;;
+            *)
+              ABIS="arm64-v8a"
+              ;;
+          esac
+          echo "abis=$ABIS" >> "$GITHUB_OUTPUT"
+          echo "  📌 ABIs to bundle: $ABIS"
+
+      - name: "💾 Cache bundled tools"
+        id: cache-tools
+        uses: actions/cache@v4
+        with:
+          path: assets/tools
+          key: tools-bundle-node${{ steps.resolve-nodejs.outputs.node_version }}-cs${{ steps.resolve-codeserver.outputs.cs_version }}-${{ steps.abis.outputs.abis }}
+
+      - name: "📦 Bundle Node.js + Claude Code + code-server + CLI tools"
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          NODE_VERSION="${{ steps.resolve-nodejs.outputs.node_version }}"
+          CS_VERSION="${{ steps.resolve-codeserver.outputs.cs_version }}"
+          ABIS="${{ steps.abis.outputs.abis }}"
+          TOOLS_DIR="assets/tools"
+
+          sudo apt-get install -y binutils -qq
+
+          mkdir -p "$TOOLS_DIR/launcher"
+
+          for ABI in $ABIS; do
+            echo "  ⚙️  Bundling for ABI: $ABI"
+            mkdir -p "$TOOLS_DIR/$ABI/npm_modules"
+            mkdir -p "$TOOLS_DIR/$ABI/bin"
+
+            # ── Node.js binary ────────────────────────────────────────────────
+            case "$ABI" in
+              arm64-v8a) NODE_ARCH="arm64" ;;
+              x86_64)    NODE_ARCH="x64"   ;;
+            esac
+            NODE_TARBALL="node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.gz"
+            NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TARBALL}"
+            echo "    ⬇️  Node.js: $NODE_URL"
+            curl -fsSL "$NODE_URL" -o "/tmp/${NODE_TARBALL}"
+            tar -xzf "/tmp/${NODE_TARBALL}" -C /tmp --strip-components=1 \
+              "node-v${NODE_VERSION}-linux-${NODE_ARCH}/bin/node"
+            mv /tmp/bin/node "$TOOLS_DIR/$ABI/node"
+            chmod 755 "$TOOLS_DIR/$ABI/node"
+
+            # ── npm module ────────────────────────────────────────────────────
+            tar -xzf "/tmp/${NODE_TARBALL}" -C /tmp --strip-components=1 \
+              "node-v${NODE_VERSION}-linux-${NODE_ARCH}/lib/node_modules/npm"
+            cp -r /tmp/lib/node_modules/npm "$TOOLS_DIR/$ABI/npm_modules/npm"
+            rm -rf /tmp/lib /tmp/bin "/tmp/${NODE_TARBALL}"
+
+            # ── Claude Code CLI ───────────────────────────────────────────────
+            CC_INSTALL="/tmp/cc_install_${ABI}"
+            rm -rf "$CC_INSTALL"
+            mkdir -p "$CC_INSTALL"
+            node "$TOOLS_DIR/$ABI/npm_modules/npm/bin/npm-cli.js" install \
+              --prefix "$CC_INSTALL" --global \
+              "@anthropic-ai/claude-code" \
+              2>&1 | tail -5
+            CLAUDE_CODE_VERSION=$(node -e "try{const p=require('$CC_INSTALL/lib/node_modules/@anthropic-ai/claude-code/package.json');console.log(p.version);}catch(e){console.log('unknown');}" 2>/dev/null || echo "unknown")
+            mkdir -p "$TOOLS_DIR/$ABI/npm_modules/@anthropic-ai"
+            cp -r "$CC_INSTALL/lib/node_modules/@anthropic-ai/claude-code" \
+              "$TOOLS_DIR/$ABI/npm_modules/@anthropic-ai/"
+            echo "    ✅ Claude Code CLI: $CLAUDE_CODE_VERSION"
+
+            # ── code-server ───────────────────────────────────────────────────
+            CS_INSTALL="/tmp/cs_install_${ABI}"
+            rm -rf "$CS_INSTALL"
+            mkdir -p "$CS_INSTALL"
+            node "$TOOLS_DIR/$ABI/npm_modules/npm/bin/npm-cli.js" install \
+              --prefix "$CS_INSTALL" --global \
+              "code-server@${CS_VERSION}" \
+              2>&1 | tail -5
+            cp -r "$CS_INSTALL/lib/node_modules/code-server" \
+              "$TOOLS_DIR/$ABI/npm_modules/code-server"
+            echo "    ✅ code-server: $CS_VERSION"
+
+            # ── Termux prebuilt binaries ──────────────────────────────────────
+            case "$ABI" in
+              arm64-v8a) TERMUX_ARCH="aarch64" ;;
+              x86_64)    TERMUX_ARCH="x86_64"  ;;
+            esac
+            TERMUX_POOL="https://packages.termux.dev/apt/termux-main/pool/main"
+
+            for PKG_INFO in \
+              "g/git/git" \
+              "r/ripgrep/ripgrep" \
+              "o/openssh/openssh-sftp-server"; do
+              PKG_LETTER=$(echo "$PKG_INFO" | cut -d/ -f1)
+              PKG_DIR=$(echo "$PKG_INFO" | cut -d/ -f2)
+              PKG_NAME=$(echo "$PKG_INFO" | cut -d/ -f3)
+              echo "    ⬇️  Fetching $PKG_NAME for $TERMUX_ARCH"
+              DEB_URL=$(curl -sf "${TERMUX_POOL}/${PKG_LETTER}/${PKG_DIR}/" \
+                | grep -o 'href="[^"]*'"$TERMUX_ARCH"'[^"]*\.deb"' \
+                | grep -v 'dbgsym\|dev\|doc' \
+                | head -1 \
+                | sed 's/href="//;s/"//')
+              if [ -z "$DEB_URL" ]; then
+                echo "    ⚠️  Could not resolve $PKG_NAME deb, skipping"
+                continue
+              fi
+              FULL_DEB_URL="${TERMUX_POOL}/${PKG_LETTER}/${PKG_DIR}/${DEB_URL##*/}"
+              curl -fsSL "$FULL_DEB_URL" -o "/tmp/${PKG_NAME}_${ABI}.deb"
+              mkdir -p "/tmp/deb_${PKG_NAME}_${ABI}"
+              cd "/tmp/deb_${PKG_NAME}_${ABI}"
+              ar x "/tmp/${PKG_NAME}_${ABI}.deb"
+              DATA_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+              if [ -n "$DATA_TAR" ]; then
+                tar -xf "$DATA_TAR" 2>/dev/null || true
+                find . -path "*/usr/bin/*" -type f | while read BIN; do
+                  cp "$BIN" "$OLDPWD/$TOOLS_DIR/$ABI/bin/$(basename $BIN)" 2>/dev/null || true
+                done
+                find . -path "*/bin/$PKG_NAME" -type f | while read BIN; do
+                  cp "$BIN" "$OLDPWD/$TOOLS_DIR/$ABI/bin/$PKG_NAME" 2>/dev/null || true
+                done
+              fi
+              cd - > /dev/null
+              rm -rf "/tmp/deb_${PKG_NAME}_${ABI}" "/tmp/${PKG_NAME}_${ABI}.deb"
+            done
+
+            chmod -R 755 "$TOOLS_DIR/$ABI/bin/" 2>/dev/null || true
+            chmod 755 "$TOOLS_DIR/$ABI/node"
+
+            echo "  ✅ ABI $ABI bundling complete"
+            echo "     Node.js: $(du -sh $TOOLS_DIR/$ABI/node | cut -f1)"
+            echo "     npm:     $(du -sh $TOOLS_DIR/$ABI/npm_modules/npm | cut -f1)"
+            echo "     Claude:  $(du -sh $TOOLS_DIR/$ABI/npm_modules/@anthropic-ai/claude-code | cut -f1)"
+            echo "     CS:      $(du -sh $TOOLS_DIR/$ABI/npm_modules/code-server | cut -f1)"
+          done
+
+          # ── Launcher scripts via base64 (YAML-safe) ──────────────────────────
+          printf '%s' 'IyEvc3lzdGVtL2Jpbi9zaApUT09MU19ESVI9IiQoY2QgIiQoZGlybmFtZSAiJDAiKS8uLiIgJiYgcHdkKSIKQUJJPSQoZ2V0cHJvcCByby5wcm9kdWN0LmNwdS5hYmkgMj4vZGV2L251bGwgfHwgZWNobyAiYXJtNjQtdjhhIikKY2FzZSAiJEFCSSIgaW4KICBhcm02NC12OGEpIEFSQ0g9ImFybTY0LXY4YSIgOzsKICB4ODZfNjQpICAgIEFSQ0g9Ing4Nl82NCIgOzsKICAqKSAgICAgICAgIEFSQ0g9ImFybTY0LXY4YSIgOzsKZXNhYwpOT0RFPSIkVE9PTFNfRElSLyRBUkNIL25vZGUiCkNMQVVERV9NT0RVTEU9IiRUT09MU19ESVIvJEFSQ0gvbnBtX21vZHVsZXMvQGFudGhyb3BpYy1haS9jbGF1ZGUtY29kZS9jbGkuanMiCmV4cG9ydCBQQVRIPSIkVE9PTFNfRElSLyRBUkNIL2JpbjokUEFUSCIKZXhwb3J0IE5PREVfUEFUSD0iJFRPT0xTX0RJUi8kQVJDSC9ucG1fbW9kdWxlcyIKZXhwb3J0IEhPTUU9IiR7SE9NRTotL2RhdGEvZGF0YS9jb20ua2FubW9uZ28uYXBwL2ZpbGVzfSIKZXhlYyAiJE5PREUiICIkQ0xBVURFX01PRFVMRSIgIiRAIgo=' | base64 -d > "$TOOLS_DIR/launcher/claude_code_launcher.sh"
+          printf '%s' 'IyEvc3lzdGVtL2Jpbi9zaApUT09MU19ESVI9IiQoY2QgIiQoZGlybmFtZSAiJDAiKS8uLiIgJiYgcHdkKSIKQUJJPSQoZ2V0cHJvcCByby5wcm9kdWN0LmNwdS5hYmkgMj4vZGV2L251bGwgfHwgZWNobyAiYXJtNjQtdjhhIikKY2FzZSAiJEFCSSIgaW4KICBhcm02NC12OGEpIEFSQ0g9ImFybTY0LXY4YSIgOzsKICB4ODZfNjQpICAgIEFSQ0g9Ing4Nl82NCIgOzsKICAqKSAgICAgICAgIEFSQ0g9ImFybTY0LXY4YSIgOzsKZXNhYwpOT0RFPSIkVE9PTFNfRElSLyRBUkNIL25vZGUiCkNTX01PRFVMRT0iJFRPT0xTX0RJUi8kQVJDSC9ucG1fbW9kdWxlcy9jb2RlLXNlcnZlci9vdXQvbm9kZS9lbnRyeS5qcyIKZXhwb3J0IFBBVEg9IiRUT09MU19ESVIvJEFSQ0gvYmluOiRQQVRIIgpleHBvcnQgTk9ERV9QQVRIPSIkVE9PTFNfRElSLyRBUkNIL25wbV9tb2R1bGVzIgpleHBvcnQgSE9NRT0iJHtIT01FOi0vZGF0YS9kYXRhL2NvbS5rYW5tb25nby5hcHAvZmlsZXN9IgpQT1JUPSIke0NPREVfU0VSVkVSX1BPUlQ6LTgwODB9IgpleGVjICIkTk9ERSIgIiRDU19NT0RVTEUiIFwKICAtLWJpbmQtYWRkciAiMTI3LjAuMC4xOiRQT1JUIiBcCiAgLS1hdXRoIG5vbmUgXAogIC0tZGlzYWJsZS10ZWxlbWV0cnkgXAogIC0tZGlzYWJsZS11cGRhdGUtY2hlY2sgXAogICIkQCIK' | base64 -d > "$TOOLS_DIR/launcher/code_server_launcher.sh"
+          chmod 755 "$TOOLS_DIR/launcher/"*.sh
+
+          # ── tools_manifest.json ───────────────────────────────────────────────
+          ABIS_JSON=$(echo "$ABIS" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip().split()))")
+          CLAUDE_VER=$(node -e "try{const p=require('./assets/tools/arm64-v8a/npm_modules/@anthropic-ai/claude-code/package.json');console.log(p.version);}catch(e){console.log('unknown');}" 2>/dev/null || echo "unknown")
+          python3 -c 'import json,os,subprocess; m={"schema_version":1,"built_at":subprocess.check_output(["date","-u","+%Y-%m-%dT%H:%M:%SZ"]).decode().strip(),"run_id":os.environ.get("GITHUB_RUN_ID",""),"node_version":os.environ.get("NODE_VERSION",""),"claude_code_version":os.environ.get("CLAUDE_VER",""),"code_server_version":os.environ.get("CS_VERSION",""),"abis":os.environ.get("ABIS","").strip().split(),"tools":["node","npm","claude-code","code-server","git","rg","ssh"]}; open("assets/tools/tools_manifest.json","w").write(json.dumps(m,indent=2)); print("  \u2705 tools_manifest.json written")' NODE_VERSION="$NODE_VERSION" CLAUDE_VER="$CLAUDE_VER" CS_VERSION="$CS_VERSION" ABIS="$ABIS"
+
+          echo "  📁 Total assets/tools size: $(du -sh $TOOLS_DIR | cut -f1)"
+
+      - name: "📋 Register assets/tools in pubspec.yaml"
+        run: |
+          if ! grep -q "assets/tools/" pubspec.yaml; then
+            python3 -c "import re; c=open('pubspec.yaml').read(); entry='    - assets/tools/\\n'; c=(re.sub(r'(  assets:\\n)',r'\\g<1>'+entry,c,count=1) if 'assets:' in c and 'assets/tools/' not in c else c) if 'assets:' in c else c.rstrip()+'\\n\\nflutter:\\n  assets:\\n'+entry+'\\n'; open('pubspec.yaml','w').write(c); print('  \u2705 pubspec.yaml updated')"
+          else
+            echo "  ✅ assets/tools/ already in pubspec.yaml"
+          fi
+
+      # ── END SESSION_01 ────────────────────────────────────────────────────────
+
+
       # ── NDK 28 ───────────────────────────────────────────────────────────────
       - name: "💾 Cache NDK 28"
         id: cache-ndk

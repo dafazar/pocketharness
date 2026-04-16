@@ -333,6 +333,43 @@ class AiService {
     }
   }
 
+  // ── Best-available AI — offline-first, online fallback ───────────────────
+  // Digunakan oleh semua layar yang tidak perlu memilih mode secara eksplisit:
+  // ChatScreen, AgentScreen, NotesScreen, OcrScreen, EbookScreen, dll.
+
+  /// Returns true if an offline model is available and loaded.
+  bool get hasOfflineModel => LlamaService.instance.isModelLoaded;
+
+  /// Generates a response stream using the best available AI source.
+  ///
+  /// Priority: offline model (if loaded) → online API (if configured) → error
+  Stream<String> generateBestAvailable({
+    required List<ChatMessage> messages,
+    InferenceConfig? config,
+    String? systemPrompt,
+  }) async* {
+    if (LlamaService.instance.isModelLoaded) {
+      yield* LlamaService.instance.generateStream(
+        messages: messages,
+        config: config ?? InferenceConfig.defaultConfig,
+        systemPromptOverride: systemPrompt,
+      );
+      return;
+    }
+    // Delegate to online/bulk API if configured
+    final mode = await currentMode;
+    if (mode == AiMode.online || mode == AiMode.bulkApi) {
+      yield* generateMultiTurn(
+        messages: messages,
+        mode: mode,
+        config: config,
+        systemPrompt: systemPrompt,
+      );
+      return;
+    }
+    yield '❌ Tidak ada AI yang tersedia. Muat model offline di Pengaturan → Offline AI, atau aktifkan AI online.';
+  }
+
   // ── Multi-turn chat dengan List<ChatMessage> (arsitektur baru) ───────────
   // Digunakan oleh ChatScreen baru yang memakai LlamaService langsung.
   // Backward compatible — fallback ke OfflineAiService jika LlamaService

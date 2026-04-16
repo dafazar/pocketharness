@@ -468,6 +468,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             Divider(color: kfc.borderSoft, height: 1, indent: 16, endIndent: 16),
 
+            // ── VS Code Editor ── SESSION 03
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.code, color: Colors.blueAccent, size: 20),
+              ),
+              title: const Text('VS Code Editor'),
+              subtitle: const Text('Open bundled code-server in browser'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(KmRoutes.vsCode),
+            ),
+            Divider(color: kfc.borderSoft, height: 1, indent: 16, endIndent: 16),
+
+            // ── Claude Code CLI ── SESSION 03
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.greenAccent.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.smart_toy_outlined,
+                    color: Colors.greenAccent, size: 20),
+              ),
+              title: const Text('Claude Code CLI'),
+              subtitle: const Text('AI coding agent terminal'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(KmRoutes.claudeCode),
+            ),
+            Divider(color: kfc.borderSoft, height: 1, indent: 16, endIndent: 16),
+
             // ── Katalog Model ───────────────────────────────────────────────
             _navRow(
               kfc,

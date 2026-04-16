@@ -3554,7 +3554,43 @@ class _AttachmentChip extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
+          // SESSION 03: PopupMenu — Open in VS Code / Edit with Claude Code
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, size: 15, color: kfc.textSub),
+            padding: EdgeInsets.zero,
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'vscode',
+                child: ListTile(
+                  leading: Icon(Icons.code, color: Colors.blueAccent, size: 18),
+                  title: Text('Open in VS Code'),
+                  dense: true,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'claude',
+                child: ListTile(
+                  leading: Icon(Icons.smart_toy_outlined, color: Colors.greenAccent, size: 18),
+                  title: Text('Edit with Claude Code'),
+                  dense: true,
+                ),
+              ),
+            ],
+            onSelected: (action) {
+              final filePath = attachment.path;
+              switch (action) {
+                case 'vscode':
+                  context.push('/vscode?path=${Uri.encodeComponent(filePath)}');
+                  break;
+                case 'claude':
+                  context.push('/claude-code?dir=${Uri.encodeComponent(
+                    File(filePath).parent.path
+                  )}');
+                  break;
+              }
+            },
+          ),
           GestureDetector(
             onTap: onRemove,
             child: Icon(Icons.close_rounded, size: 16, color: kfc.textSub),
