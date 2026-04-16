@@ -248,11 +248,11 @@ class _ClaudeCodeScreenState extends ConsumerState<ClaudeCodeScreen> {
     final filename = e.path.split('/').last;
     final event = e.event;
     String msg;
-    if (event is FileSystemModifyEvent) {
+    if (event.type == FileSystemEvent.modify) {
       msg = '📝 Modified: $filename';
-    } else if (event is FileSystemCreateEvent) {
+    } else if (event.type == FileSystemEvent.create) {
       msg = '✨ Created: $filename';
-    } else if (event is FileSystemDeleteEvent) {
+    } else if (event.type == FileSystemEvent.delete) {
       msg = '🗑️ Deleted: $filename';
     } else {
       msg = '📁 Changed: $filename';

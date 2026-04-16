@@ -19,11 +19,11 @@ import 'package:kanmongo/data/services/code_server_service.dart';
 enum _Mode { checking, needsInstall, installing, ready, starting, running, error }
 
 // ── Providers ─────────────────────────────────────────────────────────────────
-final _modeProvider      = StateProvider<_Mode>(_ => _Mode.checking);
-final _logProvider       = StateProvider<List<String>>(_ => []);
-final _progressProvider  = StateProvider<double>(_ => 0.0);
-final _apiKeyProvider    = StateProvider<String>(_ => '');
-final _errorProvider     = StateProvider<String?>(_ => null);
+final _modeProvider      = StateProvider<_Mode>((_) => _Mode.checking);
+final _logProvider       = StateProvider<List<String>>((_) => []);
+final _progressProvider  = StateProvider<double>((_) => 0.0);
+final _apiKeyProvider    = StateProvider<String>((_) => '');
+final _errorProvider     = StateProvider<String?>((_) => null);
 
 // ── VS Code Screen ────────────────────────────────────────────────────────────
 class VsCodeScreen extends ConsumerStatefulWidget {
