@@ -25,6 +25,7 @@ import 'package:kanmongo/core/security/secure_db_key_service.dart';
 import 'package:kanmongo/core/membership/membership_service.dart';
 import 'package:kanmongo/core/sync/sync_service.dart';
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
+import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/data/repositories/user_repository.dart';
 import 'package:kanmongo/data/services/database_service.dart';
 import 'package:kanmongo/data/services/ai_service.dart';
