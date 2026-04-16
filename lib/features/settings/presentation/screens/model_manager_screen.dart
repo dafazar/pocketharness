@@ -20,8 +20,10 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:kanmongo/core/ai/llama_context.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/offline_ai_service.dart';
 import 'package:kanmongo/data/services/permission_service.dart';
 import 'package:kanmongo/shared/widgets/back_handler.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
@@ -287,6 +289,11 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
       await ModelManagerService.instance.setActive(model.id);
       // ── FIX 2: Persist ke SharedPreferences (lastModelPath + config) ───────
       await LlamaService.instance.saveSettings();
+      // ── FIX #3: Sync OfflineAiService._isReady ────────────────────────────
+      OfflineAiService.instance.syncFromLlamaService(model.path);
+      // ── FIX #2: Sync activeModelPath ke AiSourceSettingsService/picker ─────
+      final svc = AiSourceSettingsService.instance;
+      svc.saveOffline(svc.offline.copyWith(activeModelPath: model.path));
       _showSnackbar('✅ ${model.name} berhasil dimuat!', color: c.correct);
       // Perbarui state isLoaded di semua model
       await _service.scanLocalModels();
@@ -529,6 +536,11 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
         // ── FIX 4: Simpan sebagai model aktif ────────────────────────────────
         await ModelManagerService.instance.setActive(model.id);
         await LlamaService.instance.saveSettings();
+        // ── FIX #3: Sync OfflineAiService._isReady ───────────────────────────
+        OfflineAiService.instance.syncFromLlamaService(model.path);
+        // ── FIX #2: Sync activeModelPath ke AiSourceSettingsService/picker ────
+        final svc = AiSourceSettingsService.instance;
+        svc.saveOffline(svc.offline.copyWith(activeModelPath: model.path));
         _showSnackbar('✅ ${model.name} siap digunakan!', color: c.correct);
       } else {
         _showSnackbar(

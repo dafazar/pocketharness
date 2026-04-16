@@ -13,6 +13,8 @@ import '../models/ai_source_config.dart';
 import 'package:kanmongo/data/services/puter_ai_service.dart';
 import 'package:kanmongo/data/services/bulk_api_service.dart';
 import 'package:kanmongo/data/services/offline_ai_service.dart';
+import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/llama_service.dart';
 
 class AiSourceSettingsService {
   static AiSourceSettingsService? _instance;
@@ -128,6 +130,10 @@ class AiSourceSettingsService {
         temperature: offline.temperature,
         topP:        offline.topP,
         topK:        offline.topK,
+        // FIX #1: Sync activeModelPath agar tombol "Load Model Aktif" tidak selalu disabled
+        activeModelPath: ModelManagerService.instance.activeModel?.path
+            ?? LlamaService.instance.currentModel?.path
+            ?? _offline.activeModelPath,
       );
     } catch (e) {
       debugPrint('[AiSourceSettings] _pullFromServices offline error: $e');
@@ -263,6 +269,10 @@ class AiSourceSettingsService {
         temperature: svc.temperature,
         topP:        svc.topP,
         topK:        svc.topK,
+        // FIX #1: Selalu sinkronkan activeModelPath
+        activeModelPath: ModelManagerService.instance.activeModel?.path
+            ?? LlamaService.instance.currentModel?.path
+            ?? _offline.activeModelPath,
       );
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('ai_source_offline_config', jsonEncode(_offline.toJson()));

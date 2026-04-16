@@ -31,6 +31,7 @@ import 'package:kanmongo/data/services/database_service.dart';
 import 'package:kanmongo/data/services/ai_service.dart';
 import 'package:kanmongo/data/services/llama_service.dart';
 import 'package:kanmongo/data/services/model_manager_service.dart';
+import 'package:kanmongo/data/services/offline_ai_service.dart';
 import 'package:kanmongo/data/services/ai_persona_service.dart';
 import 'package:kanmongo/data/services/terminal_service.dart';
 import 'package:kanmongo/data/services/wallpaper_service.dart';
@@ -162,6 +163,8 @@ void main() async {
           final ok = await LlamaService.instance.loadModel(active);
           if (ok) {
             debugPrint('[main] Auto-load success: ${active.name}');
+            // FIX #4: Sync OfflineAiService agar isReady = true
+            OfflineAiService.instance.syncFromLlamaService(active.path);
           } else {
             debugPrint('[main] Auto-load failed — trying lastModelPath fallback');
             // ── FIX: Fallback ke lastModelPath jika load utama gagal ──────
@@ -171,6 +174,8 @@ void main() async {
               final fallbackOk = await LlamaService.instance.loadModel(fallbackModel);
               debugPrint('[main] Fallback load ${fallbackOk ? "success" : "failed"}: $lastPath');
               if (fallbackOk) {
+                // FIX #4: Sync OfflineAiService di jalur fallback
+                OfflineAiService.instance.syncFromLlamaService(lastPath);
                 final lastId = LlamaService.instance.lastLoadedModelId;
                 if (lastId != null) {
                   await ModelManagerService.instance.setActive(lastId);
@@ -187,6 +192,10 @@ void main() async {
             final fallbackModel = LlamaModelInfo.fromPath(lastPath);
             final fallbackOk = await LlamaService.instance.loadModel(fallbackModel);
             debugPrint('[main] Fallback load ${fallbackOk ? "success" : "failed"}: $lastPath');
+            // FIX #4: Sync OfflineAiService
+            if (fallbackOk) {
+              OfflineAiService.instance.syncFromLlamaService(lastPath);
+            }
           }
         } else {
           // ── Tidak ada model aktif — coba langsung dari lastModelPath ─────
@@ -197,6 +206,8 @@ void main() async {
             final fallbackOk = await LlamaService.instance.loadModel(fallbackModel);
             debugPrint('[main] lastModelPath load ${fallbackOk ? "success" : "failed"}');
             if (fallbackOk) {
+              // FIX #4: Sync OfflineAiService
+              OfflineAiService.instance.syncFromLlamaService(lastPath);
               final lastId = LlamaService.instance.lastLoadedModelId;
               if (lastId != null) {
                 await ModelManagerService.instance.setActive(lastId);

@@ -179,8 +179,20 @@ jobs:
           mkdir -p assets/tools
           echo "  📁 assets/tools dir ready (cache-hit: ${{ steps.cache-tools.outputs.cache-hit }})"
 
+      - name: "🔍 Validate cache integrity"
+        id: validate-cache
+        run: |
+          TOOLS_DIR="assets/tools"
+          if [ "${{ steps.cache-tools.outputs.cache-hit }}" == "true" ] && [ ! -f "$TOOLS_DIR/tools_manifest.json" ]; then
+            echo "  ⚠️  Cache hit but tools_manifest.json is MISSING — forcing rebuild"
+            echo "needs_rebuild=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "  ✅ Cache state OK"
+            echo "needs_rebuild=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: "📦 Bundle Node.js (Termux/Bionic) + Claude Code + CLI tools"
-        if: steps.cache-tools.outputs.cache-hit != 'true'
+        if: steps.cache-tools.outputs.cache-hit != 'true' || steps.validate-cache.outputs.needs_rebuild == 'true'
         run: |
           set -euo pipefail
           NODE_VERSION="${{ steps.resolve-nodejs.outputs.node_version }}"
