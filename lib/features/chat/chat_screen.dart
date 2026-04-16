@@ -2489,6 +2489,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       },
     );
   }
+
+  void _switchToOnlineMode() {
     // Pindah ke mode online
     final choice = AiSourceChoice(mode: AiMode.online, label: 'Online');
     ref.read(aiSourceProvider.notifier).state = choice;
