@@ -18,6 +18,7 @@ import 'package:path_provider/path_provider.dart';
 import 'termux_bridge.dart';
 import 'package:kanmongo/data/services/llama_http_server.dart';
 import 'package:kanmongo/data/services/claude_code_installer.dart';
+import 'package:kanmongo/core/tools/tools_service.dart';
 
 // ── Output dari satu perintah ─────────────────────────────────────────────────
 class CommandResult {
@@ -119,6 +120,13 @@ class TerminalService {
   bool get isTermuxAvailable => _termuxAvailable;
   bool get hasTermux => _termuxAvailable;
 
+  // Native tools fallback (Sesi 4 — tanpa Termux)
+  bool _useNativeTools = false;
+  String? _envPath;
+
+  bool get isNativeToolsMode => _useNativeTools;
+  String get effectivePath => _envPath ?? Platform.environment['PATH'] ?? '';
+
   // ── Init ──────────────────────────────────────────────────────────────────
   Future<void> init() async {
     if (_initialized) return;
@@ -151,6 +159,18 @@ class TerminalService {
       debugPrint('[TerminalService] initialize error: $e');
       _termuxAvailable = false;
       _termuxChecked = true;
+    }
+
+    // Fallback: jika Termux tidak tersedia, cek ToolsService (bundled tools)
+    if (!_termuxAvailable) {
+      if (ToolsService.instance.isReady) {
+        _useNativeTools = true;
+        _envPath = '${ToolsService.instance.binDir}:${Platform.environment['PATH'] ?? ''}';
+        debugPrint('[TerminalService] Termux tidak tersedia. '
+            'Menggunakan native bundled tools.');
+      } else {
+        debugPrint('[TerminalService] Termux dan native tools keduanya tidak tersedia.');
+      }
     }
   }
 
@@ -250,6 +270,11 @@ class TerminalService {
         'LD_PRELOAD': '',
       },
     };
+
+    // Injeksi PATH bundled tools jika native mode aktif
+    if (_useNativeTools && _envPath != null) {
+      _env['PATH'] = _envPath!;
+    }
 
     // Buat tmp dir
     Directory('${_cwd.path}/tmp').createSync(recursive: true);
@@ -1139,6 +1164,26 @@ class TerminalService {
       );
       if (res.combinedOutput.isNotEmpty) yield res.combinedOutput;
       yield '\n[Exit: ${res.exitCode}] [${DateTime.now().difference(start).inSeconds}s]\n';
+    } else if (_useNativeTools) {
+      // Fallback native bundled tools via NativeEnvPlugin
+      yield '⚙️ Menjalankan via native bundled tools...\n';
+      try {
+        final parts = _parseCommand(cmd);
+        final exe = parts.isNotEmpty ? parts[0] : 'sh';
+        final args = parts.length > 1 ? parts.sublist(1) : <String>[];
+        final nativeResult = await TermuxBridge.instance.runNative(
+          exe,
+          args,
+          workDir: _cwd.path,
+          env: _env,
+          timeout: const Duration(minutes: 5),
+        );
+        if (nativeResult.stdout.isNotEmpty) yield nativeResult.stdout;
+        if (nativeResult.stderr.isNotEmpty) yield '⚠️ \${nativeResult.stderr}';
+        yield '\n[Exit: \${nativeResult.exitCode}] [\${DateTime.now().difference(start).inSeconds}s]\n';
+      } catch (e) {
+        yield '❌ Error menjalankan command via native tools: \$e\n';
+      }
     } else {
       // Fallback: Process.start — streaming output baris per baris
       yield '⚠️ Termux tidak tersedia — menggunakan shell terbatas.\n';

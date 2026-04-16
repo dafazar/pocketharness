@@ -84,6 +84,33 @@ class TermuxResult {
       'stdout: ${stdout.length}c, stderr: ${stderr.length}c)';
 }
 
+// ── CommandResult ─────────────────────────────────────────────────────────────
+
+/// Menampung hasil eksekusi command via NativeEnvPlugin.
+class CommandResult {
+  final String command;
+  final String stdout;
+  final String stderr;
+  final int exitCode;
+  final Duration duration;
+
+  const CommandResult({
+    required this.command,
+    required this.stdout,
+    required this.stderr,
+    required this.exitCode,
+    required this.duration,
+  });
+
+  bool get isSuccess => exitCode == 0;
+
+  @override
+  String toString() =>
+      'CommandResult(exitCode: $exitCode, command: $command, '
+      'stdout: ${stdout.length}c, stderr: ${stderr.length}c, '
+      'duration: ${duration.inMilliseconds}ms)';
+}
+
 // ── TermuxBridge ──────────────────────────────────────────────────────────────
 
 /// Singleton yang menjembatani Dart dengan native Android untuk menjalankan
@@ -103,6 +130,9 @@ class TermuxBridge {
 
   static const _channelName = 'com.kanmongo.app/termux';
   static const _channel = MethodChannel(_channelName);
+
+  /// Channel untuk NativeEnvPlugin — fallback tanpa Termux.
+  static const _nativeChannel = MethodChannel('com.kanmongo.app/native_env');
 
   // ── Public API -------------------------------------------------------------
 
@@ -197,6 +227,58 @@ class TermuxBridge {
       return false;
     } catch (e) {
       debugPrint('[TermuxBridge] openTermux unexpected error: $e');
+      return false;
+    }
+  }
+
+  // ── NativeEnv (fallback tanpa Termux) ─────────────────────────────────────
+
+  /// Jalankan command via NativeEnvPlugin (bundled binary, tanpa Termux).
+  /// Digunakan sebagai fallback jika Termux tidak tersedia.
+  Future<CommandResult> runNative(
+    String executable,
+    List<String> args, {
+    String? workDir,
+    Map<String, String>? env,
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
+    final start = DateTime.now();
+    try {
+      final result = await _nativeChannel.invokeMapMethod<String, dynamic>(
+        'runCommand',
+        {
+          'executable': executable,
+          'args': args,
+          'workDir': workDir,
+          'env': env ?? {},
+          'timeoutMs': timeout.inMilliseconds,
+        },
+      );
+      return CommandResult(
+        command: '$executable ${args.join(' ')}',
+        stdout: result?['stdout'] as String? ?? '',
+        stderr: result?['stderr'] as String? ?? '',
+        exitCode: result?['exitCode'] as int? ?? -1,
+        duration: DateTime.now().difference(start),
+      );
+    } catch (e) {
+      return CommandResult(
+        command: '$executable ${args.join(' ')}',
+        stdout: '',
+        stderr: e.toString(),
+        exitCode: -1,
+        duration: DateTime.now().difference(start),
+      );
+    }
+  }
+
+  /// Set executable bit pada file di internal storage.
+  Future<bool> chmodExecutable(String path) async {
+    try {
+      return await _nativeChannel.invokeMethod<bool>(
+            'chmodExecutable', {'path': path}) ??
+          false;
+    } catch (_) {
       return false;
     }
   }

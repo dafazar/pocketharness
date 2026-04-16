@@ -40,6 +40,10 @@ class MainActivity : FlutterActivity() {
         // ── TermuxBridgePlugin ───────────────────────────────────────────────
         flutterEngine.plugins.add(TermuxBridgePlugin())
 
+        // ── NativeEnvPlugin ──────────────────────────────────────────────────
+        // Fallback untuk menjalankan bundled binary tanpa Termux
+        flutterEngine.plugins.add(NativeEnvPlugin())
+
         // ── Device Info Channel ──────────────────────────────────────────────
         // Used by Dart to get SDK_INT without device_info_plus dependency
         MethodChannel(
