@@ -135,14 +135,16 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
         ref.read(_modeProvider.notifier).state = _Mode.running;
       } else {
         final detail = _svc.lastStartError;
+        final suffix = detail != null
+            ? '\n\n$detail'
+            : '\nPort ${_svc.port} mungkin sudah dipakai.';
         ref.read(_errorProvider.notifier).state =
-            'Gagal memulai code-server.'
-            '\${detail != null ? '\n\n\$detail' : '\nPort \${_svc.port} mungkin sudah dipakai.'}';
+            'Gagal memulai code-server.$suffix';
         ref.read(_modeProvider.notifier).state = _Mode.error;
       }
     } catch (e) {
       if (!mounted) return;
-      ref.read(_errorProvider.notifier).state = 'Error: \$e';
+      ref.read(_errorProvider.notifier).state = 'Error: $e';
       ref.read(_modeProvider.notifier).state = _Mode.error;
     }
   }
