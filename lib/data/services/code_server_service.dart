@@ -264,13 +264,14 @@ class CodeServerService {
     final apiKey = anthropicKey ?? _anthropicKey ?? '';
 
     try {
-      final env = {
+      final systemPath = Platform.environment['PATH'] ?? '';
+      final env = <String, String>{
         ...Platform.environment,
         'HOME': ToolsService.instance.toolsRoot,
         'NODE_PATH':
-            '\${ToolsService.instance.toolsRoot}/\${ToolsService.instance.abi}/npm_modules',
+            '${ToolsService.instance.toolsRoot}/${ToolsService.instance.abi}/npm_modules',
         'PATH':
-            '\${ToolsService.instance.binDir}:\${Platform.environment['PATH'] ?? ''}',
+            '${ToolsService.instance.binDir}:$systemPath',
         if (apiKey.isNotEmpty) 'ANTHROPIC_API_KEY': apiKey,
         if (apiKey.isNotEmpty) 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
       };
@@ -279,7 +280,7 @@ class CodeServerService {
         ToolsService.instance.nodePath,
         [
           ToolsService.instance.codeServerCliPath,
-          '--bind-addr', '127.0.0.1:\$_port',
+          '--bind-addr', '127.0.0.1:$_port',
           '--auth', 'none',
           '--disable-update-check',
         ],
@@ -294,7 +295,7 @@ class CodeServerService {
           .transform(const SystemEncoding().decoder)
           .listen((chunk) {
         stderrBuf.write(chunk);
-        debugPrint('[CodeServer/stderr] \$chunk');
+        debugPrint('[CodeServer/stderr] $chunk');
       });
 
       bool processExited = false;
@@ -302,9 +303,9 @@ class CodeServerService {
         processExited = true;
         _serverProcess = null;
         final errOut = stderrBuf.toString().trim();
-        _lastStartError = 'Proses code-server berhenti (exit \$code)'
-            '\${errOut.isNotEmpty ? ':\n\$errOut' : '.'}';
-        debugPrint('[CodeServer] Server process exited: code=\$code');
+        final errSuffix = errOut.isNotEmpty ? ':\n$errOut' : '.';
+        _lastStartError = 'Proses code-server berhenti (exit $code)$errSuffix';
+        debugPrint('[CodeServer] Server process exited: code=$code');
       });
 
       // Tunggu server ready (max 30 detik)
@@ -315,20 +316,20 @@ class CodeServerService {
           return false;
         }
         if (await _pingServer()) {
-          debugPrint('[CodeServer] Server ready on port \$_port');
+          debugPrint('[CodeServer] Server ready on port $_port');
           return true;
         }
       }
 
       // Timeout
       final errOut = stderrBuf.toString().trim();
-      _lastStartError = 'Server tidak merespons dalam 30 detik'
-          '\${errOut.isNotEmpty ? ':\n\$errOut' : '.'}';
+      final errSuffix = errOut.isNotEmpty ? ':\n$errOut' : '.';
+      _lastStartError = 'Server tidak merespons dalam 30 detik$errSuffix';
       debugPrint('[CodeServer] Server did not respond within 30s');
       return false;
     } catch (e) {
-      _lastStartError = 'Exception saat memulai server: \$e';
-      debugPrint('[CodeServer] Start error: \$e');
+      _lastStartError = 'Exception saat memulai server: $e';
+      debugPrint('[CodeServer] Start error: $e');
       _serverProcess = null;
       return false;
     }
