@@ -120,10 +120,7 @@ class _ClaudeCodeTerminalScreenState extends State<ClaudeCodeTerminalScreen> {
   Widget build(BuildContext context) {
     final c = KmColors.of(context);
     return ConfirmExitBack(
-      onWillPop: () async {
-        await _stopSession();
-        return true;
-      },
+      onBeforeConfirm: () => _stopSession(),
       child: Scaffold(
         backgroundColor: const Color(0xFF0D1117),
         appBar: AppBar(
