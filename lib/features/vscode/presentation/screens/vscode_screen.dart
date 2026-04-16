@@ -59,30 +59,37 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
   Future<void> _checkStatus() async {
     ref.read(_modeProvider.notifier).state = _Mode.checking;
 
-    final key = await _svc.getAnthropicKey();
-    if (key != null && key.isNotEmpty) {
-      _keyCtrl.text = key;
-      ref.read(_apiKeyProvider.notifier).state = key;
-    }
+    try {
+      final key = await _svc.getAnthropicKey();
+      if (key != null && key.isNotEmpty) {
+        _keyCtrl.text = key;
+        ref.read(_apiKeyProvider.notifier).state = key;
+      }
 
-    final status = await _svc.checkStatus();
-    if (!mounted) return;
+      final status = await _svc.checkStatus();
+      if (!mounted) return;
 
-    switch (status) {
-      case CodeServerStatus.running:
-        _initWebView();
-        ref.read(_modeProvider.notifier).state = _Mode.running;
-        break;
-      case CodeServerStatus.installed:
-        ref.read(_modeProvider.notifier).state = _Mode.ready;
-        break;
-      case CodeServerStatus.notInstalled:
-        ref.read(_modeProvider.notifier).state = _Mode.needsInstall;
-        break;
-      case CodeServerStatus.error:
-        ref.read(_errorProvider.notifier).state = 'Gagal memeriksa status code-server.';
+      switch (status) {
+        case CodeServerStatus.running:
+          _initWebView();
+          ref.read(_modeProvider.notifier).state = _Mode.running;
+          break;
+        case CodeServerStatus.installed:
+          ref.read(_modeProvider.notifier).state = _Mode.ready;
+          break;
+        case CodeServerStatus.notInstalled:
+          ref.read(_modeProvider.notifier).state = _Mode.needsInstall;
+          break;
+        case CodeServerStatus.error:
+          ref.read(_errorProvider.notifier).state = 'Gagal memeriksa status code-server.';
+          ref.read(_modeProvider.notifier).state = _Mode.error;
+          break;
+      }
+    } catch (e) {
+      if (mounted) {
+        ref.read(_errorProvider.notifier).state = 'Error: ${e.toString()}';
         ref.read(_modeProvider.notifier).state = _Mode.error;
-        break;
+      }
     }
   }
 
@@ -126,16 +133,25 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
       await _svc.setAnthropicKey(key);
     }
 
-    final ok = await _svc.start(anthropicKey: key);
-    if (!mounted) return;
+    try {
+      final ok = await _svc.start(anthropicKey: key);
+      if (!mounted) return;
 
-    if (ok) {
-      _initWebView();
-      ref.read(_modeProvider.notifier).state = _Mode.running;
-    } else {
-      ref.read(_errorProvider.notifier).state =
-          'Gagal memulai code-server.\n'
-          'Pastikan Termux berjalan dan port ${_svc.port} tidak dipakai.';
+      if (ok) {
+        _initWebView();
+        ref.read(_modeProvider.notifier).state = _Mode.running;
+      } else {
+        final detail = _svc.lastStartError;
+        final suffix = detail != null
+            ? '\n\n$detail'
+            : '\nPort ${_svc.port} mungkin sudah dipakai.';
+        ref.read(_errorProvider.notifier).state =
+            'Gagal memulai code-server.$suffix';
+        ref.read(_modeProvider.notifier).state = _Mode.error;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ref.read(_errorProvider.notifier).state = 'Error: $e';
       ref.read(_modeProvider.notifier).state = _Mode.error;
     }
   }
@@ -260,7 +276,7 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
               'Dibutuhkan saat instalasi pertama'),
           const SizedBox(height: 12),
           _infoCard(kmc, Icons.android_rounded, 'Persyaratan',
-              'Termux dari F-Droid harus terinstall'),
+              'Android 8.0+ · Node.js sudah ter-bundle dalam APK'),
           const SizedBox(height: 12),
           _infoCard(kmc, Icons.auto_awesome_rounded, 'Claude Code',
               'Coding AI langsung di terminal VS Code'),
@@ -479,6 +495,34 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
             'di terminal VS Code.',
             style: TextStyle(color: kmc.textMuted, fontSize: 11),
           ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final key = _keyCtrl.text.trim();
+                await _svc.setAnthropicKey(key);
+                ref.read(_apiKeyProvider.notifier).state = key;
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(key.isEmpty ? '🗑️ API Key dihapus' : '✅ API Key tersimpan'),
+                    backgroundColor: key.isEmpty ? Colors.orange : const Color(0xFF16A34A),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.save_rounded, size: 18),
+              label: const Text('Simpan Key'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
 
           const SizedBox(height: 32),
 
@@ -656,6 +700,9 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
   // ── Error ──────────────────────────────────────────────────────────────────
   Widget _buildError(KmColors kmc) {
     final err = ref.watch(_errorProvider) ?? 'Terjadi kesalahan.';
+    final isBundleMissing = err.contains('tidak ada dalam bundle APK') ||
+                           err.contains('Bundle tools tidak ditemukan');
+    
     return Scaffold(
       backgroundColor: kmc.bg,
       appBar: _appBar(kmc, 'VS Code', []),
@@ -664,10 +711,11 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                color: Color(0xFFEF4444), size: 52),
+            Icon(isBundleMissing ? Icons.warning_rounded : Icons.error_outline_rounded,
+                color: isBundleMissing ? const Color(0xFFF59E0B) : const Color(0xFFEF4444), 
+                size: 52),
             const SizedBox(height: 16),
-            Text('Terjadi Kesalahan',
+            Text(isBundleMissing ? 'Fitur Belum Tersedia' : 'Terjadi Kesalahan',
                 style: TextStyle(
                     color: kmc.text, fontSize: 18,
                     fontWeight: FontWeight.bold)),
@@ -676,15 +724,30 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withOpacity(0.08),
+                color: (isBundleMissing
+                        ? const Color(0xFFF59E0B)
+                        : const Color(0xFFEF4444))
+                    .withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                    color: const Color(0xFFEF4444).withOpacity(0.3)),
+                    color: (isBundleMissing
+                            ? const Color(0xFFF59E0B)
+                            : const Color(0xFFEF4444))
+                        .withOpacity(0.3)),
               ),
-              child: Text(err,
-                  style: const TextStyle(
-                      color: Color(0xFFEF4444), fontSize: 13,
-                      fontFamily: 'monospace')),
+              child: Text(
+                isBundleMissing
+                    ? 'APK ini tidak menyertakan bundle VS Code + Node.js.\n\n'
+                      'Untuk menggunakan fitur ini, build APK melalui GitHub Actions '
+                      '(workflow akan otomatis mengunduh dan menyertakan Node.js + code-server).'
+                    : err,
+                style: TextStyle(
+                    color: isBundleMissing
+                        ? const Color(0xFFF59E0B)
+                        : const Color(0xFFEF4444),
+                    fontSize: 13,
+                    fontFamily: 'monospace'),
+              ),
             ),
             const SizedBox(height: 32),
             SizedBox(

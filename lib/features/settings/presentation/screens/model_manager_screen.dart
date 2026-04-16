@@ -924,7 +924,7 @@ class _RamHeader extends StatelessWidget {
 
 class _LocalModelCard extends StatefulWidget {
   final LocalModelInfo model;
-  final VoidCallback onLoad;
+  final Future<void> Function(LocalModelInfo) onLoad;
   final VoidCallback onDelete;
 
   const _LocalModelCard({
@@ -945,7 +945,7 @@ class _LocalModelCardState extends State<_LocalModelCard> {
     if (_isLoading) return;
     if (mounted) setState(() => _isLoading = true);
     try {
-      await Future.microtask(widget.onLoad);
+      await widget.onLoad(widget.model);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
