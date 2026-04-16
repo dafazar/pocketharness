@@ -125,6 +125,17 @@ jobs:
 
       # ── SESSION_01: Bundle Node.js + Claude Code CLI + code-server ────────────
 
+      - name: "💻 Resolve code-server version"
+        id: resolve-codeserver
+        run: |
+          CS_VERSION=$(curl -sf https://registry.npmjs.org/code-server/latest \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
+          if [ -z "$CS_VERSION" ]; then
+            CS_VERSION="4.93.1"
+          fi
+          echo "  📌 code-server version: $CS_VERSION"
+          echo "cs_version=$CS_VERSION" >> "$GITHUB_OUTPUT"
+
       - name: "🟢 Resolve Node.js LTS version"
         id: resolve-nodejs
         run: |
@@ -340,17 +351,6 @@ jobs:
           echo "  📌 llama.cpp tag: $RESOLVED"
           echo "llama_tag=$RESOLVED" >> "$GITHUB_OUTPUT"
           echo "LLAMA_EXTERNAL_DIR=/tmp/llama_src" >> "$GITHUB_ENV"
-
-      - name: "💻 Resolve code-server version"
-        id: resolve-codeserver
-        run: |
-          CS_VERSION=$(curl -sf https://registry.npmjs.org/code-server/latest \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
-          if [ -z "$CS_VERSION" ]; then
-            CS_VERSION="4.93.1"
-          fi
-          echo "  📌 code-server version: $CS_VERSION"
-          echo "cs_version=$CS_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: "💾 Cache code-server npm package"
         uses: actions/cache@v4
