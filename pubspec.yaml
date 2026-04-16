@@ -120,3 +120,4 @@ flutter:
     - assets/theme/original/placeholders/
     - assets/theme/original/backgrounds/
     - assets/theme/original/flashcard/
+    - assets/tools/      # tools_manifest.json + tools_{abi}.tar.gz (injected by CI)

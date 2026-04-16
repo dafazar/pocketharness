@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:archive/archive.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Design: "extract-once, never re-check" — uses a manifest version key
 /// in SharedPreferences. If the stored key matches the bundled manifest's
 /// [builtAt] + [runId], extraction is skipped entirely.
+///
+/// Assets layout (injected by CI, not in git):
+///   assets/tools/tools_manifest.json
+///   assets/tools/tools_arm64-v8a.tar.gz   (or x86_64)
 class ToolsService {
   ToolsService._();
   static final ToolsService instance = ToolsService._();
@@ -16,8 +21,8 @@ class ToolsService {
   static const String _prefKey = 'tools_extracted_run_id';
   static const String _assetsToolsPrefix = 'assets/tools';
 
-  late String _toolsRoot;      // absolute path to extracted tools dir
-  late String _abi;            // device ABI: arm64-v8a or x86_64
+  late String _toolsRoot;
+  late String _abi;
   bool _isReady = false;
   ToolsManifest? _manifest;
 
@@ -26,79 +31,51 @@ class ToolsService {
   String get abi => _abi;
   ToolsManifest? get manifest => _manifest;
 
-  /// Returns the absolute path to the Node.js binary.
   String get nodePath => '$_toolsRoot/$_abi/node';
-
-  /// Returns the absolute path to the Claude Code CLI entry point (JS file).
   String get claudeCodeCliPath =>
       '$_toolsRoot/$_abi/npm_modules/@anthropic-ai/claude-code/cli.js';
-
-  /// Returns the absolute path to the code-server entry point (JS file).
   String get codeServerCliPath =>
       '$_toolsRoot/$_abi/npm_modules/code-server/out/node/entry.js';
-
-  /// Returns the bin directory for bundled CLI tools (git, rg, ssh).
   String get binDir => '$_toolsRoot/$_abi/bin';
+  String get claudeLauncherPath =>
+      '$_toolsRoot/$_abi/launcher/claude_code_launcher.sh';
+  String get codeServerLauncherPath =>
+      '$_toolsRoot/$_abi/launcher/code_server_launcher.sh';
 
-  /// Returns the launcher script path for Claude Code.
-  String get claudeLauncherPath => '$_toolsRoot/launcher/claude_code_launcher.sh';
-
-  /// Returns the launcher script path for code-server.
-  String get codeServerLauncherPath => '$_toolsRoot/launcher/code_server_launcher.sh';
-
-  /// Initializes ToolsService. Must be called once from main() before runApp().
-  ///
-  /// [onProgress] receives a value from 0.0 to 1.0 during extraction.
   Future<void> initialize({void Function(double progress)? onProgress}) async {
     final dir = await getApplicationSupportDirectory();
     _toolsRoot = '${dir.path}/tools';
     _abi = _detectAbi();
 
-    // Load manifest from assets (always present since it's bundled)
     _manifest = await _loadBundledManifest();
     if (_manifest == null) {
-      // No manifest means tools were not bundled — skip silently
       _isReady = false;
       return;
     }
 
-    // Check if already extracted with same build
     final prefs = await SharedPreferences.getInstance();
     final storedRunId = prefs.getString(_prefKey);
     final currentRunId = '${_manifest!.runId}_${_manifest!.builtAt}';
 
     if (storedRunId == currentRunId && Directory(_toolsRoot).existsSync()) {
-      // Already extracted — skip all file checks, mark ready immediately
       _isReady = true;
       onProgress?.call(1.0);
       return;
     }
 
-    // Extract all tools from assets to internal storage
-    await _extractAll(onProgress: onProgress);
-
-    // Make binaries executable
+    await _extractTarball(onProgress: onProgress);
     await _chmodExecutables();
-
-    // Persist the run ID so next launch skips extraction
     await prefs.setString(_prefKey, currentRunId);
     _isReady = true;
     onProgress?.call(1.0);
   }
 
-  /// Forces re-extraction on next app launch (used after app update).
   Future<void> invalidateCache() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefKey);
   }
 
-  // ── Private helpers ────────────────────────────────────────────────────────
-
   String _detectAbi() {
-    // Use dart:io Platform to detect ABI from the native library path or
-    // fall back to arm64-v8a as the safe default for Android.
-    // On Android the app is compiled for a specific ABI, so we check
-    // which native lib directory exists at runtime.
     final execPath = Platform.resolvedExecutable;
     if (execPath.contains('x86_64')) return 'x86_64';
     return 'arm64-v8a';
@@ -106,7 +83,8 @@ class ToolsService {
 
   Future<ToolsManifest?> _loadBundledManifest() async {
     try {
-      final raw = await rootBundle.loadString('$_assetsToolsPrefix/tools_manifest.json');
+      final raw =
+          await rootBundle.loadString('$_assetsToolsPrefix/tools_manifest.json');
       final map = json.decode(raw) as Map<String, dynamic>;
       return ToolsManifest.fromJson(map);
     } catch (_) {
@@ -114,94 +92,77 @@ class ToolsService {
     }
   }
 
-  Future<void> _extractAll({void Function(double)? onProgress}) async {
-    // Read the asset manifest to enumerate all files under assets/tools/
-    // Flutter's AssetManifest lists all registered asset paths.
-    final manifestJson = await rootBundle.loadString('AssetManifest.json');
-    final assetMap = json.decode(manifestJson) as Map<String, dynamic>;
+  /// Extracts `assets/tools/tools_<abi>.tar.gz` into [_toolsRoot].
+  /// Uses archive package (TarDecoder + GZipDecoder) — no shell needed.
+  Future<void> _extractTarball({void Function(double)? onProgress}) async {
+    final tarballAsset = '$_assetsToolsPrefix/tools_$_abi.tar.gz';
 
-    final toolsAssets = assetMap.keys
-        .where((k) => k.startsWith('$_assetsToolsPrefix/'))
-        .toList()
-      ..sort();
+    final byteData = await rootBundle.load(tarballAsset);
+    final compressedBytes = byteData.buffer.asUint8List();
 
-    if (toolsAssets.isEmpty) return;
+    final tarBytes = GZipDecoder().decodeBytes(compressedBytes);
+    final archive = TarDecoder().decodeBytes(tarBytes);
 
-    final total = toolsAssets.length;
+    final total = archive.files.length;
     var done = 0;
 
-    for (final assetPath in toolsAssets) {
-      // Compute destination path
-      final relativePath = assetPath.replaceFirst('$_assetsToolsPrefix/', '');
-      final destPath = '$_toolsRoot/$relativePath';
-      final destFile = File(destPath);
+    await Directory(_toolsRoot).create(recursive: true);
 
-      // Create parent directory if needed
-      await destFile.parent.create(recursive: true);
-
-      // Copy from asset bundle to filesystem
-      final bytes = await rootBundle.load(assetPath);
-      await destFile.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
-
+    for (final file in archive.files) {
+      final destPath = '$_toolsRoot/${file.name}';
+      if (file.isFile) {
+        final destFile = File(destPath);
+        await destFile.parent.create(recursive: true);
+        await destFile.writeAsBytes(file.content as List<int>, flush: true);
+      } else {
+        await Directory(destPath).create(recursive: true);
+      }
       done++;
       onProgress?.call(done / total);
     }
   }
 
   Future<void> _chmodExecutables() async {
-    final executablePaths = [
-      nodePath,
-      claudeLauncherPath,
-      codeServerLauncherPath,
-      '$_toolsRoot/$_abi/npm_modules/npm/bin/npm-cli.js',
-    ];
+    // chmod launcher dir scripts
+    final launcherDir = Directory('$_toolsRoot/$_abi/launcher');
+    if (await launcherDir.exists()) {
+      await for (final entity in launcherDir.list()) {
+        if (entity is File) await Process.run('chmod', ['755', entity.path]);
+      }
+    }
 
-    // Also chmod everything in binDir
+    // chmod bin dir tools
     final binDirectory = Directory(binDir);
     if (await binDirectory.exists()) {
       await for (final entity in binDirectory.list()) {
-        if (entity is File) {
-          await Process.run('chmod', ['755', entity.path]);
-        }
+        if (entity is File) await Process.run('chmod', ['755', entity.path]);
       }
     }
 
-    for (final path in executablePaths) {
-      if (await File(path).exists()) {
-        await Process.run('chmod', ['755', path]);
-      }
+    // chmod node binary
+    if (await File(nodePath).exists()) {
+      await Process.run('chmod', ['755', nodePath]);
     }
   }
 
-  /// Runs a command using the bundled Node.js binary.
-  /// Returns a [ProcessResult] with stdout/stderr.
   Future<ProcessResult> runNode(
     List<String> args, {
     String? workingDirectory,
     Map<String, String>? environment,
   }) async {
     final env = _buildEnv(environment);
-    return Process.run(
-      nodePath,
-      args,
-      workingDirectory: workingDirectory,
-      environment: env,
-    );
+    return Process.run(nodePath, args,
+        workingDirectory: workingDirectory, environment: env);
   }
 
-  /// Starts a persistent Node.js process (for streaming output).
   Future<Process> startNode(
     List<String> args, {
     String? workingDirectory,
     Map<String, String>? environment,
   }) async {
     final env = _buildEnv(environment);
-    return Process.start(
-      nodePath,
-      args,
-      workingDirectory: workingDirectory,
-      environment: env,
-    );
+    return Process.start(nodePath, args,
+        workingDirectory: workingDirectory, environment: env);
   }
 
   Map<String, String> _buildEnv([Map<String, String>? extra]) {
@@ -216,7 +177,6 @@ class ToolsService {
   }
 }
 
-/// Parsed contents of `assets/tools/tools_manifest.json`.
 class ToolsManifest {
   final int schemaVersion;
   final String builtAt;

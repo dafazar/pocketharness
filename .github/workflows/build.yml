@@ -174,151 +174,164 @@ jobs:
           path: assets/tools
           key: tools-bundle-node${{ steps.resolve-nodejs.outputs.node_version }}-cs${{ steps.resolve-codeserver.outputs.cs_version }}-${{ runner.os }}-${{ runner.arch }}
 
-      - name: "📦 Bundle Node.js + Claude Code + code-server + CLI tools"
+      - name: "📦 Bundle Node.js (Termux/Bionic) + Claude Code + CLI tools"
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           NODE_VERSION="${{ steps.resolve-nodejs.outputs.node_version }}"
-          CS_VERSION="${{ steps.resolve-codeserver.outputs.cs_version }}"
           ABIS="${{ steps.abis.outputs.abis }}"
           TOOLS_DIR="assets/tools"
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          TERMUX_POOL="https://packages.termux.dev/apt/termux-main/pool/main"
 
           sudo apt-get install -y binutils -qq
 
-          mkdir -p "$TOOLS_DIR/launcher"
+          mkdir -p "$TOOLS_DIR"
+
+          # ── Host Node.js (Linux x64) — used only for npm install ─────────
+          HOST_NODE=$(which node)
+          HOST_NPM=$(which npm || echo "$(dirname $HOST_NODE)/npm")
+          echo "  🟢 Host Node: $($HOST_NODE --version)  NPM: $($HOST_NPM --version)"
+
+          CLAUDE_CODE_VERSION="unknown"
 
           for ABI in $ABIS; do
-            echo "  ⚙️  Bundling for ABI: $ABI"
-            mkdir -p "$TOOLS_DIR/$ABI/npm_modules"
+            echo ""
+            echo "  ══ ABI: $ABI ══════════════════════════════════════════════════"
+            mkdir -p "$TOOLS_DIR/$ABI/npm_modules/@anthropic-ai"
             mkdir -p "$TOOLS_DIR/$ABI/bin"
 
-            # ── Node.js binary ────────────────────────────────────────────────
-            # FIX: Always download for the GitHub runner architecture (x64)
-            # The Android ABI only determines what the Flutter build targets,
-            # NOT what architecture the build tools run on
-            NODE_TARBALL="node-v${NODE_VERSION}-linux-x64.tar.gz"
-            NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TARBALL}"
-            echo "    ⬇️  Node.js: $NODE_URL"
-            curl -fsSL "$NODE_URL" -o "/tmp/${NODE_TARBALL}"
-            tar -xzf "/tmp/${NODE_TARBALL}" -C /tmp --strip-components=1 \
-              "node-v${NODE_VERSION}-linux-x64/bin/node"
-            mv /tmp/bin/node "$TOOLS_DIR/$ABI/node"
-            chmod 755 "$TOOLS_DIR/$ABI/node"
-
-            # ── npm module ────────────────────────────────────────────────────
-            tar -xzf "/tmp/${NODE_TARBALL}" -C /tmp --strip-components=1 \
-              "node-v${NODE_VERSION}-linux-x64/lib/node_modules/npm"
-            cp -r /tmp/lib/node_modules/npm "$TOOLS_DIR/$ABI/npm_modules/npm"
-            rm -rf /tmp/lib /tmp/bin "/tmp/${NODE_TARBALL}"
-
-            # ── Claude Code CLI ───────────────────────────────────────────────
-            CC_INSTALL="/tmp/cc_install_${ABI}"
-            rm -rf "$CC_INSTALL"
-            mkdir -p "$CC_INSTALL"
-            node "$TOOLS_DIR/$ABI/npm_modules/npm/bin/npm-cli.js" install \
-              --prefix "$CC_INSTALL" --global \
-              "@anthropic-ai/claude-code" \
-              2>&1 | tail -5
-            CLAUDE_CODE_VERSION=$(node -e "try{const p=require('$CC_INSTALL/lib/node_modules/@anthropic-ai/claude-code/package.json');console.log(p.version);}catch(e){console.log('unknown');}" 2>/dev/null || echo "unknown")
-            mkdir -p "$TOOLS_DIR/$ABI/npm_modules/@anthropic-ai"
-            cp -r "$CC_INSTALL/lib/node_modules/@anthropic-ai/claude-code" \
-              "$TOOLS_DIR/$ABI/npm_modules/@anthropic-ai/"
-            echo "    ✅ Claude Code CLI: $CLAUDE_CODE_VERSION"
-
-            # ── code-server (pre-built binary from GitHub Releases) ──────────
-            # npm install fails due to VS Code's deeply nested node_modules (ENOENT pend).
-            # Downloading the pre-built tarball also gives us the correct target arch binary.
-            case "$ABI" in
-              arm64-v8a) CS_ARCH="arm64" ;;
-              x86_64)    CS_ARCH="amd64" ;;
-              *)         CS_ARCH="amd64" ;;
-            esac
-            CS_URL="https://github.com/coder/code-server/releases/download/v${CS_VERSION}/code-server-${CS_VERSION}-linux-${CS_ARCH}.tar.gz"
-            echo "    ⬇️  code-server ($CS_ARCH): $CS_URL"
-            curl -fsSL "$CS_URL" -o "/tmp/cs_${ABI}.tar.gz"
-            mkdir -p "$TOOLS_DIR/$ABI/npm_modules/code-server"
-            tar -xzf "/tmp/cs_${ABI}.tar.gz" \
-              -C "$TOOLS_DIR/$ABI/npm_modules/code-server" \
-              --strip-components=1
-            rm -f "/tmp/cs_${ABI}.tar.gz"
-            echo "    ✅ code-server: $CS_VERSION ($CS_ARCH)"
-
-            # ── Termux prebuilt binaries ──────────────────────────────────────
-            # NOTE: Termux binaries CORRECTLY use $ABI for target architecture
             case "$ABI" in
               arm64-v8a) TERMUX_ARCH="aarch64" ;;
               x86_64)    TERMUX_ARCH="x86_64"  ;;
+              *)         TERMUX_ARCH="aarch64" ;;
             esac
-            TERMUX_POOL="https://packages.termux.dev/apt/termux-main/pool/main"
 
-            for PKG_INFO in \
-              "g/git/git" \
-              "r/ripgrep/ripgrep" \
-              "o/openssh/openssh-sftp-server"; do
-              PKG_LETTER=$(echo "$PKG_INFO" | cut -d/ -f1)
-              PKG_DIR=$(echo "$PKG_INFO" | cut -d/ -f2)
-              PKG_NAME=$(echo "$PKG_INFO" | cut -d/ -f3)
-              echo "    ⬇️  Fetching $PKG_NAME for $TERMUX_ARCH"
-              DEB_URL=$(curl -sf "${TERMUX_POOL}/${PKG_LETTER}/${PKG_DIR}/" \
-                | grep -o 'href="[^"]*'"$TERMUX_ARCH"'[^"]*\.deb"' \
-                | grep -v 'dbgsym\|dev\|doc' \
-                | head -1 \
-                | sed 's/href="//;s/"//')
-              if [ -z "$DEB_URL" ]; then
-                echo "    ⚠️  Could not resolve $PKG_NAME deb, skipping"
-                continue
-              fi
-              FULL_DEB_URL="${TERMUX_POOL}/${PKG_LETTER}/${PKG_DIR}/${DEB_URL##*/}"
-              curl -fsSL "$FULL_DEB_URL" -o "/tmp/${PKG_NAME}_${ABI}.deb"
-              mkdir -p "/tmp/deb_${PKG_NAME}_${ABI}"
-              cd "/tmp/deb_${PKG_NAME}_${ABI}"
-              ar x "/tmp/${PKG_NAME}_${ABI}.deb"
+            # ── Android-native Node.js (Termux/Bionic libc) ──────────────────
+            echo "    ⬇️  Android Node.js from Termux ($TERMUX_ARCH)..."
+            NODE_DEB_NAME=$(curl -sf "${TERMUX_POOL}/n/nodejs-lts/" \
+              | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
+              | grep -v 'dbgsym\|dev\|doc' \
+              | head -1)
+            if [ -n "$NODE_DEB_NAME" ]; then
+              curl -fsSL "${TERMUX_POOL}/n/nodejs-lts/${NODE_DEB_NAME}" -o "/tmp/nodejs_${TERMUX_ARCH}.deb"
+              mkdir -p "/tmp/deb_node"
+              cd "/tmp/deb_node"
+              ar x "/tmp/nodejs_${TERMUX_ARCH}.deb"
               DATA_TAR=$(ls data.tar.* 2>/dev/null | head -1)
               if [ -n "$DATA_TAR" ]; then
                 tar -xf "$DATA_TAR" 2>/dev/null || true
-                find . -path "*/usr/bin/*" -type f | while read BIN; do
-                  cp "$BIN" "$OLDPWD/$TOOLS_DIR/$ABI/bin/$(basename $BIN)" 2>/dev/null || true
-                done
-                find . -path "*/bin/$PKG_NAME" -type f | while read BIN; do
-                  cp "$BIN" "$OLDPWD/$TOOLS_DIR/$ABI/bin/$PKG_NAME" 2>/dev/null || true
-                done
+                ANDROID_NODE=$(find . -type f -name "node" | grep "usr/bin" | head -1)
+                if [ -n "$ANDROID_NODE" ]; then
+                  cp "$ANDROID_NODE" "$OLDPWD/$TOOLS_DIR/$ABI/node"
+                  chmod 755 "$OLDPWD/$TOOLS_DIR/$ABI/node"
+                  echo "    ✅ Android Node.js (Bionic, $TERMUX_ARCH)"
+                else
+                  echo "    ⚠️  node binary not found in deb — using host binary (emulator only)"
+                  cp "$HOST_NODE" "$OLDPWD/$TOOLS_DIR/$ABI/node"
+                  chmod 755 "$OLDPWD/$TOOLS_DIR/$ABI/node"
+                fi
               fi
               cd "$OLDPWD"
-              rm -rf "/tmp/deb_${PKG_NAME}_${ABI}" "/tmp/${PKG_NAME}_${ABI}.deb"
+              rm -rf "/tmp/deb_node" "/tmp/nodejs_${TERMUX_ARCH}.deb"
+            else
+              echo "    ⚠️  Termux nodejs-lts deb not found — using host binary (emulator only)"
+              cp "$HOST_NODE" "$TOOLS_DIR/$ABI/node"
+              chmod 755 "$TOOLS_DIR/$ABI/node"
+            fi
+
+            # ── Claude Code CLI (pure JS, architecture-independent) ───────────
+            CC_INSTALL="/tmp/cc_install_${ABI}"
+            rm -rf "$CC_INSTALL" && mkdir -p "$CC_INSTALL"
+            "$HOST_NODE" "$HOST_NPM" install \
+              --prefix "$CC_INSTALL" --global \
+              "@anthropic-ai/claude-code" \
+              2>&1 | tail -3
+            CLAUDE_CODE_VERSION=$("$HOST_NODE" -e \
+              "try{const p=require('$CC_INSTALL/lib/node_modules/@anthropic-ai/claude-code/package.json');console.log(p.version);}catch(e){console.log('unknown');}" \
+              2>/dev/null || echo "unknown")
+            cp -r "$CC_INSTALL/lib/node_modules/@anthropic-ai/claude-code" \
+              "$TOOLS_DIR/$ABI/npm_modules/@anthropic-ai/"
+            rm -rf "$CC_INSTALL"
+            echo "    ✅ Claude Code CLI: $CLAUDE_CODE_VERSION"
+
+            # ── Termux CLI tools (git, ripgrep) ───────────────────────────────
+            for PKG_INFO in "g/git/git" "r/ripgrep/ripgrep"; do
+              PKG_LETTER=$(echo "$PKG_INFO" | cut -d/ -f1)
+              PKG_DIR=$(echo "$PKG_INFO" | cut -d/ -f2)
+              PKG_NAME=$(echo "$PKG_INFO" | cut -d/ -f3)
+              DEB_NAME=$(curl -sf "${TERMUX_POOL}/${PKG_LETTER}/${PKG_DIR}/" \
+                | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
+                | grep -v 'dbgsym\|dev\|doc' | head -1)
+              if [ -z "$DEB_NAME" ]; then
+                echo "    ⚠️  $PKG_NAME: deb not found, skipping"
+                continue
+              fi
+              curl -fsSL "${TERMUX_POOL}/${PKG_LETTER}/${PKG_DIR}/${DEB_NAME}" -o "/tmp/${PKG_NAME}.deb"
+              mkdir -p "/tmp/deb_pkg"
+              cd "/tmp/deb_pkg"
+              ar x "/tmp/${PKG_NAME}.deb"
+              DATA_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+              if [ -n "$DATA_TAR" ]; then
+                tar -xf "$DATA_TAR" 2>/dev/null || true
+                BIN_PATH=$(find . -path "*/usr/bin/$PKG_NAME" -type f | head -1)
+                if [ -n "$BIN_PATH" ]; then
+                  cp "$BIN_PATH" "$OLDPWD/$TOOLS_DIR/$ABI/bin/$PKG_NAME"
+                  chmod 755 "$OLDPWD/$TOOLS_DIR/$ABI/bin/$PKG_NAME"
+                  echo "    ✅ $PKG_NAME bundled"
+                fi
+              fi
+              cd "$OLDPWD"
+              rm -rf "/tmp/deb_pkg" "/tmp/${PKG_NAME}.deb"
             done
 
-            # ── Git configuration ─────────────────────────────────────────────
-            mkdir -p "$TOOLS_DIR/$ABI/etc"
-            printf '%s\n' \
-              '[core]' \
-              '  editor = nano' \
-              '  pager = less' \
-              '[user]' \
-              '  name = "KanMon Builder"' \
-              '  email = "build@kanmon.local"' \
-              '[init]' \
-              '  defaultBranch = main' \
-              > "$TOOLS_DIR/$ABI/etc/gitconfig"
-
             # ── Launcher script ───────────────────────────────────────────────
-            # (Launcher script continues in next section...)
+            mkdir -p "$TOOLS_DIR/$ABI/launcher"
+            printf '%s\n' \
+              '#!/bin/sh' \
+              'TOOLS="$(dirname "$(dirname "$0")")" ' \
+              'export NODE_PATH="$TOOLS/npm_modules"' \
+              'export NODE_NO_WARNINGS=1' \
+              'export CLAUDE_CODE_DISABLE_TELEMETRY=1' \
+              'exec "$TOOLS/node" "$TOOLS/npm_modules/@anthropic-ai/claude-code/cli.js" "$@"' \
+              > "$TOOLS_DIR/$ABI/launcher/claude_code_launcher.sh"
+            chmod 755 "$TOOLS_DIR/$ABI/launcher/claude_code_launcher.sh"
 
+            # ── Pack per-ABI tarball ──────────────────────────────────────────
+            echo "    📦 Creating tools_${ABI}.tar.gz ..."
+            tar -czf "$TOOLS_DIR/tools_${ABI}.tar.gz" \
+              -C "$TOOLS_DIR" \
+              "$ABI"
+            TARBALL_SIZE=$(du -sh "$TOOLS_DIR/tools_${ABI}.tar.gz" | cut -f1)
+            echo "    ✅ tools_${ABI}.tar.gz  ($TARBALL_SIZE)"
+
+            # Clean up unpacked dir
+            rm -rf "$TOOLS_DIR/$ABI"
           done
 
-          # ── Generate launcher wrapper ─────────────────────────────────────
-          # Pre-built code-server has its own bundled Node.js at lib/node
-          printf '%s\n' \
-            '#!/bin/bash' \
-            'set -euo pipefail' \
-            'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' \
-            'ABI_DIR="$SCRIPT_DIR/../arm64-v8a"' \
-            'CS_DIR="$ABI_DIR/npm_modules/code-server"' \
-            'export LD_LIBRARY_PATH="$ABI_DIR:$LD_LIBRARY_PATH"' \
-            'exec "$CS_DIR/lib/node" "$CS_DIR/lib/code-server.js" "$@"' \
-            > "$TOOLS_DIR/launcher/code-server.sh"
-          chmod 755 "$TOOLS_DIR/launcher/code-server.sh"
+          # ── Generate tools_manifest.json ──────────────────────────────────
+          ABIS_JSON=$(echo "$ABIS" | tr ' ' '\n' | \
+            python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))")
+          python3 << PYEOF2
+          import json
+          manifest = {
+              "schema_version": 2,
+              "built_at": "${BUILD_DATE}",
+              "run_id": "${{ github.run_id }}",
+              "node_version": "${NODE_VERSION}",
+              "claude_code_version": "${CLAUDE_CODE_VERSION}",
+              "code_server_version": "not_bundled",
+              "abis": ${ABIS_JSON},
+              "tools": ["claude-code", "git", "ripgrep"]
+          }
+          with open("${TOOLS_DIR}/tools_manifest.json", "w") as f:
+              json.dump(manifest, f, indent=2)
+          print("  ✅ tools_manifest.json generated")
+          PYEOF2
 
-          echo "  ✅ Build tools bundle complete"
+          echo ""
+          echo "  ✅ Bundle complete:"
+          ls -lh "$TOOLS_DIR/"
 
       # ── SESSION_02: Build Flutter APK ─────────────────────────────────────
 
