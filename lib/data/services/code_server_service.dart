@@ -68,13 +68,10 @@ class CodeServerService {
   bool _prefsLoaded  = false;
   String? _anthropicKey;
 
-  String? _lastStartError;
-
-  bool get isInstalled     => _installed;
-  bool get isRunning       => _serverProcess != null;
-  int  get port            => _port;
-  String get serverUrl     => 'http://localhost:$_port';
-  String? get lastStartError => _lastStartError;
+  bool get isInstalled => _installed;
+  bool get isRunning   => _serverProcess != null;
+  int  get port        => _port;
+  String get serverUrl => 'http://localhost:$_port';
 
   // ── Load Prefs ──────────────────────────────────────────────────────────────
   Future<void> _loadPrefs() async {
@@ -247,7 +244,6 @@ class CodeServerService {
   // ── Start Server ────────────────────────────────────────────────────────────
   Future<bool> start({String? anthropicKey}) async {
     await _loadPrefs();
-    _lastStartError = null;
 
     if (isRunning) {
       debugPrint('[CodeServer] Already running on port $_port');
@@ -255,23 +251,22 @@ class CodeServerService {
     }
 
     if (!File(ToolsService.instance.codeServerCliPath).existsSync()) {
-      _lastStartError = 'code-server tidak ada dalam bundle APK.\n'
-          'Rebuild APK via GitHub Actions dengan bundle code-server diaktifkan.';
-      debugPrint('[CodeServer] $_lastStartError');
-      return false;
+      throw Exception(
+        'code-server tidak ada dalam bundle APK.\n'
+        'Rebuild APK via GitHub Actions dengan bundle code-server diaktifkan.',
+      );
     }
 
     final apiKey = anthropicKey ?? _anthropicKey ?? '';
 
     try {
-      final systemPath = Platform.environment['PATH'] ?? '';
-      final env = <String, String>{
+      final env = {
         ...Platform.environment,
         'HOME': ToolsService.instance.toolsRoot,
         'NODE_PATH':
             '${ToolsService.instance.toolsRoot}/${ToolsService.instance.abi}/npm_modules',
         'PATH':
-            '${ToolsService.instance.binDir}:$systemPath',
+            '${ToolsService.instance.binDir}:${Platform.environment['PATH'] ?? ''}',
         if (apiKey.isNotEmpty) 'ANTHROPIC_API_KEY': apiKey,
         if (apiKey.isNotEmpty) 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
       };
@@ -288,47 +283,27 @@ class CodeServerService {
         runInShell: false,
       );
 
-      // Kumpulkan stderr untuk diagnosis
-      final stderrBuf = StringBuffer();
+      // Drain stdout/stderr agar tidak buffer penuh
       _serverProcess!.stdout.listen((_) {});
-      _serverProcess!.stderr
-          .transform(const SystemEncoding().decoder)
-          .listen((chunk) {
-        stderrBuf.write(chunk);
-        debugPrint('[CodeServer/stderr] $chunk');
-      });
+      _serverProcess!.stderr.listen((_) {});
 
-      bool processExited = false;
-      _serverProcess!.exitCode.then((code) {
-        processExited = true;
+      _serverProcess!.exitCode.then((_) {
         _serverProcess = null;
-        final errOut = stderrBuf.toString().trim();
-        final errSuffix = errOut.isNotEmpty ? ':\n$errOut' : '.';
-        _lastStartError = 'Proses code-server berhenti (exit $code)$errSuffix';
-        debugPrint('[CodeServer] Server process exited: code=$code');
+        debugPrint('[CodeServer] Server process exited');
       });
 
-      // Tunggu server ready (max 30 detik)
-      for (int i = 0; i < 60; i++) {
+      // Tunggu server ready (max 10 detik)
+      for (int i = 0; i < 20; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
-        if (processExited) {
-          debugPrint('[CodeServer] Process exited before ready');
-          return false;
-        }
         if (await _pingServer()) {
           debugPrint('[CodeServer] Server ready on port $_port');
           return true;
         }
       }
 
-      // Timeout
-      final errOut = stderrBuf.toString().trim();
-      final errSuffix = errOut.isNotEmpty ? ':\n$errOut' : '.';
-      _lastStartError = 'Server tidak merespons dalam 30 detik$errSuffix';
-      debugPrint('[CodeServer] Server did not respond within 30s');
+      debugPrint('[CodeServer] Server did not respond within 10s');
       return false;
     } catch (e) {
-      _lastStartError = 'Exception saat memulai server: $e';
       debugPrint('[CodeServer] Start error: $e');
       _serverProcess = null;
       return false;
