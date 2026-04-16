@@ -53,3 +53,8 @@ assets/data/
 
 # llama.cpp native source (di-clone otomatis saat build via setup_llama.sh atau CI)
 android/app/src/main/cpp/llama.cpp/
+
+# CI-generated tools bundle (injected by GitHub Actions, not committed)
+# .gitkeep placeholder IS committed to ensure folder tracked by git
+assets/tools/*.tar.gz
+assets/tools/tools_manifest.json

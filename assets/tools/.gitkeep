@@ -1,0 +1,3 @@
+# This directory is populated by CI during build.
+# tools_manifest.json and tools_{abi}.tar.gz are injected by GitHub Actions.
+# Do NOT manually place files here.

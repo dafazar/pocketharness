@@ -174,6 +174,11 @@ jobs:
           path: assets/tools
           key: tools-bundle-node${{ steps.resolve-nodejs.outputs.node_version }}-cs${{ steps.resolve-codeserver.outputs.cs_version }}-${{ runner.os }}-${{ runner.arch }}
 
+      - name: "📁 Ensure assets/tools directory exists"
+        run: |
+          mkdir -p assets/tools
+          echo "  📁 assets/tools dir ready (cache-hit: ${{ steps.cache-tools.outputs.cache-hit }})"
+
       - name: "📦 Bundle Node.js (Termux/Bionic) + Claude Code + CLI tools"
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
@@ -332,6 +337,46 @@ jobs:
           echo ""
           echo "  ✅ Bundle complete:"
           ls -lh "$TOOLS_DIR/"
+
+      # ── Verify tools bundle before build ─────────────────────────────────
+
+      - name: "✅ Verify tools bundle integrity"
+        run: |
+          TOOLS_DIR="assets/tools"
+          echo "  🔍 Verifying tools bundle..."
+          echo "  Cache hit: ${{ steps.cache-tools.outputs.cache-hit }}"
+          echo "  Contents of $TOOLS_DIR:"
+          ls -lh "$TOOLS_DIR/" 2>/dev/null || echo "  (empty or not found)"
+
+          # Wajib ada tools_manifest.json
+          if [ ! -f "$TOOLS_DIR/tools_manifest.json" ]; then
+            echo ""
+            echo "  ❌ FATAL: tools_manifest.json NOT found in $TOOLS_DIR/"
+            echo "  Cache hit was: ${{ steps.cache-tools.outputs.cache-hit }}"
+            echo "  This means the bundle step was skipped (cache hit) but cache restore failed,"
+            echo "  OR the bundle step itself failed silently."
+            echo ""
+            echo "  → Fix: Delete the Actions cache named 'tools-bundle-*' in repo settings"
+            echo "    and re-run this workflow to force a fresh bundle."
+            exit 1
+          fi
+
+          # Cek tarball ABI sesuai target
+          ABIS="${{ steps.abis.outputs.abis }}"
+          for ABI in $ABIS; do
+            TARBALL="$TOOLS_DIR/tools_${ABI}.tar.gz"
+            if [ ! -f "$TARBALL" ]; then
+              echo "  ❌ FATAL: $TARBALL NOT found!"
+              exit 1
+            fi
+            SIZE=$(du -sh "$TARBALL" | cut -f1)
+            echo "  ✅ $TARBALL ($SIZE)"
+          done
+
+          echo "  ✅ tools_manifest.json found"
+          cat "$TOOLS_DIR/tools_manifest.json"
+          echo ""
+          echo "  ✅ All tools verified — proceeding to Flutter build."
 
       # ── SESSION_02: Build Flutter APK ─────────────────────────────────────
 
