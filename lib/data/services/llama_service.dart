@@ -737,7 +737,18 @@ class LlamaService {
       } else {
         await prefs.remove(_kSystemPrompt);
       }
-      debugPrint('[LlamaService] Settings disimpan');
+      // ── FIX: Persist path dan id model yang sedang aktif ─────────────────
+      if (_currentModel != null) {
+        await prefs.setString(_kLastModelPath, _currentModel!.path);
+        await prefs.setString(_kLastModelId,   _currentModel!.id);
+        _lastLoadedModelPath = _currentModel!.path;
+        _lastLoadedModelId   = _currentModel!.id;
+        debugPrint('[LlamaService] Settings disimpan (lastModel: ${_currentModel!.name})');
+      } else {
+        await prefs.remove(_kLastModelPath);
+        await prefs.remove(_kLastModelId);
+        debugPrint('[LlamaService] Settings disimpan (no active model)');
+      }
     } catch (e) {
       debugPrint('[LlamaService] saveSettings error: $e');
     }
@@ -761,9 +772,13 @@ class LlamaService {
           orElse: () => ChatTemplate.auto,
         ),
       );
-      _systemPrompt = prefs.getString(_kSystemPrompt);
+      _systemPrompt        = prefs.getString(_kSystemPrompt);
+      // ── FIX: Baca path model terakhir sebagai referensi fallback ──────────
+      _lastLoadedModelPath = prefs.getString(_kLastModelPath);
+      _lastLoadedModelId   = prefs.getString(_kLastModelId);
       debugPrint('[LlamaService] Settings dimuat: ctx=${_modelConfig.contextSize} '
-          'gpu=${_modelConfig.gpuLayers} threads=${_modelConfig.nThreads}');
+          'gpu=${_modelConfig.gpuLayers} threads=${_modelConfig.nThreads} '
+          'lastModel=$_lastLoadedModelPath');
     } catch (e) {
       debugPrint('[LlamaService] loadSettings error: $e');
     }

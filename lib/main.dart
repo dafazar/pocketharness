@@ -2,6 +2,7 @@
 // KanMon GO — Main Entry Point
 // =============================================================================
 
+import 'dart:io';
 import 'dart:async';
 import 'dart:ui';
 
@@ -153,16 +154,56 @@ void main() async {
       LlamaService.instance.loadSettings().then((_) async {
         final active    = ModelManagerService.instance.activeModel;
         final activeRaw = ModelManagerService.instance.activeModelRaw;
+
         if (active != null) {
+          // ── Jalur utama: model terdaftar & file ada ─────────────────────
           debugPrint('[main] Auto-loading active model via LlamaService: ${active.name}');
           final ok = await LlamaService.instance.loadModel(active);
           if (ok) {
             debugPrint('[main] Auto-load success: ${active.name}');
           } else {
-            debugPrint('[main] Auto-load failed: ${active.name}');
+            debugPrint('[main] Auto-load failed — trying lastModelPath fallback');
+            // ── FIX: Fallback ke lastModelPath jika load utama gagal ──────
+            final lastPath = LlamaService.instance.lastLoadedModelPath;
+            if (lastPath != null && File(lastPath).existsSync()) {
+              final fallbackModel = LlamaModelInfo.fromPath(lastPath);
+              final fallbackOk = await LlamaService.instance.loadModel(fallbackModel);
+              debugPrint('[main] Fallback load ${fallbackOk ? "success" : "failed"}: $lastPath');
+              if (fallbackOk) {
+                final lastId = LlamaService.instance.lastLoadedModelId;
+                if (lastId != null) {
+                  await ModelManagerService.instance.setActive(lastId);
+                }
+              }
+            }
           }
         } else if (activeRaw != null) {
-          debugPrint('[main] Model registered but file missing: ${activeRaw.path}');
+          // ── Model terdaftar tapi file hilang — coba lastModelPath ────────
+          debugPrint('[main] Registered model file missing: ${activeRaw.path}');
+          final lastPath = LlamaService.instance.lastLoadedModelPath;
+          if (lastPath != null && lastPath != activeRaw.path && File(lastPath).existsSync()) {
+            debugPrint('[main] Trying lastModelPath fallback: $lastPath');
+            final fallbackModel = LlamaModelInfo.fromPath(lastPath);
+            final fallbackOk = await LlamaService.instance.loadModel(fallbackModel);
+            debugPrint('[main] Fallback load ${fallbackOk ? "success" : "failed"}: $lastPath');
+          }
+        } else {
+          // ── Tidak ada model aktif — coba langsung dari lastModelPath ─────
+          final lastPath = LlamaService.instance.lastLoadedModelPath;
+          if (lastPath != null && File(lastPath).existsSync()) {
+            debugPrint('[main] No active model — loading from lastModelPath: $lastPath');
+            final fallbackModel = LlamaModelInfo.fromPath(lastPath);
+            final fallbackOk = await LlamaService.instance.loadModel(fallbackModel);
+            debugPrint('[main] lastModelPath load ${fallbackOk ? "success" : "failed"}');
+            if (fallbackOk) {
+              final lastId = LlamaService.instance.lastLoadedModelId;
+              if (lastId != null) {
+                await ModelManagerService.instance.setActive(lastId);
+              }
+            }
+          } else {
+            debugPrint('[main] No active model and no lastModelPath — skipping auto-load');
+          }
         }
       }).ignore();
 

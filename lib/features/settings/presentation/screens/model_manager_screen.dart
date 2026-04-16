@@ -283,6 +283,10 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
     if (!mounted) return;
 
     if (ok) {
+      // ── FIX 1: Simpan sebagai model aktif agar auto-load saat restart ──────
+      await ModelManagerService.instance.setActive(model.id);
+      // ── FIX 2: Persist ke SharedPreferences (lastModelPath + config) ───────
+      await LlamaService.instance.saveSettings();
       _showSnackbar('✅ ${model.name} berhasil dimuat!', color: c.correct);
       // Perbarui state isLoaded di semua model
       await _service.scanLocalModels();
@@ -515,7 +519,23 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
     if (mounted) setState(() { _isImporting = false; _importProgress = -1.0; });
 
     if (model != null) {
-      _showSnackbar('✅ ${model.name} berhasil diimport!', color: c.correct);
+      _showSnackbar('✅ ${model.name} berhasil diimport! Memuat...', color: c.correct);
+
+      // ── FIX 3: Auto-load model setelah import berhasil ──────────────────────
+      final loadOk = await LlamaService.instance.loadModel(model.toLlamaModelInfo());
+      if (!mounted) return;
+
+      if (loadOk) {
+        // ── FIX 4: Simpan sebagai model aktif ────────────────────────────────
+        await ModelManagerService.instance.setActive(model.id);
+        await LlamaService.instance.saveSettings();
+        _showSnackbar('✅ ${model.name} siap digunakan!', color: c.correct);
+      } else {
+        _showSnackbar(
+          '⚠️ ${model.name} diimport tapi gagal dimuat. Coba muat manual dari daftar.',
+          color: c.warning,
+        );
+      }
     } else {
       _showSnackbar(
         '❌ Gagal mengimport model. Pastikan file .gguf valid.',
