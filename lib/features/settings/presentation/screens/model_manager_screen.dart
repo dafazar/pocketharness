@@ -298,7 +298,11 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
       // Perbarui state isLoaded di semua model
       await _service.scanLocalModels();
     } else {
-      _showSnackbar('❌ Gagal memuat ${model.name}', color: c.wrong);
+      final errDetail = LlamaService.instance.lastLoadError;
+      final msg = errDetail != null
+          ? '❌ Gagal memuat ${model.name}: $errDetail'
+          : '❌ Gagal memuat ${model.name}';
+      _showSnackbar(msg, color: c.wrong);
     }
   }
 
@@ -543,10 +547,11 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
         svc.saveOffline(svc.offline.copyWith(activeModelPath: model.path));
         _showSnackbar('✅ ${model.name} siap digunakan!', color: c.correct);
       } else {
-        _showSnackbar(
-          '⚠️ ${model.name} diimport tapi gagal dimuat. Coba muat manual dari daftar.',
-          color: c.warning,
-        );
+        final errDetail = LlamaService.instance.lastLoadError;
+        final warnMsg = errDetail != null
+            ? '⚠️ ${model.name} diimport tapi gagal dimuat: $errDetail'
+            : '⚠️ ${model.name} diimport tapi gagal dimuat. Coba muat manual dari daftar.';
+        _showSnackbar(warnMsg, color: c.warning);
       }
     } else {
       _showSnackbar(

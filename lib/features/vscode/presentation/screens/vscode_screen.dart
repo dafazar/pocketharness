@@ -126,16 +126,23 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
       await _svc.setAnthropicKey(key);
     }
 
-    final ok = await _svc.start(anthropicKey: key);
-    if (!mounted) return;
+    try {
+      final ok = await _svc.start(anthropicKey: key);
+      if (!mounted) return;
 
-    if (ok) {
-      _initWebView();
-      ref.read(_modeProvider.notifier).state = _Mode.running;
-    } else {
-      ref.read(_errorProvider.notifier).state =
-          'Gagal memulai code-server.\n'
-          'Pastikan Termux berjalan dan port ${_svc.port} tidak dipakai.';
+      if (ok) {
+        _initWebView();
+        ref.read(_modeProvider.notifier).state = _Mode.running;
+      } else {
+        final detail = _svc.lastStartError;
+        ref.read(_errorProvider.notifier).state =
+            'Gagal memulai code-server.'
+            '\${detail != null ? '\n\n\$detail' : '\nPort \${_svc.port} mungkin sudah dipakai.'}';
+        ref.read(_modeProvider.notifier).state = _Mode.error;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ref.read(_errorProvider.notifier).state = 'Error: \$e';
       ref.read(_modeProvider.notifier).state = _Mode.error;
     }
   }
@@ -260,7 +267,7 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
               'Dibutuhkan saat instalasi pertama'),
           const SizedBox(height: 12),
           _infoCard(kmc, Icons.android_rounded, 'Persyaratan',
-              'Termux dari F-Droid harus terinstall'),
+              'Android 8.0+ · Node.js sudah ter-bundle dalam APK'),
           const SizedBox(height: 12),
           _infoCard(kmc, Icons.auto_awesome_rounded, 'Claude Code',
               'Coding AI langsung di terminal VS Code'),
@@ -478,6 +485,34 @@ class _VsCodeScreenState extends ConsumerState<VsCodeScreen> {
             'Key disimpan lokal di perangkat. Digunakan untuk perintah claude '
             'di terminal VS Code.',
             style: TextStyle(color: kmc.textMuted, fontSize: 11),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final key = _keyCtrl.text.trim();
+                await _svc.setAnthropicKey(key);
+                ref.read(_apiKeyProvider.notifier).state = key;
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(key.isEmpty ? '🗑️ API Key dihapus' : '✅ API Key tersimpan'),
+                    backgroundColor: key.isEmpty ? Colors.orange : const Color(0xFF16A34A),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.save_rounded, size: 18),
+              label: const Text('Simpan Key'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
           ),
 
           const SizedBox(height: 32),

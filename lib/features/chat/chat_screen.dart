@@ -30,6 +30,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import 'package:kanmongo/core/ai/llama_context.dart' as llama_ctx;
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
@@ -131,6 +132,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   bool _sessionLoaded = false;
   // ── E-002: loading session state ──────────────────────────────────────────
   bool _isLoadingSession = false;
+
+  // ── Last file context memory (session continuity) ───────────────────────────
+  List<ChatAttachmentPayload> _lastTextPayloads = [];
+  String? _lastEditedFilename;
 
   // ── Attachment chip row key (6B-i) ────────────────────────────────────────
   final _chipRowKey = GlobalKey<AttachmentChipRowState>();
@@ -322,6 +327,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           icon: const Icon(Icons.terminal_rounded),
           tooltip: 'Terminal',
           onPressed: () => context.push('/terminal'),
+        ),
+        // Tombol 🛠️ Code Tools
+        IconButton(
+          icon: const Icon(Icons.build_rounded),
+          tooltip: 'Code Tools',
+          onPressed: _showCodeToolsSheet,
         ),
         // ── Edit Mode Settings button ────────────────────────────────────
         _EditModeButton(
@@ -519,6 +530,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   )
                 : const SizedBox.shrink(),
           ),
+          // Memory context chip — tampil jika ada file terakhir yang diedit
+          if (_pendingAttachments.isEmpty && _lastEditedFilename != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      _lastTextPayloads   = [];
+                      _lastEditedFilename = null;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: KmColors.of(context).accent.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: KmColors.of(context).accent.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.memory_rounded,
+                              size: 13, color: KmColors.of(context).accent),
+                          const SizedBox(width: 5),
+                          Text(
+                            '📎 $_lastEditedFilename  ✕',
+                            style: TextStyle(
+                              color: KmColors.of(context).accent,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Attachment chips — tampil jika ada pending attachments
           if (_pendingAttachments.isNotEmpty)
             AttachmentChipRow(
@@ -862,6 +912,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       }
     }
 
+    // ── Memory: inject konteks file terakhir untuk follow-up ─────────────────
+    // Jika tidak ada attachment baru tapi ada file terakhir yang diedit,
+    // tambahkan konteks file itu ke prompt supaya AI tahu sedang mengedit apa.
+    if (attachmentsSnapshot.isEmpty && _lastTextPayloads.isNotEmpty) {
+      final prev = _lastTextPayloads.first;
+      final snippet = (prev.textContent ?? '').length > 6000
+          ? (prev.textContent ?? '').substring(0, 6000)
+          : (prev.textContent ?? '');
+      if (snippet.isNotEmpty) {
+        fullPrompt = '📎 [Melanjutkan edit: ${prev.filename}]\n```\n$snippet\n```'
+            '\n\n$rawInputText';
+      }
+    }
+
     String effectiveText = fullPrompt.isEmpty ? '(file dilampirkan)' : fullPrompt;
 
     // ── Default mode with attachments — B5 ───────────────────────────────────
@@ -925,9 +989,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         final mode = choice?.mode ?? AiService.instance.currentMode;
         if (mode == AiMode.bulkApi) {
           final payloads = await _buildPayloads(attachmentsSnapshot);
+          _trackTextPayloads(payloads);
           await _generateBulkApi(augmentedText, choice, payloads: payloads);
         } else if (mode == AiMode.offline) {
           final payloads = await _buildPayloads(attachmentsSnapshot);
+          _trackTextPayloads(payloads);
           await _generateOffline(payloads: payloads);
         } else {
           // Delegasikan ke vision handler (online/puter)
@@ -1532,6 +1598,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         setState(() { _isGenerating = false; });
         _genSub = null;
         _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
+        // Detect file edit result untuk semua mode
+        if (payloads.isNotEmpty) {
+          final msgs = ref.read(chatSessionProvider).messages;
+          final lastAi = msgs.lastWhere(
+            (m) => m.role == 'assistant',
+            orElse: () => chat_models.ChatMessage(
+              id: const Uuid().v4(), role: 'assistant',
+              content: '', createdAt: DateTime.now()),
+          );
+          _detectAndSetFileEditResult(payloads, lastAi.content);
+        }
       },
       onError: (Object e) {
         if (!mounted) return;
@@ -1548,6 +1625,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         _genSub = null;
       },
     );
+  }
+
+  // ─── Track text payloads untuk memory ───────────────────────────────────────
+
+  void _trackTextPayloads(List<ChatAttachmentPayload> payloads) {
+    final textOnes = payloads
+        .where((p) => p.textContent != null && p.textContent!.isNotEmpty)
+        .toList();
+    if (textOnes.isNotEmpty) {
+      _lastTextPayloads   = textOnes;
+      _lastEditedFilename = textOnes.first.filename;
+    }
+  }
+
+  // ─── Detect & set FileEditResult for any AI mode ────────────────────────────
+
+  void _detectAndSetFileEditResult(
+    List<ChatAttachmentPayload> payloads,
+    String aiContent,
+  ) {
+    const textExts = {
+      'txt', 'md', 'dart', 'py', 'js', 'ts', 'html', 'css', 'json',
+      'xml', 'csv', 'kt', 'java', 'cpp', 'c', 'h', 'yaml', 'yml',
+      'toml', 'ini', 'log', 'sql', 'sh', 'bat',
+    };
+    final textPayloads = payloads
+        .where((pl) => pl.textContent != null && pl.textContent!.isNotEmpty)
+        .toList();
+    if (textPayloads.isEmpty || aiContent.isEmpty) return;
+    final first = textPayloads.first;
+    final ext = first.filename.contains('.')
+        ? first.filename.split('.').last.toLowerCase()
+        : 'txt';
+    if (!textExts.contains(ext)) return;
+    if (!mounted) return;
+    setState(() {
+      _pendingFileEditResult = FileEditResult(
+        originalFilename: first.filename,
+        textContent: aiContent,
+        outputExtension: ext,
+        description: 'Hasil AI untuk: ${first.filename}',
+      );
+      _lastEditedFilename = first.filename;
+      _lastTextPayloads   = textPayloads;
+    });
   }
 
   // ─── Attachment payload helpers ───────────────────────────────────────────
@@ -1569,11 +1691,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       String? base64Data;
 
       if (isImg) {
-        // Gunakan thumbnailBytes yang sudah di-compress (JPEG ≤4 MB).
-        // JANGAN readAsBytes dari file asli — bisa puluhan MB → OOM.
-        final thumb = att.thumbnailBytes;
-        if (thumb != null && thumb.lengthInBytes <= 4 * 1024 * 1024) {
-          base64Data = base64Encode(thumb);
+        // Coba thumbnailBytes dulu. Jika null, fallback compress dari file.
+        Uint8List? imgData = att.thumbnailBytes;
+        if ((imgData == null || imgData.isEmpty) && file.existsSync()) {
+          try {
+            final raw = await file.readAsBytes();
+            imgData = await FlutterImageCompress.compressWithList(
+              raw,
+              minWidth: 1024,
+              minHeight: 1024,
+              quality: 80,
+              format: CompressFormat.jpeg,
+            );
+          } catch (_) {
+            // last resort: kirim bytes mentah jika ≤4MB
+            try {
+              final raw = await file.readAsBytes();
+              if (raw.lengthInBytes <= 4 * 1024 * 1024) imgData = raw;
+            } catch (__) {}
+          }
+        }
+        if (imgData != null && imgData.isNotEmpty &&
+            imgData.lengthInBytes <= 5 * 1024 * 1024) {
+          base64Data = base64Encode(imgData);
         }
       } else if (isVideo) {
         textContent =
@@ -2071,8 +2211,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       _messageAttachments.clear();
       _messageWebSources.clear();
       setState(() {
-        _pendingAttachments = [];
-        _currentSession = new_models.ChatSession.empty();
+        _pendingAttachments   = [];
+        _currentSession       = new_models.ChatSession.empty();
+        _lastTextPayloads     = [];
+        _lastEditedFilename   = null;
+        _pendingFileEditResult = null;
       });
       _inputCtrl.clear();
     }
@@ -2214,7 +2357,138 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     context.push('/settings/ai-params');
   }
 
-  void _switchToOnlineMode() {
+  // ── Code Tools Sheet ────────────────────────────────────────────────────
+  void _showCodeToolsSheet() {
+    // Cari path file terakhir dari pending attachments
+    String? filePath;
+    String? dirPath;
+    if (_pendingAttachments.isNotEmpty) {
+      filePath = _pendingAttachments.last.path;
+      if (filePath != null) {
+        final idx = filePath.lastIndexOf('/');
+        dirPath = idx > 0 ? filePath.substring(0, idx) : filePath;
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        final kfc = KmColors.of(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: kfc.bg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: kfc.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '🛠️ Code Tools',
+                style: TextStyle(
+                  color: kfc.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Buka editor kode yang terhubung dengan konteks chat',
+                style: TextStyle(color: kfc.textSub, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              _CodeToolTile(
+                icon: Icons.code_rounded,
+                iconColor: const Color(0xFFD97706),
+                title: 'Claude Code',
+                subtitle: 'AI coding agent berbasis terminal',
+                onTap: () {
+                  Navigator.pop(context);
+                  final extra = dirPath != null
+                      ? {'workDir': dirPath}
+                      : filePath != null
+                          ? {'filePath': filePath}
+                          : null;
+                  context.push('/claude-code', extra: extra);
+                },
+              ),
+              const SizedBox(height: 10),
+              _CodeToolTile(
+                icon: Icons.web_rounded,
+                iconColor: const Color(0xFF2563EB),
+                title: 'VS Code',
+                subtitle: 'Editor kode berbasis browser (code-server)',
+                onTap: () {
+                  Navigator.pop(context);
+                  final uri = dirPath != null
+                      ? '/vscode?path=${Uri.encodeComponent(dirPath)}'
+                      : filePath != null
+                          ? '/vscode?path=${Uri.encodeComponent(filePath)}'
+                          : '/vscode';
+                  context.push(uri);
+                },
+              ),
+              const SizedBox(height: 10),
+              _CodeToolTile(
+                icon: Icons.terminal_rounded,
+                iconColor: const Color(0xFF16A34A),
+                title: 'Terminal',
+                subtitle: 'Shell interaktif — jalankan perintah langsung',
+                onTap: () {
+                  Navigator.pop(context);
+                  final extra = filePath != null
+                      ? {'initialCommand': 'cd ${dirPath ?? '.'} && ls', 'autoRun': true}
+                      : null;
+                  context.push('/terminal', extra: extra);
+                },
+              ),
+              const SizedBox(height: 6),
+              if (filePath != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: kfc.card,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kfc.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.attach_file_rounded,
+                          size: 14, color: kfc.textMuted),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          filePath,
+                          style: TextStyle(
+                            color: kfc.textSub,
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
     // Pindah ke mode online
     final choice = AiSourceChoice(mode: AiMode.online, label: 'Online');
     ref.read(aiSourceProvider.notifier).state = choice;
@@ -3808,5 +4082,79 @@ class _CapabilityRow extends StatelessWidget {
         ? Icon(Icons.check_circle_rounded, color: color, size: 14)
         : Icon(Icons.radio_button_unchecked_rounded,
             color: c.border, size: 14);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WIDGET: _CodeToolTile
+// ─────────────────────────────────────────────────────────────────────────────
+class _CodeToolTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _CodeToolTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final kfc = KmColors.of(context);
+    return Material(
+      color: kfc.card,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kfc.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: kfc.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(color: kfc.textSub, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  size: 14, color: kfc.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

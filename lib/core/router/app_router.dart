@@ -140,6 +140,10 @@ final GoRouter appRouter = GoRouter(
     // Context.push('/model-manager') dari AiSourcePicker atau ChatScreen
     GoRoute(path: '/model-manager', pageBuilder: (c, s) => _slide(const ModelManagerScreen())),
 
+    // ── Flat routes (push-able dari screen manapun, termasuk claude_code) ──
+    GoRoute(path: '/offline-ai',  pageBuilder: (c, s) => _slide(const OfflineAiScreen())),
+    GoRoute(path: '/ai-params',   pageBuilder: (c, s) => _slide(const AiInferenceParamsScreen())),
+
     // Feature Shell
     ShellRoute(
       builder: (context, state, child) => WallpaperMenuShell(child: child),
