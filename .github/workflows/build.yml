@@ -284,16 +284,16 @@ jobs:
 
             # ── Git configuration ─────────────────────────────────────────────
             mkdir -p "$TOOLS_DIR/$ABI/etc"
-            cat > "$TOOLS_DIR/$ABI/etc/gitconfig" << 'EOF'
-[core]
-  editor = nano
-  pager = less
-[user]
-  name = "KanMon Builder"
-  email = "build@kanmon.local"
-[init]
-  defaultBranch = main
-EOF
+            printf '%s\n' \
+              '[core]' \
+              '  editor = nano' \
+              '  pager = less' \
+              '[user]' \
+              '  name = "KanMon Builder"' \
+              '  email = "build@kanmon.local"' \
+              '[init]' \
+              '  defaultBranch = main' \
+              > "$TOOLS_DIR/$ABI/etc/gitconfig"
 
             # ── Launcher script ───────────────────────────────────────────────
             # (Launcher script continues in next section...)
@@ -301,14 +301,14 @@ EOF
           done
 
           # ── Generate launcher wrapper ─────────────────────────────────────
-          cat > "$TOOLS_DIR/launcher/code-server.sh" << 'LAUNCHER_SCRIPT'
-#!/bin/bash
-set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ABI_DIR="$SCRIPT_DIR/../arm64-v8a"
-export LD_LIBRARY_PATH="$ABI_DIR:$LD_LIBRARY_PATH"
-exec "$ABI_DIR/node" "$ABI_DIR/npm_modules/code-server/out/main.js" "$@"
-LAUNCHER_SCRIPT
+          printf '%s\n' \
+            '#!/bin/bash' \
+            'set -euo pipefail' \
+            'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' \
+            'ABI_DIR="$SCRIPT_DIR/../arm64-v8a"' \
+            'export LD_LIBRARY_PATH="$ABI_DIR:$LD_LIBRARY_PATH"' \
+            'exec "$ABI_DIR/node" "$ABI_DIR/npm_modules/code-server/out/main.js" "$@"' \
+            > "$TOOLS_DIR/launcher/code-server.sh"
           chmod 755 "$TOOLS_DIR/launcher/code-server.sh"
 
           echo "  ✅ Build tools bundle complete"
