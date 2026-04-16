@@ -139,9 +139,10 @@ jobs:
       - name: "🟢 Resolve Node.js LTS version"
         id: resolve-nodejs
         run: |
+          # Claude Code CLI requires Node.js v20 — do NOT use v22
           NODE_VERSION=$(curl -sf https://nodejs.org/dist/index.json \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); lts=[v for v in d if v.get('lts') and v['version'].startswith('v22')]; print(lts[0]['version'].lstrip('v'))" \
-            2>/dev/null || echo "22.14.0")
+            | python3 -c "import sys,json; d=json.load(sys.stdin); lts=[v for v in d if v.get('lts') and v['version'].startswith('v20')]; print(lts[0]['version'].lstrip('v'))" \
+            2>/dev/null || echo "20.19.1")
           echo "node_version=$NODE_VERSION" >> "$GITHUB_OUTPUT"
           echo "  📌 Node.js: $NODE_VERSION"
 
