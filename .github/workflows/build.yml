@@ -225,19 +225,23 @@ jobs:
               "$TOOLS_DIR/$ABI/npm_modules/@anthropic-ai/"
             echo "    ✅ Claude Code CLI: $CLAUDE_CODE_VERSION"
 
-            # ── code-server ───────────────────────────────────────────────────
-            CS_INSTALL="/tmp/cs_install_${ABI}"
-            rm -rf "$CS_INSTALL"
-            mkdir -p "$CS_INSTALL"
-            NODE_MAJOR=$(node --version | grep -oE '[0-9]+' | head -1)
-            FORCE_NODE_VERSION="$NODE_MAJOR" \
-              "$TOOLS_DIR/$ABI/node" "$TOOLS_DIR/$ABI/npm_modules/npm/bin/npm-cli.js" install \
-              --prefix "$CS_INSTALL" --global \
-              "code-server@${CS_VERSION}" \
-              2>&1 | tail -5
-            cp -r "$CS_INSTALL/lib/node_modules/code-server" \
-              "$TOOLS_DIR/$ABI/npm_modules/code-server"
-            echo "    ✅ code-server: $CS_VERSION"
+            # ── code-server (pre-built binary from GitHub Releases) ──────────
+            # npm install fails due to VS Code's deeply nested node_modules (ENOENT pend).
+            # Downloading the pre-built tarball also gives us the correct target arch binary.
+            case "$ABI" in
+              arm64-v8a) CS_ARCH="arm64" ;;
+              x86_64)    CS_ARCH="amd64" ;;
+              *)         CS_ARCH="amd64" ;;
+            esac
+            CS_URL="https://github.com/coder/code-server/releases/download/v${CS_VERSION}/code-server-${CS_VERSION}-linux-${CS_ARCH}.tar.gz"
+            echo "    ⬇️  code-server ($CS_ARCH): $CS_URL"
+            curl -fsSL "$CS_URL" -o "/tmp/cs_${ABI}.tar.gz"
+            mkdir -p "$TOOLS_DIR/$ABI/npm_modules/code-server"
+            tar -xzf "/tmp/cs_${ABI}.tar.gz" \
+              -C "$TOOLS_DIR/$ABI/npm_modules/code-server" \
+              --strip-components=1
+            rm -f "/tmp/cs_${ABI}.tar.gz"
+            echo "    ✅ code-server: $CS_VERSION ($CS_ARCH)"
 
             # ── Termux prebuilt binaries ──────────────────────────────────────
             # NOTE: Termux binaries CORRECTLY use $ABI for target architecture
@@ -302,13 +306,15 @@ jobs:
           done
 
           # ── Generate launcher wrapper ─────────────────────────────────────
+          # Pre-built code-server has its own bundled Node.js at lib/node
           printf '%s\n' \
             '#!/bin/bash' \
             'set -euo pipefail' \
             'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' \
             'ABI_DIR="$SCRIPT_DIR/../arm64-v8a"' \
+            'CS_DIR="$ABI_DIR/npm_modules/code-server"' \
             'export LD_LIBRARY_PATH="$ABI_DIR:$LD_LIBRARY_PATH"' \
-            'exec "$ABI_DIR/node" "$ABI_DIR/npm_modules/code-server/out/main.js" "$@"' \
+            'exec "$CS_DIR/lib/node" "$CS_DIR/lib/code-server.js" "$@"' \
             > "$TOOLS_DIR/launcher/code-server.sh"
           chmod 755 "$TOOLS_DIR/launcher/code-server.sh"
 
