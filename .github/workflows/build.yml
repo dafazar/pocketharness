@@ -229,7 +229,9 @@ jobs:
             CS_INSTALL="/tmp/cs_install_${ABI}"
             rm -rf "$CS_INSTALL"
             mkdir -p "$CS_INSTALL"
-            node "$TOOLS_DIR/$ABI/npm_modules/npm/bin/npm-cli.js" install \
+            NODE_MAJOR=$(node --version | grep -oE '[0-9]+' | head -1)
+            FORCE_NODE_VERSION="$NODE_MAJOR" \
+              "$TOOLS_DIR/$ABI/node" "$TOOLS_DIR/$ABI/npm_modules/npm/bin/npm-cli.js" install \
               --prefix "$CS_INSTALL" --global \
               "code-server@${CS_VERSION}" \
               2>&1 | tail -5
