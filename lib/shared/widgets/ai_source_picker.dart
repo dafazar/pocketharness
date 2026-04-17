@@ -2401,14 +2401,22 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                       targetPath = fallback.path;
                     }
 
+                    // Cari UUID real dari ModelManagerService berdasarkan path
+                    final mgr = ModelManagerService.instance;
+                    LocalModelInfo? realModel;
+                    try {
+                      realModel = mgr.localModels.firstWhere((m) => m.path == targetPath);
+                    } catch (_) {
+                      realModel = null;
+                    }
                     final modelInfo = LlamaModelInfo(
-                      id            : targetPath.hashCode.toString(),
-                      name          : targetPath.split('/').last,
+                      id            : realModel?.id ?? targetPath.hashCode.toString(),
+                      name          : realModel?.name ?? targetPath.split('/').last,
                       path          : targetPath,
-                      sizeBytes     : 0,
+                      sizeBytes     : realModel?.sizeBytes ?? 0,
                       format        : 'gguf',
                       quantization  : QuantizationType.unknown,
-                      estimatedRamMb: 0,
+                      estimatedRamMb: realModel?.estimatedRamMb ?? 0,
                       contextLength : _cfg.contextSize,
                       isDownloaded  : true,
                     );
@@ -2426,6 +2434,13 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                     await LlamaService.instance.loadModel(modelInfo, config: config);
                     if (LlamaService.instance.isModelLoaded) {
                       offlineSvc.syncFromLlamaService(targetPath);
+                      // ── FIX: Simpan model aktif agar persist setelah restart ──
+                      if (realModel != null) {
+                        await ModelManagerService.instance.setActive(realModel.id);
+                      }
+                      await LlamaService.instance.saveSettings();
+                      final svcUpd = AiSourceSettingsService.instance;
+                      svcUpd.saveOffline(svcUpd.offline.copyWith(activeModelPath: targetPath));
                     }
                     setLocal(() => _isLoadingModel = false);
                     setState(() {});
@@ -2458,13 +2473,13 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                   setLocal(() => _isLoadingModel = true);
                   _saveField(_cfg.copyWith(activeModelPath: model.path));
                   final modelInfo = LlamaModelInfo(
-                    id            : model.path.hashCode.toString(),
+                    id            : model.id,  // ── FIX: gunakan UUID real, bukan hashCode ──
                     name          : model.name,
                     path          : model.path,
                     sizeBytes     : model.sizeBytes,
                     format        : 'gguf',
                     quantization  : QuantizationType.unknown,
-                    estimatedRamMb: (model.sizeBytes / (1024 * 1024) * 1.2).toInt(),
+                    estimatedRamMb: model.estimatedRamMb,
                     contextLength : _cfg.contextSize,
                     isDownloaded  : true,
                   );
@@ -2482,6 +2497,11 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                   await LlamaService.instance.loadModel(modelInfo, config: config);
                   if (LlamaService.instance.isModelLoaded) {
                     offlineSvc.syncFromLlamaService(model.path);
+                    // ── FIX: Simpan model aktif agar persist setelah restart ──
+                    await ModelManagerService.instance.setActive(model.id);
+                    await LlamaService.instance.saveSettings();
+                    final svc = AiSourceSettingsService.instance;
+                    svc.saveOffline(svc.offline.copyWith(activeModelPath: model.path));
                   }
                   setLocal(() => _isLoadingModel = false);
                   setState(() {});

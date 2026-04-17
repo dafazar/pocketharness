@@ -2,9 +2,11 @@
 // KanMonAI — Code Server Service (Native, tanpa Termux)
 //
 // Mengelola lifecycle code-server (VS Code di browser):
+//   • Auto-init ToolsService saat pertama kali dipakai
 //   • Cek bundle APK via ToolsService
 //   • Tulis config code-server (no-auth, port 9191) ke internal storage
 //   • Start/stop code-server sebagai background process via node
+//   • Auto-recover permission jika Permission denied
 //   • Inject ANTHROPIC_API_KEY ke environment
 // =============================================================================
 
@@ -61,19 +63,18 @@ class CodeServerService {
   static const int _defaultPort = 9191;
 
   // State
-  bool _installed    = false;
+  bool _installed     = false;
   bool _nodeInstalled = false;
   Process? _serverProcess;
-  int _port          = _defaultPort;
-  bool _prefsLoaded  = false;
+  int _port           = _defaultPort;
+  bool _prefsLoaded   = false;
   String? _anthropicKey;
-
   String? _lastStartError;
 
-  bool get isInstalled     => _installed;
-  bool get isRunning       => _serverProcess != null;
-  int  get port            => _port;
-  String get serverUrl     => 'http://localhost:$_port';
+  bool    get isInstalled    => _installed;
+  bool    get isRunning      => _serverProcess != null;
+  int     get port           => _port;
+  String  get serverUrl      => 'http://localhost:$_port';
   String? get lastStartError => _lastStartError;
 
   // ── Load Prefs ──────────────────────────────────────────────────────────────
@@ -104,31 +105,67 @@ class CodeServerService {
     return _anthropicKey;
   }
 
+  // ── Ensure ToolsService ready ───────────────────────────────────────────────
+  /// Pastikan ToolsService sudah di-initialize.
+  /// Dipanggil sebelum setiap operasi yang butuh tools.
+  Future<bool> _ensureToolsReady({void Function(double)? onProgress}) async {
+    final svc = ToolsService.instance;
+    if (svc.isReady) return true;
+
+    debugPrint('[CodeServer] ToolsService not ready — initializing...');
+    try {
+      await svc.initialize(onProgress: onProgress);
+    } catch (e) {
+      debugPrint('[CodeServer] ToolsService.initialize() failed: $e');
+      return false;
+    }
+    return svc.isReady;
+  }
+
   // ── Check Status ────────────────────────────────────────────────────────────
   Future<CodeServerStatus> checkStatus() async {
     await _loadPrefs();
-    if (!_installed) return CodeServerStatus.notInstalled;
-    if (isRunning)   return CodeServerStatus.running;
+    if (isRunning) return CodeServerStatus.running;
 
-    // Cek entry.js dari bundle (tidak ada Termux path)
-    if (!ToolsService.instance.isReady) return CodeServerStatus.notInstalled;
-    final cliPath = ToolsService.instance.codeServerCliPath;
-    if (File(cliPath).existsSync()) return CodeServerStatus.installed;
+    // Auto-init ToolsService jika belum ready
+    final toolsReady = await _ensureToolsReady();
+    if (!toolsReady) return CodeServerStatus.notInstalled;
 
-    return CodeServerStatus.notInstalled;
+    // Cek apakah node + code-server ada
+    final nodeExists       = File(ToolsService.instance.nodePath).existsSync();
+    final codeServerExists = File(ToolsService.instance.codeServerCliPath).existsSync();
+
+    if (!nodeExists || !codeServerExists) {
+      // Tools tidak lengkap — reset installed flag
+      if (_installed) {
+        _installed = false;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_kInstalled, false);
+      }
+      return CodeServerStatus.notInstalled;
+    }
+
+    // Tools ada — pastikan _installed flag konsisten
+    if (!_installed) {
+      // Tools ada di disk tapi flag belum set — tandai sebagai installed
+      await _saveInstalled();
+      _installed = true;
+    }
+
+    return CodeServerStatus.installed;
   }
 
   // ── Install Pipeline ────────────────────────────────────────────────────────
   Stream<CodeServerInstallEvent> install() async* {
     await _loadPrefs();
 
-    // Step 1: Cek / extract bundle
     yield const CodeServerInstallEvent(
       step: CodeServerStep.checkingBundle,
       message: 'Memeriksa bundle tools bawaan...',
       progress: 0.05,
     );
 
+    // Extract jika belum ready
     if (!ToolsService.instance.isReady) {
       yield const CodeServerInstallEvent(
         step: CodeServerStep.extractingBundle,
@@ -137,7 +174,9 @@ class CodeServerService {
       );
 
       try {
-        await ToolsService.instance.initialize(onProgress: (_) {});
+        await ToolsService.instance.initialize(
+          onProgress: (_) {},
+        );
       } catch (e) {
         yield CodeServerInstallEvent(
           step: CodeServerStep.error,
@@ -161,7 +200,7 @@ class CodeServerService {
       return;
     }
 
-    // Pastikan code-server CLI ada di bundle
+    // Cek code-server CLI
     if (!File(ToolsService.instance.codeServerCliPath).existsSync()) {
       yield CodeServerInstallEvent(
         step: CodeServerStep.error,
@@ -173,22 +212,14 @@ class CodeServerService {
       return;
     }
 
-    // ✅ FIX 7: Ensure Node.js dan executables punya permission yang benar
+    // Re-apply permissions (pastikan tidak ada yang hilang)
     yield CodeServerInstallEvent(
       step: CodeServerStep.verifying,
-      message: 'Verifikasi permissions binary...',
+      message: 'Memverifikasi permissions binary...',
       progress: 0.40,
     );
 
-    try {
-      // Re-chmod executables jika ada yang loss permission
-      await Process.run('chmod', ['+x', ToolsService.instance.nodePath]);
-      await Process.run('chmod', ['+x', ToolsService.instance.codeServerCliPath]);
-      debugPrint('[CodeServer.install] Binary permissions verified');
-    } catch (e) {
-      debugPrint('[CodeServer.install] Warning: chmod failed: $e');
-      // Continue anyway
-    }
+    await ToolsService.instance.reapplyPermissions();
 
     yield CodeServerInstallEvent(
       step: CodeServerStep.checkingBundle,
@@ -197,7 +228,7 @@ class CodeServerService {
       progress: 0.50,
     );
 
-    // Step 2: Tulis config YAML
+    // Tulis config YAML
     yield const CodeServerInstallEvent(
       step: CodeServerStep.writingConfig,
       message: 'Menulis konfigurasi code-server...',
@@ -211,7 +242,7 @@ class CodeServerService {
     }
     yield configResult;
 
-    // Step 3: Verifikasi
+    // Verifikasi final
     yield const CodeServerInstallEvent(
       step: CodeServerStep.verifying,
       message: 'Memverifikasi...',
@@ -275,6 +306,14 @@ class CodeServerService {
       return true;
     }
 
+    // Auto-init ToolsService jika belum ready
+    final toolsReady = await _ensureToolsReady();
+    if (!toolsReady) {
+      _lastStartError = 'Bundle tools tidak ditemukan dalam APK.\n'
+          'Rebuild APK via GitHub Actions agar tools ter-bundle.';
+      return false;
+    }
+
     if (!File(ToolsService.instance.codeServerCliPath).existsSync()) {
       _lastStartError = 'code-server tidak ada dalam bundle APK.\n'
           'Rebuild APK via GitHub Actions dengan bundle code-server diaktifkan.';
@@ -282,17 +321,22 @@ class CodeServerService {
       return false;
     }
 
-    // ✅ FIX 6A: Ensure Node.js binary has execute permission
+    // Pastikan node binary punya permission execute
     final nodeBinary = ToolsService.instance.nodePath;
     if (File(nodeBinary).existsSync()) {
-      try {
-        // Make Node.js executable
-        await Process.run('chmod', ['+x', nodeBinary]);
-        debugPrint('[CodeServer] Node.js binary permissions set: $nodeBinary');
-      } catch (e) {
-        debugPrint('[CodeServer] Warning: Could not set permissions: $e');
-        // Continue anyway, might work despite warning
+      for (final cmd in ['/system/bin/chmod', '/bin/chmod', 'chmod']) {
+        try {
+          final r = await Process.run(cmd, ['755', nodeBinary]);
+          if (r.exitCode == 0) {
+            debugPrint('[CodeServer] Node.js chmod 755: OK via $cmd');
+            break;
+          }
+        } catch (_) { continue; }
       }
+    } else {
+      _lastStartError = 'Node.js binary tidak ditemukan di:\n$nodeBinary\n'
+          'Coba reinstall VS Code.';
+      return false;
     }
 
     final apiKey = anthropicKey ?? _anthropicKey ?? '';
@@ -302,10 +346,10 @@ class CodeServerService {
       final env = <String, String>{
         ...Platform.environment,
         'HOME': ToolsService.instance.toolsRoot,
-        'NODE_PATH':
-            '${ToolsService.instance.toolsRoot}/${ToolsService.instance.abi}/npm_modules',
-        'PATH':
-            '${ToolsService.instance.binDir}:$systemPath',
+        'NODE_PATH': '${ToolsService.instance.toolsRoot}/${ToolsService.instance.abi}/npm_modules',
+        'PATH': '${ToolsService.instance.binDir}:$systemPath',
+        'NODE_NO_WARNINGS': '1',
+        'CS_DISABLE_GETTING_STARTED_OVERRIDE': '1',
         if (apiKey.isNotEmpty) 'ANTHROPIC_API_KEY': apiKey,
         if (apiKey.isNotEmpty) 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1',
       };
@@ -322,7 +366,6 @@ class CodeServerService {
         runInShell: false,
       );
 
-      // Kumpulkan stderr untuk diagnosis
       final stderrBuf = StringBuffer();
       _serverProcess!.stdout.listen((_) {});
       _serverProcess!.stderr
@@ -336,16 +379,26 @@ class CodeServerService {
       _serverProcess!.exitCode.then((code) {
         processExited = true;
         _serverProcess = null;
-        final errOut = stderrBuf.toString().trim();
+        final errOut    = stderrBuf.toString().trim();
         final errSuffix = errOut.isNotEmpty ? ':\n$errOut' : '.';
         _lastStartError = 'Proses code-server berhenti (exit $code)$errSuffix';
-        debugPrint('[CodeServer] Server process exited: code=$code');
+        debugPrint('[CodeServer] Server exited: code=$code');
       });
 
-      // Tunggu server ready (max 30 detik)
+      // Tunggu server ready — max 30 detik
       for (int i = 0; i < 60; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
         if (processExited) {
+          // Jika error permission denied — coba auto-fix
+          final err = stderrBuf.toString();
+          if (err.contains('Permission denied') || err.contains('EACCES')) {
+            debugPrint('[CodeServer] Permission denied detected — attempting auto-fix...');
+            await ToolsService.instance.reapplyPermissions();
+            // Jangan langsung retry dari sini — biarkan user tekan Coba Lagi
+            _lastStartError = 'Permission denied.\n\n'
+                'Permissions telah diperbaiki otomatis.\n'
+                'Silakan tekan "Coba Lagi" untuk memulai ulang VS Code.';
+          }
           debugPrint('[CodeServer] Process exited before ready');
           return false;
         }
@@ -356,18 +409,21 @@ class CodeServerService {
       }
 
       // Timeout
-      final errOut = stderrBuf.toString().trim();
+      final errOut    = stderrBuf.toString().trim();
       final errSuffix = errOut.isNotEmpty ? ':\n$errOut' : '.';
       _lastStartError = 'Server tidak merespons dalam 30 detik$errSuffix';
-      debugPrint('[CodeServer] Server did not respond within 30s');
+      debugPrint('[CodeServer] Timeout waiting for server');
       return false;
+
     } catch (e) {
-      // ✅ FIX 6B: Better error message untuk permission denied
       final errorMsg = e.toString();
-      if (errorMsg.contains('Permission denied')) {
-        _lastStartError = 'Permission denied saat memulai Node.js.\n'
-            'Kemungkinan: binary tidak punya permission execute.\n'
-            'Coba reinstall VS Code dari menu.';
+      if (errorMsg.contains('Permission denied') || errorMsg.contains('EACCES')) {
+        // Auto-fix permissions
+        debugPrint('[CodeServer] Permission denied on start — auto-fixing...');
+        await ToolsService.instance.reapplyPermissions();
+        _lastStartError = 'Permission denied saat memulai Node.js.\n\n'
+            'Permissions telah diperbaiki otomatis.\n'
+            'Silakan tekan "Coba Lagi" untuk memulai ulang VS Code.';
       } else {
         _lastStartError = 'Exception saat memulai server: $e';
       }
@@ -379,9 +435,7 @@ class CodeServerService {
 
   // ── Stop Server ─────────────────────────────────────────────────────────────
   Future<void> stop() async {
-    try {
-      _serverProcess?.kill();
-    } catch (_) {}
+    try { _serverProcess?.kill(); } catch (_) {}
     _serverProcess = null;
     debugPrint('[CodeServer] Server stopped');
   }
@@ -395,9 +449,7 @@ class CodeServerService {
       );
       await socket.close();
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   // ── Reset install state ─────────────────────────────────────────────────────
@@ -408,10 +460,11 @@ class CodeServerService {
     _installed     = false;
     _nodeInstalled = false;
     _prefsLoaded   = false;
+    // Invalidate ToolsService cache juga agar re-extract
+    await ToolsService.instance.invalidateCache();
     debugPrint('[CodeServer] Install state reset');
   }
 
-  // ── getLaunchCommand (for terminal hint) ────────────────────────────────────
   String getLaunchCommand() {
     final node = ToolsService.instance.nodePath;
     final cli  = ToolsService.instance.codeServerCliPath;

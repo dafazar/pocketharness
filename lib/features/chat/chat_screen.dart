@@ -34,6 +34,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import 'package:kanmongo/core/ai/llama_context.dart' as llama_ctx;
 import 'package:kanmongo/core/ai/inference_params_provider.dart';
+import 'package:kanmongo/core/ai/llama_status_provider.dart';
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/data/models/chat_models.dart' as chat_models;
 import 'package:kanmongo/data/services/ai_service.dart';
@@ -210,6 +211,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final messages  = ref.watch(chatSessionProvider).messages;
     final aiMode    = ref.watch(aiSourceProvider);
     final isOffline = (aiMode?.mode ?? AiService.instance.currentMode) == AiMode.offline;
+    // ── FIX: Watch llamaStatusProvider agar UI rebuild otomatis saat model selesai load ──
+    // Tanpa ini, modelLoaded hanya dibaca sekali dan tidak pernah update.
+    ref.watch(llamaStatusProvider);
     final modelLoaded = LlamaService.instance.isModelLoaded;
 
     // Tampilkan EmptyModelWidget jika mode offline tapi belum ada model

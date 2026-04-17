@@ -46,7 +46,7 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     if: |
       github.event_name == 'push' ||
@@ -172,7 +172,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: assets/tools
-          key: tools-bundle-node${{ steps.resolve-nodejs.outputs.node_version }}-cs${{ steps.resolve-codeserver.outputs.cs_version }}-${{ runner.os }}-${{ runner.arch }}
+          key: tools-bundle-v5-node${{ steps.resolve-nodejs.outputs.node_version }}-cs${{ steps.resolve-codeserver.outputs.cs_version }}-${{ runner.os }}-${{ runner.arch }}
 
       - name: "📁 Ensure assets/tools directory exists"
         run: |
@@ -216,6 +216,7 @@ jobs:
             echo ""
             echo "  ══ ABI: $ABI ══════════════════════════════════════════════════"
             mkdir -p "$TOOLS_DIR/$ABI/npm_modules/@anthropic-ai"
+            mkdir -p "$TOOLS_DIR/$ABI/npm_modules/code-server"
             mkdir -p "$TOOLS_DIR/$ABI/bin"
 
             case "$ABI" in
@@ -272,38 +273,200 @@ jobs:
             rm -rf "$CC_INSTALL"
             echo "    ✅ Claude Code CLI: $CLAUDE_CODE_VERSION"
 
-            # ── Termux CLI tools (git, ripgrep) ───────────────────────────────
-            for PKG_INFO in "g/git/git" "r/ripgrep/ripgrep"; do
-              PKG_LETTER=$(echo "$PKG_INFO" | cut -d/ -f1)
-              PKG_DIR=$(echo "$PKG_INFO" | cut -d/ -f2)
-              PKG_NAME=$(echo "$PKG_INFO" | cut -d/ -f3)
-              DEB_NAME=$(curl -sf "${TERMUX_POOL}/${PKG_LETTER}/${PKG_DIR}/" \
-                | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
-                | grep -v 'dbgsym\|dev\|doc' | head -1)
-              if [ -z "$DEB_NAME" ]; then
-                echo "    ⚠️  $PKG_NAME: deb not found, skipping"
-                continue
+            # ── code-server (VS Code in browser) — pure JS, arch-independent ──
+            CS_VERSION_ACTUAL="${{ steps.resolve-codeserver.outputs.cs_version }}"
+            echo "    ⬇️  code-server v${CS_VERSION_ACTUAL} (VS Code)..."
+            CS_INSTALL="/tmp/cs_install_${ABI}"
+            rm -rf "$CS_INSTALL" && mkdir -p "$CS_INSTALL"
+            # Install code-server via npm (pure JS bundle, no native rebuild needed)
+            "$HOST_NODE" "$HOST_NPM" install \
+              --prefix "$CS_INSTALL" --global \
+              "code-server@${CS_VERSION_ACTUAL}" \
+              --unsafe-perm \
+              2>&1 | tail -5
+            # Verify install succeeded
+            CS_ENTRY=$(find "$CS_INSTALL" -name "entry.js" -path "*/node/entry.js" 2>/dev/null | head -1)
+            if [ -n "$CS_ENTRY" ]; then
+              # Copy entire code-server module
+              CS_MOD_DIR=$(dirname "$(dirname "$(dirname "$CS_ENTRY")")")
+              cp -r "$CS_MOD_DIR" "$TOOLS_DIR/$ABI/npm_modules/code-server/"
+              echo "    ✅ code-server v${CS_VERSION_ACTUAL} bundled ($(du -sh "$TOOLS_DIR/$ABI/npm_modules/code-server" | cut -f1))"
+            else
+              # Fallback: copy everything from lib/node_modules/code-server
+              CS_LIB=$(find "$CS_INSTALL" -maxdepth 5 -type d -name "code-server" 2>/dev/null | head -1)
+              if [ -n "$CS_LIB" ]; then
+                cp -r "$CS_LIB/." "$TOOLS_DIR/$ABI/npm_modules/code-server/"
+                echo "    ✅ code-server v${CS_VERSION_ACTUAL} bundled (fallback path)"
+              else
+                echo "    ⚠️  code-server: module not found after install — check npm logs"
+                ls "$CS_INSTALL/lib/node_modules/" 2>/dev/null || true
               fi
-              curl -fsSL "${TERMUX_POOL}/${PKG_LETTER}/${PKG_DIR}/${DEB_NAME}" -o "/tmp/${PKG_NAME}.deb"
-              mkdir -p "/tmp/deb_pkg"
-              cd "/tmp/deb_pkg"
-              ar x "/tmp/${PKG_NAME}.deb"
+            fi
+            rm -rf "$CS_INSTALL"
+
+            # ── Launcher script: code-server ──────────────────────────────────
+
+            # ════════════════════════════════════════════════════════════════
+            # ── Native CLI Tools from Termux (Android Bionic libc) ──────────
+            # ════════════════════════════════════════════════════════════════
+            echo "    📦 Bundling native CLI tools from Termux ($TERMUX_ARCH)..."
+
+            BIN_DEST="$TOOLS_DIR/$ABI/bin"
+            mkdir -p "$BIN_DEST"
+
+            # Helper: download & extract single binary from Termux deb
+            extract_termux_bin() {
+              local POOL_L="$1" PKG_DIR="$2" PKG_NAME="$3" BIN_SUBPATH="$4" DEST="$5" T_ARCH="$6"
+              local DEB_NAME
+              DEB_NAME=$(curl -sf "${TERMUX_POOL}/${POOL_L}/${PKG_DIR}/" \
+                | grep -oP 'href="\K[^"]*'${T_ARCH}'[^"]*\.deb' \
+                | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
+              if [ -z "$DEB_NAME" ]; then
+                echo "      ⚠️  $PKG_NAME not found for $T_ARCH, skipping"
+                return 0
+              fi
+              curl -fsSL "${TERMUX_POOL}/${POOL_L}/${PKG_DIR}/${DEB_NAME}" -o "/tmp/${PKG_NAME}_${T_ARCH}.deb"
+              local EXDIR="/tmp/deb_${PKG_NAME}_${T_ARCH}"
+              mkdir -p "$EXDIR"
+              cd "$EXDIR"
+              ar x "/tmp/${PKG_NAME}_${T_ARCH}.deb"
+              local DATA_TAR
               DATA_TAR=$(ls data.tar.* 2>/dev/null | head -1)
               if [ -n "$DATA_TAR" ]; then
                 tar -xf "$DATA_TAR" 2>/dev/null || true
-                BIN_PATH=$(find . -path "*/usr/bin/$PKG_NAME" -type f | head -1)
+                local BIN_PATH
+                BIN_PATH=$(find . -path "*/${BIN_SUBPATH}" -type f | head -1)
                 if [ -n "$BIN_PATH" ]; then
-                  cp "$BIN_PATH" "$OLDPWD/$TOOLS_DIR/$ABI/bin/$PKG_NAME"
-                  chmod 755 "$OLDPWD/$TOOLS_DIR/$ABI/bin/$PKG_NAME"
-                  echo "    ✅ $PKG_NAME bundled"
+                  mkdir -p "$(dirname "$DEST")"
+                  cp "$BIN_PATH" "$DEST"
+                  chmod 755 "$DEST"
+                  echo "      ✅ $PKG_NAME bundled"
+                else
+                  echo "      ⚠️  ${BIN_SUBPATH} not found in $PKG_NAME deb"
                 fi
               fi
               cd "$OLDPWD"
-              rm -rf "/tmp/deb_pkg" "/tmp/${PKG_NAME}.deb"
-            done
+              rm -rf "$EXDIR" "/tmp/${PKG_NAME}_${T_ARCH}.deb"
+            }
 
-            # ── Launcher script ───────────────────────────────────────────────
+            # ── git ──────────────────────────────────────────────────────────
+            extract_termux_bin "g" "git" "git" "usr/bin/git" "$BIN_DEST/git" "$TERMUX_ARCH"
+
+            # ── ripgrep ──────────────────────────────────────────────────────
+            extract_termux_bin "r" "ripgrep" "ripgrep" "usr/bin/rg" "$BIN_DEST/rg" "$TERMUX_ARCH"
+
+            # ── curl ─────────────────────────────────────────────────────────
+            extract_termux_bin "c" "curl" "curl" "usr/bin/curl" "$BIN_DEST/curl" "$TERMUX_ARCH"
+
+            # ── wget ─────────────────────────────────────────────────────────
+            extract_termux_bin "w" "wget" "wget" "usr/bin/wget" "$BIN_DEST/wget" "$TERMUX_ARCH"
+
+            # ── jq ───────────────────────────────────────────────────────────
+            extract_termux_bin "j" "jq" "jq" "usr/bin/jq" "$BIN_DEST/jq" "$TERMUX_ARCH"
+
+            # ── busybox (sh, grep, sed, awk, find, tar, …) ───────────────────
+            extract_termux_bin "b" "busybox" "busybox" "usr/bin/busybox" "$BIN_DEST/busybox" "$TERMUX_ARCH"
+            if [ -f "$BIN_DEST/busybox" ]; then
+              for APPLET in sh ash grep sed awk find xargs head tail wc sort uniq tr cut paste \
+                            tar gzip gunzip bzip2 bunzip2 xz unxz base64 \
+                            du df free top ps kill killall sleep date echo printf \
+                            mkdir rm cp mv ln touch chmod chown stat readlink \
+                            od hexdump strings md5sum sha256sum sha1sum \
+                            nc netstat cmp diff patch vi; do
+                if [ ! -f "$BIN_DEST/$APPLET" ]; then
+                  ln -sf busybox "$BIN_DEST/$APPLET"
+                fi
+              done
+              echo "      ✅ busybox applet symlinks created"
+            fi
+
+            # ── python3 ──────────────────────────────────────────────────────
+            extract_termux_bin "p" "python" "python" "usr/bin/python3" "$BIN_DEST/python3" "$TERMUX_ARCH"
+            if [ -f "$BIN_DEST/python3" ] && [ ! -f "$BIN_DEST/python" ]; then
+              ln -sf python3 "$BIN_DEST/python"
+            fi
+
+            # ── zip / unzip ──────────────────────────────────────────────────
+            extract_termux_bin "z" "zip" "zip" "usr/bin/zip" "$BIN_DEST/zip" "$TERMUX_ARCH"
+            extract_termux_bin "u" "unzip" "unzip" "usr/bin/unzip" "$BIN_DEST/unzip" "$TERMUX_ARCH"
+
+            # ── sqlite3 ──────────────────────────────────────────────────────
+            extract_termux_bin "s" "sqlite" "sqlite" "usr/bin/sqlite3" "$BIN_DEST/sqlite3" "$TERMUX_ARCH"
+
+            # ── ffmpeg + ffprobe ──────────────────────────────────────────────
+            extract_termux_bin "f" "ffmpeg" "ffmpeg" "usr/bin/ffmpeg" "$BIN_DEST/ffmpeg" "$TERMUX_ARCH"
+            extract_termux_bin "f" "ffmpeg" "ffprobe" "usr/bin/ffprobe" "$BIN_DEST/ffprobe" "$TERMUX_ARCH"
+
+            # ── imagemagick (convert, identify, mogrify) ─────────────────────
+            extract_termux_bin "i" "imagemagick" "imagemagick" "usr/bin/convert" "$BIN_DEST/convert" "$TERMUX_ARCH"
+            extract_termux_bin "i" "imagemagick" "imagemagick-identify" "usr/bin/identify" "$BIN_DEST/identify" "$TERMUX_ARCH"
+            extract_termux_bin "i" "imagemagick" "imagemagick-mogrify" "usr/bin/mogrify" "$BIN_DEST/mogrify" "$TERMUX_ARCH"
+
+            # ── sox + soxi ───────────────────────────────────────────────────
+            extract_termux_bin "s" "sox" "sox" "usr/bin/sox" "$BIN_DEST/sox" "$TERMUX_ARCH"
+            extract_termux_bin "s" "sox" "sox-soxi" "usr/bin/soxi" "$BIN_DEST/soxi" "$TERMUX_ARCH"
+
+            # ── yt-dlp ───────────────────────────────────────────────────────
+            extract_termux_bin "y" "yt-dlp" "yt-dlp" "usr/bin/yt-dlp" "$BIN_DEST/yt-dlp" "$TERMUX_ARCH"
+
+            # ── nano ─────────────────────────────────────────────────────────
+            extract_termux_bin "n" "nano" "nano" "usr/bin/nano" "$BIN_DEST/nano" "$TERMUX_ARCH"
+
+            # ── vim ──────────────────────────────────────────────────────────
+            extract_termux_bin "v" "vim" "vim" "usr/bin/vim" "$BIN_DEST/vim" "$TERMUX_ARCH"
+
+            # ── pv (pipe viewer) ─────────────────────────────────────────────
+            extract_termux_bin "p" "pv" "pv" "usr/bin/pv" "$BIN_DEST/pv" "$TERMUX_ARCH"
+
+            # ── file ─────────────────────────────────────────────────────────
+            extract_termux_bin "f" "file" "file" "usr/bin/file" "$BIN_DEST/file" "$TERMUX_ARCH"
+
+            # ── patch ────────────────────────────────────────────────────────
+            extract_termux_bin "p" "patch" "patch" "usr/bin/patch" "$BIN_DEST/patch" "$TERMUX_ARCH"
+
+            # ── diffutils ────────────────────────────────────────────────────
+            extract_termux_bin "d" "diffutils" "diffutils" "usr/bin/diff" "$BIN_DEST/diff" "$TERMUX_ARCH"
+
+            # ── rsync ────────────────────────────────────────────────────────
+            extract_termux_bin "r" "rsync" "rsync" "usr/bin/rsync" "$BIN_DEST/rsync" "$TERMUX_ARCH"
+
+            # ── p7zip ────────────────────────────────────────────────────────
+            extract_termux_bin "p" "p7zip" "p7zip" "usr/bin/7z" "$BIN_DEST/7z" "$TERMUX_ARCH"
+
+            # ── lz4 ──────────────────────────────────────────────────────────
+            extract_termux_bin "l" "lz4" "lz4" "usr/bin/lz4" "$BIN_DEST/lz4" "$TERMUX_ARCH"
+
+            # ── zstd ─────────────────────────────────────────────────────────
+            extract_termux_bin "z" "zstd" "zstd" "usr/bin/zstd" "$BIN_DEST/zstd" "$TERMUX_ARCH"
+
+            # ── xz-utils ─────────────────────────────────────────────────────
+            extract_termux_bin "x" "xz-utils" "xz-utils" "usr/bin/xz" "$BIN_DEST/xz" "$TERMUX_ARCH"
+
+            # ── procps (ps, top, free, pgrep, pkill) ─────────────────────────
+            extract_termux_bin "p" "procps" "procps" "usr/bin/ps" "$BIN_DEST/ps" "$TERMUX_ARCH"
+            extract_termux_bin "p" "procps" "procps-free" "usr/bin/free" "$BIN_DEST/free" "$TERMUX_ARCH"
+            extract_termux_bin "p" "procps" "procps-pgrep" "usr/bin/pgrep" "$BIN_DEST/pgrep" "$TERMUX_ARCH"
+            extract_termux_bin "p" "procps" "procps-pkill" "usr/bin/pkill" "$BIN_DEST/pkill" "$TERMUX_ARCH"
+
+            # ── exiftool ─────────────────────────────────────────────────────
+            extract_termux_bin "p" "perl-image-exiftool" "exiftool" "usr/bin/exiftool" "$BIN_DEST/exiftool" "$TERMUX_ARCH"
+
+            # ── openssh ──────────────────────────────────────────────────────
+            extract_termux_bin "o" "openssh" "openssh" "usr/bin/ssh" "$BIN_DEST/ssh" "$TERMUX_ARCH"
+            extract_termux_bin "o" "openssh" "openssh-scp" "usr/bin/scp" "$BIN_DEST/scp" "$TERMUX_ARCH"
+            extract_termux_bin "o" "openssh" "openssh-keygen" "usr/bin/ssh-keygen" "$BIN_DEST/ssh-keygen" "$TERMUX_ARCH"
+
+            # ── strace ───────────────────────────────────────────────────────
+            extract_termux_bin "s" "strace" "strace" "usr/bin/strace" "$BIN_DEST/strace" "$TERMUX_ARCH"
+
+            echo ""
+            echo "    📋 bin/ inventory ($ABI): $(ls "$BIN_DEST/" | wc -l) files"
+            ls "$BIN_DEST/" | awk '{print "      " $0}' || true
+
+            # ── Launcher scripts ──────────────────────────────────────────────
             mkdir -p "$TOOLS_DIR/$ABI/launcher"
+
+            # Claude Code launcher
             printf '%s\n' \
               '#!/bin/sh' \
               'TOOLS="$(dirname "$(dirname "$0")")" ' \
@@ -313,6 +476,27 @@ jobs:
               'exec "$TOOLS/node" "$TOOLS/npm_modules/@anthropic-ai/claude-code/cli.js" "$@"' \
               > "$TOOLS_DIR/$ABI/launcher/claude_code_launcher.sh"
             chmod 755 "$TOOLS_DIR/$ABI/launcher/claude_code_launcher.sh"
+
+            # code-server (VS Code) launcher
+            CS_ENTRY_REL="npm_modules/code-server/out/node/entry.js"
+            # Try to find real entry point path
+            FOUND_ENTRY=$(find "$TOOLS_DIR/$ABI/npm_modules/code-server" -name "entry.js" -path "*/node/entry.js" 2>/dev/null | head -1)
+            if [ -n "$FOUND_ENTRY" ]; then
+              # Make path relative to $TOOLS_DIR/$ABI
+              CS_ENTRY_REL="${FOUND_ENTRY#$TOOLS_DIR/$ABI/}"
+            fi
+            printf '%s\n' \
+              '#!/bin/sh' \
+              'TOOLS="$(dirname "$(dirname "$0")")"' \
+              'export NODE_PATH="$TOOLS/npm_modules"' \
+              'export NODE_NO_WARNINGS=1' \
+              'export XDG_DATA_HOME="${TOOLS}/vscode-data"' \
+              'export XDG_CONFIG_HOME="${TOOLS}/vscode-config"' \
+              'mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"' \
+              "exec \"\$TOOLS/node\" \"\$TOOLS/${CS_ENTRY_REL}\" \"\$@\"" \
+              > "$TOOLS_DIR/$ABI/launcher/code_server_launcher.sh"
+            chmod 755 "$TOOLS_DIR/$ABI/launcher/code_server_launcher.sh"
+            echo "    ✅ Launchers created"
 
             # ── Pack per-ABI tarball ──────────────────────────────────────────
             echo "    📦 Creating tools_${ABI}.tar.gz ..."
@@ -332,14 +516,25 @@ jobs:
           python3 << PYEOF2
           import json
           manifest = {
-              "schema_version": 2,
+              "schema_version": 3,
               "built_at": "${BUILD_DATE}",
               "run_id": "${{ github.run_id }}",
               "node_version": "${NODE_VERSION}",
               "claude_code_version": "${CLAUDE_CODE_VERSION}",
-              "code_server_version": "not_bundled",
+              "code_server_version": "${{ steps.resolve-codeserver.outputs.cs_version }}",
               "abis": ${ABIS_JSON},
-              "tools": ["claude-code", "git", "ripgrep"]
+              "tools": [
+                "claude-code", "code-server",
+                "git", "ripgrep", "curl", "wget", "jq",
+                "busybox", "python3",
+                "zip", "unzip", "sqlite3",
+                "ffmpeg", "ffprobe", "imagemagick",
+                "sox", "yt-dlp",
+                "nano", "vim", "pv", "file", "patch",
+                "diffutils", "rsync", "p7zip",
+                "lz4", "zstd", "xz",
+                "procps", "exiftool", "openssh", "strace"
+              ]
           }
           with open("${TOOLS_DIR}/tools_manifest.json", "w") as f:
               json.dump(manifest, f, indent=2)
@@ -368,7 +563,7 @@ jobs:
             echo "  This means the bundle step was skipped (cache hit) but cache restore failed,"
             echo "  OR the bundle step itself failed silently."
             echo ""
-            echo "  → Fix: Delete the Actions cache named 'tools-bundle-*' in repo settings"
+            echo "  → Fix: Delete the Actions cache named 'tools-bundle-v5-*' in repo settings"
             echo "    and re-run this workflow to force a fresh bundle."
             exit 1
           fi
@@ -383,9 +578,30 @@ jobs:
             fi
             SIZE=$(du -sh "$TARBALL" | cut -f1)
             echo "  ✅ $TARBALL ($SIZE)"
+
+            # Cek isi tarball — harus ada node, claude-code, code-server
+            echo "  🔍 Checking tarball contents for $ABI..."
+            HAS_NODE=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "/$ABI/node$" || echo "0")
+            HAS_CC=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "@anthropic-ai/claude-code/cli.js" || echo "0")
+            HAS_CS=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "code-server" || echo "0")
+            HAS_GIT=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/git$" || echo "0")
+            HAS_PYTHON=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/python3$" || echo "0")
+            HAS_BUSYBOX=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/busybox$" || echo "0")
+            HAS_CURL=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/curl$" || echo "0")
+            HAS_FFMPEG=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/ffmpeg$" || echo "0")
+            HAS_JQ=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/jq$" || echo "0")
+            [ "$HAS_NODE" -gt 0 ]    && echo "    ✅ node"       || echo "    ⚠️  node NOT found"
+            [ "$HAS_CC" -gt 0 ]      && echo "    ✅ claude-code" || echo "    ⚠️  claude-code NOT found"
+            [ "$HAS_CS" -gt 0 ]      && echo "    ✅ code-server" || echo "    ⚠️  code-server NOT found"
+            [ "$HAS_GIT" -gt 0 ]     && echo "    ✅ git"         || echo "    ⚠️  git NOT found"
+            [ "$HAS_PYTHON" -gt 0 ]  && echo "    ✅ python3"     || echo "    ⚠️  python3 NOT found"
+            [ "$HAS_BUSYBOX" -gt 0 ] && echo "    ✅ busybox"     || echo "    ⚠️  busybox NOT found"
+            [ "$HAS_CURL" -gt 0 ]    && echo "    ✅ curl"        || echo "    ⚠️  curl NOT found"
+            [ "$HAS_FFMPEG" -gt 0 ]  && echo "    ✅ ffmpeg"      || echo "    ⚠️  ffmpeg NOT found"
+            [ "$HAS_JQ" -gt 0 ]      && echo "    ✅ jq"          || echo "    ⚠️  jq NOT found"
           done
 
-          echo "  ✅ tools_manifest.json found"
+          echo "  ✅ tools_manifest.json:"
           cat "$TOOLS_DIR/tools_manifest.json"
           echo ""
           echo "  ✅ All tools verified — proceeding to Flutter build."
@@ -509,11 +725,18 @@ jobs:
         run: |
           echo "════════════════════════════════════════════════"
           echo "  KanMon GO — Build Summary"
-          echo "  Target  : ${{ github.event_name == 'push' && 'apk-release' || github.event.inputs.build_target }}"
-          echo "  Channel : ${{ github.event.inputs.flutter_channel || 'stable' }}"
-          echo "  Run #   : ${{ github.run_number }}"
-          echo "  Status  : ${{ job.status }}"
-          echo "  llama   : ${{ steps.resolve-tag.outputs.llama_tag }}"
+          echo "  Target      : ${{ github.event_name == 'push' && 'apk-release' || github.event.inputs.build_target }}"
+          echo "  Channel     : ${{ github.event.inputs.flutter_channel || 'stable' }}"
+          echo "  Run #       : ${{ github.run_number }}"
+          echo "  Status      : ${{ job.status }}"
+          echo "  llama       : ${{ steps.resolve-tag.outputs.llama_tag }}"
+          echo "  Node.js     : ${{ steps.resolve-nodejs.outputs.node_version }}"
+          echo "  code-server : ${{ steps.resolve-codeserver.outputs.cs_version }}"
+          echo "  Bundled     : claude-code, code-server, git, ripgrep, curl, wget, jq,"
+          echo "                busybox, python3, zip, sqlite3, ffmpeg, imagemagick,"
+          echo "                sox, yt-dlp, nano, vim, pv, file, patch, diffutils,"
+          echo "                rsync, p7zip, lz4, zstd, xz, procps, exiftool,"
+          echo "                openssh, strace"
           echo "════════════════════════════════════════════════"
           ccache --show-stats 2>/dev/null || true
 

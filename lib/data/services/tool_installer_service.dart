@@ -8,6 +8,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:kanmongo/data/services/terminal_service.dart';
+import 'package:kanmongo/core/tools/tools_service.dart';
 
 class ToolCheckResult {
   final bool    success;
@@ -126,7 +127,24 @@ class ToolInstallerService {
 
   // ── Cek apakah tool ada di PATH ───────────────────────────────────────────
   Future<bool> _isToolAvailable(String tool) async {
-    // Cek path langsung
+    // 1. Cek bundled native tools via ToolsService (prioritas tertinggi)
+    try {
+      final ts = ToolsService.instance;
+      if (ts.isReady) {
+        // Cek nama tool langsung dan aliases umum
+        final aliases = <String>[tool];
+        if (tool == 'python') aliases.add('python3');
+        if (tool == 'python3') aliases.add('python');
+        if (tool == 'convert') aliases.add('imagemagick');
+        if (tool == 'ripgrep') aliases.add('rg');
+        if (tool == '7z') aliases.add('p7zip');
+        for (final alias in aliases) {
+          if (ts.hasNativeTool(alias)) return true;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Cek path Termux + system
     final paths = [
       '/data/data/com.termux/files/usr/bin/$tool',
       '/data/data/com.termux/files/usr/local/bin/$tool',
@@ -138,7 +156,7 @@ class ToolInstallerService {
       if (File(p).existsSync()) return true;
     }
 
-    // Cek via which command
+    // 3. Cek via which command
     try {
       final result = await TerminalService.instance.run('which $tool',
           timeout: const Duration(seconds: 5));
