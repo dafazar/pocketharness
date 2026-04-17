@@ -452,6 +452,73 @@ jobs:
               echo "      ⚠️  imagemagick not available, skipping"
             fi
 
+      - name: "📦 Bundle CLI tools (sox/yt-dlp/vim/exiftool/misc)"
+        if: steps.cache-tools.outputs.cache-hit != 'true' || steps.validate-cache.outputs.needs_rebuild == 'true'
+        env:
+          TERMUX_POOL: "https://packages.termux.dev/apt/termux-main/pool/main"
+        run: |
+          set -euo pipefail
+          ABIS="${{ steps.abis.outputs.abis }}"
+          TOOLS_DIR="assets/tools"
+
+          # Redefine extract_termux_bin helper (needed in split step)
+          extract_termux_bin() {
+            local POOL_L="$1" PKG_DIR="$2" PKG_NAME="$3" BIN_SUBPATH="$4" DEST="$5" T_ARCH="$6"
+            local BIN_BASENAME
+            BIN_BASENAME=$(basename "$BIN_SUBPATH")
+            local ABS_DEST
+            ABS_DEST="$(cd "$(dirname "$DEST")" 2>/dev/null && pwd)/$(basename "$DEST")" || \
+              ABS_DEST="$(pwd)/$DEST"
+            local DEB_NAME
+            DEB_NAME=$(curl -sf "${TERMUX_POOL}/${POOL_L}/${PKG_DIR}/" \
+              | grep -oP 'href="\K[^"]*'"${T_ARCH}"'[^"]*\.deb' \
+              | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
+            if [ -z "$DEB_NAME" ]; then
+              echo "      ⚠️  $PKG_NAME not found for $T_ARCH, skipping"
+              return 1
+            fi
+            curl -fsSL "${TERMUX_POOL}/${POOL_L}/${PKG_DIR}/${DEB_NAME}" -o "/tmp/${PKG_NAME}_${T_ARCH}.deb"
+            local EXDIR="/tmp/deb_${PKG_NAME}_${T_ARCH}"
+            rm -rf "$EXDIR" && mkdir -p "$EXDIR"
+            pushd "$EXDIR" > /dev/null
+            ar x "/tmp/${PKG_NAME}_${T_ARCH}.deb"
+            local DATA_TAR
+            DATA_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+            local FOUND=0
+            if [ -n "$DATA_TAR" ]; then
+              tar -xf "$DATA_TAR" 2>/dev/null || true
+              local BIN_PATH
+              BIN_PATH=$(find . -path "*/${BIN_SUBPATH}" -type f 2>/dev/null | head -1)
+              if [ -z "$BIN_PATH" ]; then
+                BIN_PATH=$(find . -name "${BIN_BASENAME}" -type f 2>/dev/null \
+                  | grep -v 'dbgsym\|include\|share/man\|\.h$' | head -1)
+              fi
+              if [ -n "$BIN_PATH" ]; then
+                mkdir -p "$(dirname "$ABS_DEST")"
+                cp "$BIN_PATH" "$ABS_DEST"
+                chmod 755 "$ABS_DEST"
+                echo "      ✅ $PKG_NAME bundled"
+                FOUND=1
+              else
+                echo "      ⚠️  ${BIN_BASENAME} not found in $PKG_NAME deb"
+              fi
+            fi
+            popd > /dev/null
+            rm -rf "$EXDIR" "/tmp/${PKG_NAME}_${T_ARCH}.deb"
+            return $((1 - FOUND))
+          }
+
+          for ABI in $ABIS; do
+            echo ""
+            echo "  ══ ABI: $ABI (CLI tools part 2) ══════════════════════════════"
+            case "$ABI" in
+              arm64-v8a) TERMUX_ARCH="aarch64" ;;
+              x86_64)    TERMUX_ARCH="x86_64"  ;;
+              *)         TERMUX_ARCH="aarch64" ;;
+            esac
+            BIN_DEST="assets/tools/$ABI/bin"
+            mkdir -p "$BIN_DEST"
+
             # ── sox + soxi ───────────────────────────────────────────────────
             # Both sox and soxi binaries are in the main 'sox' package
             extract_termux_bin "s" "sox" "sox" "usr/bin/sox" "$BIN_DEST/sox" "$TERMUX_ARCH" || true
