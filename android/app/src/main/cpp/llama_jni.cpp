@@ -536,7 +536,8 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetTokenCount(
     // Tokenize to count
     int n = (int)text.size() + 16;
     std::vector<llama_token> tokens(n);
-    int count = llama_tokenize(g_state.model, text.c_str(), (int)text.size(),
+    const llama_vocab* vocab_tc = llama_model_get_vocab(g_state.model);
+    int count = llama_tokenize(vocab_tc, text.c_str(), (int)text.size(),
                                tokens.data(), n, /*add_special=*/true, /*parse_special=*/false);
     return (count < 0) ? 0 : count;
 }
@@ -638,7 +639,8 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
     // ── Tokenize prompt ───────────────────────────────────────────────────────
     int n_ctx = (int)llama_n_ctx(g_state.ctx);
     std::vector<llama_token> promptTokens(n_ctx);
-    int n_prompt = llama_tokenize(g_state.model,
+    const llama_vocab* vocab = llama_model_get_vocab(g_state.model);
+    int n_prompt = llama_tokenize(vocab,
                                   prompt.c_str(), (int)prompt.size(),
                                   promptTokens.data(), (int)promptTokens.size(),
                                   /*add_special=*/true, /*parse_special=*/false);
@@ -669,7 +671,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
 
     if (mirostatMode == 1) {
         llama_sampler_chain_add(g_state.sampler,
-            llama_sampler_init_mirostat(llama_model_n_vocab(g_state.model),
+            llama_sampler_init_mirostat(llama_vocab_n_tokens(llama_model_get_vocab(g_state.model)),
                                         (uint32_t)seed, mirostatTau, mirostatEta, 100));
     } else if (mirostatMode == 2) {
         llama_sampler_chain_add(g_state.sampler,
@@ -702,7 +704,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
     int  ttft_ms = -1;
     std::string accumulated;
 
-    llama_token eos = llama_token_eos(g_state.model);
+    llama_token eos = llama_vocab_eos(llama_model_get_vocab(g_state.model));
 
     // ── Generation loop ───────────────────────────────────────────────────────
     while (n_gen < (int)maxTokens && !g_state.shouldStop) {
@@ -716,7 +718,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
 
         // Decode token to text
         char piece[256] = {};
-        int  plen = llama_token_to_piece(g_state.model, tok, piece, sizeof(piece) - 1, 0, true);
+        int  plen = llama_token_to_piece(llama_model_get_vocab(g_state.model), tok, piece, sizeof(piece) - 1, 0, true);
         if (plen > 0) {
             piece[plen] = '\0';
             accumulated += piece;
