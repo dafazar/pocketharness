@@ -272,14 +272,14 @@ class ClaudeCodeService {
 
     // 1. Cek Online AI (Puter) — prioritas tertinggi
     final puter = PuterAiService.instance;
-    await puter.load();
+    await puter.loadSettings();
     if (puter.isEnabled) {
       debugPrint('[ClaudeCodeService] Using Online AI (Puter): ${puter.baseUrl}');
       return {
         ...baseEnv,
         'ANTHROPIC_BASE_URL': puter.baseUrl,
         'ANTHROPIC_API_KEY':  puter.apiKey.isNotEmpty ? puter.apiKey : 'kanmon-online',
-        'ANTHROPIC_MODEL':    puter.selectedModel,
+        'ANTHROPIC_MODEL':    puter.selectedModelId,
       };
     }
 

@@ -343,7 +343,7 @@ class LlamaHttpServer {
     if (LlamaService.instance.status != ModelStatus.generating) {
       if (!completer.isCompleted) {
         completer.complete(true);
-        sub.cancel();
+        sub?.cancel();
       }
     }
 
