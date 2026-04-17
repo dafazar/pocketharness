@@ -321,18 +321,13 @@ class CodeServerService {
       return false;
     }
 
-    // Pastikan node binary punya permission execute
+    // Ensure node binary is executable. Delegates to ToolsService which uses
+    // NativeEnvPlugin.chmodExecutable (Java File.setExecutable) — works on all
+    // Android API levels without a shell process.
     final nodeBinary = ToolsService.instance.nodePath;
     if (File(nodeBinary).existsSync()) {
-      for (final cmd in ['/system/bin/chmod', '/bin/chmod', 'chmod']) {
-        try {
-          final r = await Process.run(cmd, ['755', nodeBinary]);
-          if (r.exitCode == 0) {
-            debugPrint('[CodeServer] Node.js chmod 755: OK via $cmd');
-            break;
-          }
-        } catch (_) { continue; }
-      }
+      await ToolsService.instance.reapplyPermissions();
+      debugPrint('[CodeServer] Node.js permissions ensured via ToolsService');
     } else {
       _lastStartError = 'Node.js binary tidak ditemukan di:\n$nodeBinary\n'
           'Coba reinstall VS Code.';

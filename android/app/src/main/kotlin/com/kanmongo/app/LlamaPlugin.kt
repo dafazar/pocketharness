@@ -440,6 +440,7 @@ class LlamaPlugin(
         }
     }
 
+    @Synchronized
     fun emitEventFromNative(
         type: String,
         token: String,

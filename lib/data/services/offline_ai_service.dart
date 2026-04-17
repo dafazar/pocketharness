@@ -133,6 +133,19 @@ class OfflineAiService {
         break;
       }
 
+      case 'generation_complete': {
+        // Native llama_jni.cpp emits "generation_complete" (not "done") when
+        // inference finishes. This is the primary completion signal.
+        final evalTokens  = event['evalTokens']  as int?;
+        final tps         = event['tokensPerSec'] as double?;
+        debugPrint('[OfflineAI] generation_complete seq=$_currentActiveSeq '
+            'evalTokens=$evalTokens tokensPerSec=$tps');
+        _firstTokenTimer?.cancel();
+        _firstTokenTimer = null;
+        _closeActiveCtrl();
+        break;
+      }
+
       case 'done': {
         debugPrint('[OfflineAI] done seq=$_currentActiveSeq '
             'evalTokens=${event['evalTokens']} '

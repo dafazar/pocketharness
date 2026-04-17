@@ -5,6 +5,8 @@
 // 2. Path tidak valid / file tidak ada → llama_model_load_from_file returns nullptr → FIX: add validation
 // 3. Context creation fails → llama_new_context_with_model returns nullptr → FIX: add error logging
 // 4. Memory allocation failure → context params terlalu besar → FIX: graceful error handling
+// [SESSION 1] registerPlugin() stub fix + emit_to_kotlin static→instance call fix
+// [SESSION 4] seq forwarding fix + all emit_to_kotlin call sites updated (12 args)
 
 // ── Standard C/C++ headers ────────────────────────────────────────────────────
 #include <jni.h>
@@ -38,6 +40,12 @@
 // ── JVM global reference (set in JNI_OnLoad) ─────────────────────────────────
 static JavaVM* g_jvm = nullptr;
 
+// ── Global reference to LlamaPlugin Kotlin instance (set in registerPlugin) ─
+// Required for instance-method JNI callbacks (emitEventFromNative).
+static jobject    g_plugin_obj   = nullptr;   // GlobalRef to LlamaPlugin instance
+static jclass     g_plugin_cls   = nullptr;   // GlobalRef to LlamaPlugin class
+static jmethodID  g_emit_mid     = nullptr;   // emitEventFromNative method ID
+
 // ── Forward declarations ──────────────────────────────────────────────────────
 static JNIEnv* jni_attach(bool& needsDetach);
 static int     optimal_threads();
@@ -45,7 +53,7 @@ static void    native_crash_handler(int sig, siginfo_t* info, void* ctx);
 static void    emit_to_kotlin(JNIEnv* env, const char* event,
                               const char* text, int promptTokens,
                               int genTokens, int totalTokens,
-                              int tps, int ttft,
+                              int tps, int ttft, int seq,
                               double progress, const char* error, int errorCode);
 
 // ── Global inference state ────────────────────────────────────────────────────
@@ -89,45 +97,82 @@ static int optimal_threads() {
 
 // ── Crash handler ─────────────────────────────────────────────────────────────
 static void native_crash_handler(int sig, siginfo_t* /*info*/, void* /*ctx*/) {
-    LOGE("💥 NATIVE CRASH signal=%d in LlamaJNI", sig);
+    LOGE("NATIVE CRASH signal=%d in LlamaJNI", sig);
     g_state.shouldStop = true;
 }
 
-// ── emit_to_kotlin: send event to Flutter/Dart via EventChannel ───────────────
-// Must match the method name registered in LlamaPlugin.kt
+// ── emit_to_kotlin — call LlamaPlugin.emitEventFromNative() on cached instance.
+// [SESSION 1 FIX] Uses CallVoidMethod (instance) instead of CallStaticVoidMethod.
+// [SESSION 4 FIX] Added int seq parameter; forwarded to emitEventFromNative.
+//
+// Parameter mapping to Kotlin fun emitEventFromNative:
+//   event       → type         (String)
+//   text        → token        (String)
+//   seq         → seq          (Int) — [S4] forwarded from nativeGenerateTokens
+//   promptTokens→ promptTokens (Int)
+//   genTokens   → evalTokens   (Int)
+//   ttft        → promptMs     (Long)
+//   progress    → evalMs       (Long, via *1000)
+//   tps         → tokensPerSec (Double)
+//   error       → errorMsg     (String)
+//   errorCode   → availMb      (Int)
 static void emit_to_kotlin(JNIEnv* env, const char* event,
                             const char* text, int promptTokens,
                             int genTokens, int totalTokens,
-                            int tps, int ttft,
+                            int tps, int ttft, int seq,
                             double progress, const char* error, int errorCode) {
     if (!env || !event) return;
 
-    jclass cls = env->FindClass("com/kanmongo/app/LlamaPlugin");
-    if (!cls) { env->ExceptionClear(); return; }
+    // Guard: plugin must be registered via registerPlugin()
+    if (g_plugin_obj == nullptr || g_plugin_cls == nullptr || g_emit_mid == nullptr) {
+        LOGW("emit_to_kotlin: plugin not registered — dropping event '%s'", event);
+        return;
+    }
 
-    jmethodID mid = env->GetStaticMethodID(cls, "onNativeEvent",
-        "(Ljava/lang/String;Ljava/lang/String;IIIIIDLjava/lang/String;I)V");
-    if (!mid) { env->ExceptionClear(); env->DeleteLocalRef(cls); return; }
+    // Build JNI strings
+    jstring jType   = env->NewStringUTF(event ? event : "");
+    jstring jToken  = env->NewStringUTF(text  ? text  : "");
+    jstring jErrMsg = env->NewStringUTF(error ? error : "");
 
-    jstring jEvent = env->NewStringUTF(event  ? event  : "");
-    jstring jText  = env->NewStringUTF(text   ? text   : "");
-    jstring jError = env->NewStringUTF(error  ? error  : "");
+    if (!jType || !jToken || !jErrMsg) {
+        LOGE("emit_to_kotlin: NewStringUTF failed (OOM?)");
+        if (jType)   env->DeleteLocalRef(jType);
+        if (jToken)  env->DeleteLocalRef(jToken);
+        if (jErrMsg) env->DeleteLocalRef(jErrMsg);
+        return;
+    }
 
-    env->CallStaticVoidMethod(cls, mid,
-        jEvent, jText,
-        (jint)promptTokens, (jint)genTokens, (jint)totalTokens,
-        (jint)tps, (jint)ttft,
-        (jdouble)progress, jError, (jint)errorCode);
+    // [SESSION 1 FIX] CallVoidMethod (instance) — NOT CallStaticVoidMethod
+    // [SESSION 4 FIX] (jint)seq passed instead of hardcoded (jint)0
+    env->CallVoidMethod(
+        g_plugin_obj,
+        g_emit_mid,
+        jType,
+        jToken,
+        (jint)seq,                        // seq — forwarded from nativeGenerateTokens
+        (jint)promptTokens,
+        (jint)genTokens,
+        (jlong)ttft,                      // promptMs
+        (jlong)(long)(progress * 1000.0), // evalMs
+        (jdouble)tps,                     // tokensPerSec
+        jErrMsg,
+        (jint)errorCode                   // availMb reused
+    );
 
-    env->DeleteLocalRef(jEvent);
-    env->DeleteLocalRef(jText);
-    env->DeleteLocalRef(jError);
-    env->DeleteLocalRef(cls);
-    if (env->ExceptionCheck()) env->ExceptionClear();
+    // Clear any exception that occurred during the callback
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        LOGE("emit_to_kotlin: exception during CallVoidMethod for event '%s'", event);
+    }
+
+    env->DeleteLocalRef(jType);
+    env->DeleteLocalRef(jToken);
+    env->DeleteLocalRef(jErrMsg);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 🔴 CRITICAL FIX: nativeLoadModel function
+// nativeLoadModel
 // ═════════════════════════════════════════════════════════════════════════════
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -137,7 +182,6 @@ Java_com_kanmongo_app_LlamaPlugin_nativeLoadModel(
     jint nBatch, jint nThreads, jboolean useFlashAttn,
     jboolean memLock, jfloat ropeBase, jfloat ropeScale)
 {
-    // Convert path
     const char* rawPath = env->GetStringUTFChars(jPath, nullptr);
     std::string path(rawPath);
     env->ReleaseStringUTFChars(jPath, rawPath);
@@ -149,48 +193,44 @@ Java_com_kanmongo_app_LlamaPlugin_nativeLoadModel(
          (int)nBatch, (int)nThreads, (int)useFlashAttn,
          (int)memLock, (float)ropeBase, (float)ropeScale);
 
-    // 🆕 FIX: Validate path before loading
     if (path.empty()) {
         LOGE("nativeLoadModel: path is empty!");
         return 0L;
     }
-    
+
     FILE* test_file = fopen(path.c_str(), "rb");
     if (!test_file) {
         LOGE("nativeLoadModel: cannot open file - errno=%d (%s)", errno, strerror(errno));
         return 0L;
     }
-    
-    // Check file size
+
     fseek(test_file, 0, SEEK_END);
     long file_size = ftell(test_file);
     fseek(test_file, 0, SEEK_SET);
-    
-    LOGI("nativeLoadModel: file opened, size=%ld bytes (%.1f MB)", 
+
+    LOGI("nativeLoadModel: file opened, size=%ld bytes (%.1f MB)",
          file_size, file_size / (1024.0 * 1024.0));
-    
-    if (file_size < 1024 * 1024) {  // Less than 1MB
+
+    if (file_size < 1024 * 1024) {
         LOGE("nativeLoadModel: file too small (%ld bytes)", file_size);
         fclose(test_file);
         return 0L;
     }
-    
-    // Check GGUF magic
+
     unsigned char magic[4];
-    size_t read = fread(magic, 1, 4, test_file);
+    size_t nread = fread(magic, 1, 4, test_file);
     fclose(test_file);
-    
-    if (read != 4 || magic[0] != 'G' || magic[1] != 'G' || magic[2] != 'U' || magic[3] != 'F') {
-        LOGE("nativeLoadModel: invalid GGUF magic (got %02x%02x%02x%02x, expected 47474655)",
+
+    if (nread != 4 || magic[0] != 'G' || magic[1] != 'G' || magic[2] != 'U' || magic[3] != 'F') {
+        LOGE("nativeLoadModel: invalid GGUF magic (got %02x%02x%02x%02x)",
              magic[0], magic[1], magic[2], magic[3]);
         return 0L;
     }
-    
-    LOGI("nativeLoadModel: GGUF magic verified ✓");
+
+    LOGI("nativeLoadModel: GGUF magic verified");
 
     std::lock_guard<std::mutex> lk(g_state.modelMutex);
 
-    // Clear any existing model
     if (g_state.isLoaded()) {
         LOGI("nativeLoadModel: releasing previous model");
         g_state.shouldStop = true;
@@ -198,91 +238,73 @@ Java_com_kanmongo_app_LlamaPlugin_nativeLoadModel(
         g_state.shouldStop = false;
     }
 
-    // 🆕 FIX: Model params with proper Android storage settings
     auto mparams = llama_model_default_params();
     mparams.n_gpu_layers = (int)gpuLayers;
     mparams.use_mlock    = (bool)memLock;
-    mparams.use_mmap     = false;  // 🔥 CRITICAL: mmap=true causes SIGBUS on Android internal storage!
+    mparams.use_mmap     = false; // CRITICAL: mmap=true causes SIGBUS on Android internal storage!
 
     LOGI("nativeLoadModel: model params - gpu_layers=%d mlock=%d mmap=%d",
          mparams.n_gpu_layers, mparams.use_mlock, mparams.use_mmap);
 
-    // Emit initial loading progress
+    // Emit initial loading progress — seq=0 (not a generation event)
     {
         bool nd = false;
         JNIEnv* cbEnv = jni_attach(nd);
         if (cbEnv) {
-            emit_to_kotlin(cbEnv, "loading_progress", "", 0, 0, 0, 0, 0, 0.0, "", 0);
+            emit_to_kotlin(cbEnv, "loading_progress", "", 0, 0, 0, 0, 0, 0, 0.0, "", 0);
             if (nd) g_jvm->DetachCurrentThread();
         }
     }
 
-    // 🆕 FIX: Load model with explicit error checking
     LOGI("nativeLoadModel: calling llama_model_load_from_file...");
     g_state.model = llama_model_load_from_file(path.c_str(), mparams);
-    
+
     if (!g_state.model) {
-        LOGE("❌ nativeLoadModel: llama_model_load_from_file FAILED - returned nullptr");
-        LOGE("    Possible causes:");
-        LOGE("    1. File path invalid or file doesn't exist");
-        LOGE("    2. File corrupted or not a valid GGUF model");
-        LOGE("    3. Insufficient memory");
-        LOGE("    4. Model architecture not supported by this llama.cpp version");
+        LOGE("nativeLoadModel: llama_model_load_from_file FAILED - returned nullptr");
         return 0L;
     }
-    
-    LOGI("✓ nativeLoadModel: model loaded OK");
-    
-    // 🆕 FIX: Log model info
+
+    LOGI("nativeLoadModel: model loaded OK");
+
     char model_name[256] = "unknown";
     llama_model_meta_val_str(g_state.model, "general.name", model_name, sizeof(model_name));
     int model_ctx = (int)llama_model_n_ctx_train(g_state.model);
     LOGI("  model name: %s", model_name);
     LOGI("  model context size: %d", model_ctx);
 
-    // Context params with clamping
     auto cparams = llama_context_default_params();
-    cparams.n_ctx      = (uint32_t)contextSize;
-    cparams.n_batch    = (uint32_t)nBatch;
-    cparams.n_threads  = (nThreads > 0) ? (uint32_t)nThreads : (uint32_t)optimal_threads();
-    
-    // Clamp context to model's max
+    cparams.n_ctx     = (uint32_t)contextSize;
+    cparams.n_batch   = (uint32_t)nBatch;
+    cparams.n_threads = (nThreads > 0) ? (uint32_t)nThreads : (uint32_t)optimal_threads();
+
     if (cparams.n_ctx > (uint32_t)model_ctx) {
-        LOGW("nativeLoadModel: clamping context %d → %d (model max)", 
+        LOGW("nativeLoadModel: clamping context %d to %d (model max)",
              (int)cparams.n_ctx, model_ctx);
         cparams.n_ctx = (uint32_t)model_ctx;
     }
-    
+
     if (ropeBase  > 0.0f) cparams.rope_freq_base  = ropeBase;
     if (ropeScale > 0.0f) cparams.rope_freq_scale = ropeScale;
 
     LOGI("nativeLoadModel: context params - n_ctx=%d n_batch=%d n_threads=%d",
          (int)cparams.n_ctx, (int)cparams.n_batch, (int)cparams.n_threads);
 
-    // 🆕 FIX: Create context with explicit error handling
     LOGI("nativeLoadModel: calling llama_new_context_with_model...");
     g_state.ctx = llama_new_context_with_model(g_state.model, cparams);
-    
+
     if (!g_state.ctx) {
-        LOGE("❌ nativeLoadModel: llama_new_context_with_model FAILED - returned nullptr");
-        LOGE("    Possible causes:");
-        LOGE("    1. Insufficient memory for context (need ~%d MB)", 
-             (int)((contextSize * 2) / 1024));
-        LOGE("    2. Context size (%d) exceeds model max (%d)", contextSize, model_ctx);
-        LOGE("    3. Batch size (%d) too large", (int)nBatch);
-        
+        LOGE("nativeLoadModel: llama_new_context_with_model FAILED");
         llama_model_free(g_state.model);
         g_state.model = nullptr;
         return 0L;
     }
 
-    LOGI("✓ nativeLoadModel: context ready ctx=%d threads=%d batch=%d",
+    LOGI("nativeLoadModel: context ready ctx=%d threads=%d batch=%d",
          (int)contextSize, (int)cparams.n_threads, (int)cparams.n_batch);
 
-    // Create sampler
     g_state.sampler = llama_sampler_chain_init(llama_sampler_chain_default_params());
     if (!g_state.sampler) {
-        LOGE("❌ nativeLoadModel: sampler creation failed");
+        LOGE("nativeLoadModel: sampler creation failed");
         llama_free(g_state.ctx);
         llama_model_free(g_state.model);
         g_state.ctx = nullptr;
@@ -290,103 +312,87 @@ Java_com_kanmongo_app_LlamaPlugin_nativeLoadModel(
         return 0L;
     }
 
-    // Emit loading complete
+    // Emit loading complete — seq=0 (not a generation event)
     {
         bool nd3 = false;
         JNIEnv* pe = jni_attach(nd3);
         if (pe) {
-            emit_to_kotlin(pe, "loading_progress", "", 0, 0, 0, 0, 0, 1.0, "", 0);
+            emit_to_kotlin(pe, "loading_progress", "", 0, 0, 0, 0, 0, 0, 1.0, "", 0);
             if (nd3) g_jvm->DetachCurrentThread();
         }
     }
 
-    // Emit model_loaded event
+    // Emit model_loaded event — seq=0 (not a generation event)
     {
         bool nd2 = false;
         JNIEnv* evEnv = jni_attach(nd2);
         if (evEnv) {
             emit_to_kotlin(evEnv, "model_loaded", model_name, (int)contextSize,
-                           0, 0, 0, 0, 0.0, "", 0);
+                           0, 0, 0, 0, 0, 0.0, "", 0);
             if (nd2) g_jvm->DetachCurrentThread();
         }
     }
 
-    LOGI("✅ nativeLoadModel: SUCCESS - handle=%p", g_state.model);
+    LOGI("nativeLoadModel: SUCCESS - handle=%p", g_state.model);
     return reinterpret_cast<jlong>(g_state.model);
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// Additional helper fixes in llama_jni.cpp
-// ═════════════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
+// Memory utility
+// ─────────────────────────────────────────────────────────────────────────────
 
-// 🆕 FIX: Better memory check utility
 static int read_mem_available_mb() {
     FILE* f = fopen("/proc/meminfo", "r");
     if (!f) {
         LOGW("read_mem_available_mb: cannot open /proc/meminfo");
         return -1;
     }
-    
     char line[256];
     long kb = -1;
     while (fgets(line, sizeof(line), f)) {
         if (strncmp(line, "MemAvailable:", 13) == 0) {
-            if (sscanf(line + 13, "%ld", &kb) == 1 && kb > 0) {
-                break;
-            }
+            if (sscanf(line + 13, "%ld", &kb) == 1 && kb > 0) break;
         }
     }
     fclose(f);
-    
     if (kb <= 0) {
-        LOGW("read_mem_available_mb: cannot parse MemAvailable from /proc/meminfo");
+        LOGW("read_mem_available_mb: cannot parse MemAvailable");
         return -1;
     }
-    
     int mb = (int)(kb / 1024);
     LOGD("read_mem_available_mb: %d MB available", mb);
     return mb;
 }
 
-// 🆕 FIX: JNI error codes lebih informatif
-static jint nativeLoadModel_check_errors(JNIEnv* env, const char* path) {
-    // Return error code yang bisa di-interpret di Dart:
-    // 0 = OK, 1 = file not found, 2 = permission denied, 3 = invalid format, 4 = memory error
-    
-    if (!path || !*path) return 1;  // empty path
-    
+static jint nativeLoadModel_check_errors(JNIEnv* /*env*/, const char* path) {
+    if (!path || !*path) return 1;
     FILE* f = fopen(path, "rb");
     if (!f) {
-        if (errno == ENOENT) return 1;      // not found
-        if (errno == EACCES) return 2;      // permission denied
-        return 1;                            // other open error
+        if (errno == ENOENT) return 1;
+        if (errno == EACCES) return 2;
+        return 1;
     }
-    
-    // Check magic
     unsigned char magic[4];
-    if (fread(magic, 1, 4, f) != 4 || 
+    if (fread(magic, 1, 4, f) != 4 ||
         magic[0] != 'G' || magic[1] != 'G' || magic[2] != 'U' || magic[3] != 'F') {
         fclose(f);
-        return 3;  // invalid format
+        return 3;
     }
-    
     fclose(f);
-    return 0;  // OK
+    return 0;
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// Call this at JNI_OnLoad untuk initialize properly
-// ═════════════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
+// JNI_OnLoad
+// ─────────────────────────────────────────────────────────────────────────────
 
 extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    LOGI("╔════════════════════════════════════════════════════════════════╗");
-    LOGI("║          KanMon AI - LlamaJNI v2 Initializing                  ║");
-    LOGI("║  📌 FIX: use_mmap=false, proper file validation, memory checks ║");
-    LOGI("╚════════════════════════════════════════════════════════════════╝");
-    
+    LOGI("KanMon AI - LlamaJNI Initializing");
+    LOGI("[S1] registerPlugin + instance-method callback fixed");
+    LOGI("[S4] seq forwarding fixed");
+
     g_jvm = vm;
 
-    // Install crash handlers
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_sigaction = native_crash_handler;
@@ -404,79 +410,106 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
         std::string s(txt);
         if (!s.empty() && s.back() == '\n') s.pop_back();
         if (s.empty()) return;
-        if (lvl == GGML_LOG_LEVEL_ERROR)      LOGE("[ll] %s", s.c_str());
-        else if (lvl == GGML_LOG_LEVEL_WARN)  LOGW("[ll] %s", s.c_str());
-        else                                   LOGD("[ll] %s", s.c_str());
+        if (lvl == GGML_LOG_LEVEL_ERROR)     LOGE("[ll] %s", s.c_str());
+        else if (lvl == GGML_LOG_LEVEL_WARN) LOGW("[ll] %s", s.c_str());
+        else                                  LOGD("[ll] %s", s.c_str());
     }, nullptr);
 
-    int threads = optimal_threads();
-    LOGI("✓ LlamaJNI initialized successfully");
-    LOGI("  - CPU threads: %d", threads);
-    LOGI("  - Memory strategy: NUMA disabled");
-    LOGI("  - Crash handlers: installed");
-    LOGI("  - Flash attention: check llama.h for support");
-    
+    LOGI("LlamaJNI initialized - CPU threads: %d", optimal_threads());
     return JNI_VERSION_1_6;
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// Print detailed diagnostics ketika model loading fails
-// ═════════════════════════════════════════════════════════════════════════════
-
 static void log_loading_diagnostics(const char* path) {
-    LOGI("╔════════════════════════════════════════════════════════════════╗");
-    LOGI("║              MODEL LOADING DIAGNOSTICS                         ║");
-    LOGI("╚════════════════════════════════════════════════════════════════╝");
-    
-    if (!path || !*path) {
-        LOGE("❌ Path is empty");
-        return;
-    }
-    
+    LOGI("MODEL LOADING DIAGNOSTICS");
+    if (!path || !*path) { LOGE("Path is empty"); return; }
     LOGI("Path: %s", path);
-    
-    // Check if file exists
     FILE* f = fopen(path, "rb");
-    if (!f) {
-        LOGE("❌ File not found or cannot be opened");
-        LOGE("   errno=%d: %s", errno, strerror(errno));
-        return;
-    }
-    LOGI("✓ File exists");
-    
-    // Check size
+    if (!f) { LOGE("File not found: errno=%d: %s", errno, strerror(errno)); return; }
+    LOGI("File exists");
     fseek(f, 0, SEEK_END);
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
-    LOGI("✓ File size: %ld bytes (%.1f MB)", size, size / (1024.0 * 1024.0));
-    
-    // Check magic
+    LOGI("File size: %ld bytes (%.1f MB)", size, size / (1024.0 * 1024.0));
     unsigned char magic[4];
-    size_t nread = fread(magic, 1, 4, f);
-    if (nread == 4 && magic[0] == 'G' && magic[1] == 'G' && 
-        magic[2] == 'U' && magic[3] == 'F') {
-        LOGI("✓ GGUF magic verified");
-    } else {
-        LOGE("❌ Invalid GGUF magic: %02x %02x %02x %02x", 
-             magic[0], magic[1], magic[2], magic[3]);
-    }
-    
+    size_t nr = fread(magic, 1, 4, f);
+    if (nr == 4 && magic[0]=='G' && magic[1]=='G' && magic[2]=='U' && magic[3]=='F')
+        LOGI("GGUF magic verified");
+    else
+        LOGE("Invalid GGUF magic: %02x %02x %02x %02x", magic[0], magic[1], magic[2], magic[3]);
     fclose(f);
-    
-    // Check memory
-    int avail_mb = read_mem_available_mb();
-    LOGI("✓ Available memory: %d MB", avail_mb);
-    
-    LOGI("╚════════════════════════════════════════════════════════════════╝");
+    LOGI("Available memory: %d MB", read_mem_available_mb());
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// registerPlugin
+// [SESSION 1 FIX] registerPlugin — store GlobalRef to LlamaPlugin instance
+// so that emit_to_kotlin can call emitEventFromNative() as an instance method.
 // ═════════════════════════════════════════════════════════════════════════════
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_kanmongo_app_LlamaPlugin_registerPlugin(JNIEnv* env, jobject thiz) {
-    LOGI("registerPlugin: OK (llama.cpp build)");
+    LOGI("registerPlugin: storing global plugin reference...");
+
+    // Release any previous references to avoid leaking on re-register
+    if (g_plugin_obj != nullptr) {
+        env->DeleteGlobalRef(g_plugin_obj);
+        g_plugin_obj = nullptr;
+    }
+    if (g_plugin_cls != nullptr) {
+        env->DeleteGlobalRef(g_plugin_cls);
+        g_plugin_cls = nullptr;
+    }
+    g_emit_mid = nullptr;
+
+    // Store GlobalRef to LlamaPlugin instance (thiz)
+    // Local ref is only valid for the current JNI call stack frame.
+    // GlobalRef survives across threads and call frames.
+    g_plugin_obj = env->NewGlobalRef(thiz);
+    if (g_plugin_obj == nullptr) {
+        LOGE("registerPlugin: NewGlobalRef(thiz) failed — out of memory?");
+        return;
+    }
+
+    // Cache class as GlobalRef (FindClass is expensive and thread-unsafe on background threads)
+    jclass localCls = env->GetObjectClass(thiz);
+    if (localCls == nullptr) {
+        LOGE("registerPlugin: GetObjectClass failed");
+        env->DeleteGlobalRef(g_plugin_obj);
+        g_plugin_obj = nullptr;
+        return;
+    }
+    g_plugin_cls = reinterpret_cast<jclass>(env->NewGlobalRef(localCls));
+    env->DeleteLocalRef(localCls);
+
+    if (g_plugin_cls == nullptr) {
+        LOGE("registerPlugin: NewGlobalRef(class) failed");
+        env->DeleteGlobalRef(g_plugin_obj);
+        g_plugin_obj = nullptr;
+        return;
+    }
+
+    // Cache method ID for emitEventFromNative.
+    // Signature: (Ljava/lang/String;Ljava/lang/String;IIIJJDLjava/lang/String;I)V
+    // Matches Kotlin: fun emitEventFromNative(
+    //   type:String, token:String, seq:Int,
+    //   promptTokens:Int, evalTokens:Int,
+    //   promptMs:Long, evalMs:Long,
+    //   tokensPerSec:Double, errorMsg:String, availMb:Int)
+    g_emit_mid = env->GetMethodID(
+        g_plugin_cls,
+        "emitEventFromNative",
+        "(Ljava/lang/String;Ljava/lang/String;IIIJJDLjava/lang/String;I)V"
+    );
+    if (g_emit_mid == nullptr) {
+        LOGE("registerPlugin: GetMethodID(emitEventFromNative) failed — signature mismatch?");
+        env->ExceptionClear();
+        env->DeleteGlobalRef(g_plugin_cls);
+        env->DeleteGlobalRef(g_plugin_obj);
+        g_plugin_cls = nullptr;
+        g_plugin_obj = nullptr;
+        return;
+    }
+
+    LOGI("registerPlugin: OK g_plugin_obj=%p g_emit_mid=%p", g_plugin_obj, g_emit_mid);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -492,7 +525,10 @@ Java_com_kanmongo_app_LlamaPlugin_nativeReleaseModel(
     g_state.shouldStop = true;
     g_state.clear();
     g_state.shouldStop = false;
-    LOGI("nativeReleaseModel: done");
+    // Note: do NOT release g_plugin_obj / g_plugin_cls here — they are needed
+    // for any final "done" or "error" callbacks that may arrive on background
+    // threads. They are released and re-set only in registerPlugin().
+    LOGI("nativeReleaseModel: done (plugin refs retained for callbacks)");
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -533,12 +569,11 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetTokenCount(
     std::string text(raw);
     env->ReleaseStringUTFChars(jText, raw);
 
-    // Tokenize to count
     int n = (int)text.size() + 16;
     std::vector<llama_token> tokens(n);
     const llama_vocab* vocab_tc = llama_model_get_vocab(g_state.model);
     int count = llama_tokenize(vocab_tc, text.c_str(), (int)text.size(),
-                               tokens.data(), n, /*add_special=*/true, /*parse_special=*/false);
+                               tokens.data(), n, true, false);
     return (count < 0) ? 0 : count;
 }
 
@@ -565,7 +600,6 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetModelInfo(
     std::string path = raw ? raw : "";
     if (raw) env->ReleaseStringUTFChars(jPath, raw);
 
-    // Validate file
     int err = nativeLoadModel_check_errors(env, path.c_str());
     if (err != 0) {
         char buf[256];
@@ -575,12 +609,10 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetModelInfo(
         return env->NewStringUTF(buf);
     }
 
-    // Load model temporarily for metadata
     auto mparams = llama_model_default_params();
     mparams.n_gpu_layers = 0;
     mparams.use_mmap     = false;
     mparams.use_mlock    = false;
-    // Metadata-only: no need for vocab/tensors beyond what's in header
     llama_model* m = llama_model_load_from_file(path.c_str(), mparams);
     if (!m) {
         return env->NewStringUTF(
@@ -593,7 +625,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetModelInfo(
     llama_model_meta_val_str(m, "general.name",         name, sizeof(name));
     llama_model_meta_val_str(m, "general.architecture", arch, sizeof(arch));
     int ctx_train = (int)llama_model_n_ctx_train(m);
-    int n_params  = (int)(llama_model_n_params(m) / 1000000LL); // millions
+    int n_params  = (int)(llama_model_n_params(m) / 1000000LL);
 
     llama_model_free(m);
 
@@ -607,6 +639,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetModelInfo(
 
 // ═════════════════════════════════════════════════════════════════════════════
 // nativeGenerateTokens  — streaming inference
+// [SESSION 4 FIX] All emit_to_kotlin calls now pass (int)seq as 9th argument.
 // ═════════════════════════════════════════════════════════════════════════════
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -631,8 +664,8 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
     std::string prompt(rawPrompt ? rawPrompt : "");
     if (rawPrompt) env->ReleaseStringUTFChars(jPrompt, rawPrompt);
 
-    LOGI("nativeGenerateTokens: prompt_len=%d max_tokens=%d temp=%.2f",
-         (int)prompt.size(), (int)maxTokens, (float)temp);
+    LOGI("nativeGenerateTokens: prompt_len=%d max_tokens=%d temp=%.2f seq=%d",
+         (int)prompt.size(), (int)maxTokens, (float)temp, (int)seq);
 
     g_state.shouldStop = false;
 
@@ -643,14 +676,13 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
     int n_prompt = llama_tokenize(vocab,
                                   prompt.c_str(), (int)prompt.size(),
                                   promptTokens.data(), (int)promptTokens.size(),
-                                  /*add_special=*/true, /*parse_special=*/false);
+                                  true, false);
     if (n_prompt < 0) {
         LOGE("nativeGenerateTokens: tokenize failed (n_prompt=%d)", n_prompt);
         return JNI_FALSE;
     }
     promptTokens.resize(n_prompt);
 
-    // Clamp if too long
     if (n_prompt >= n_ctx) {
         int trim = n_ctx - 4;
         LOGW("nativeGenerateTokens: prompt too long (%d), trimming to %d", n_prompt, trim);
@@ -716,21 +748,20 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
             break;
         }
 
-        // Decode token to text
         char piece[256] = {};
-        int  plen = llama_token_to_piece(llama_model_get_vocab(g_state.model), tok, piece, sizeof(piece) - 1, 0, true);
+        int  plen = llama_token_to_piece(llama_model_get_vocab(g_state.model),
+                                         tok, piece, sizeof(piece) - 1, 0, true);
         if (plen > 0) {
             piece[plen] = '\0';
             accumulated += piece;
 
-            // TTFT
             if (n_gen == 0) {
                 auto now = std::chrono::steady_clock::now();
                 ttft_ms  = (int)std::chrono::duration_cast<std::chrono::milliseconds>(
                                now - t_start).count();
             }
 
-            // Emit token
+            // [SESSION 4 FIX] pass (int)seq as 9th argument
             bool nd = false;
             JNIEnv* cbEnv = jni_attach(nd);
             if (cbEnv) {
@@ -739,14 +770,13 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
                 int tps = (elapsed_ms > 0) ? (int)(n_gen * 1000.0 / elapsed_ms) : 0;
                 emit_to_kotlin(cbEnv, "token", piece,
                                n_prompt, n_gen + 1, n_prompt + n_gen + 1,
-                               tps, ttft_ms, 0.0, "", 0);
+                               tps, ttft_ms, (int)seq, 0.0, "", 0);
                 if (nd) g_jvm->DetachCurrentThread();
             }
         }
 
         n_gen++;
 
-        // Next token decode
         llama_batch next = llama_batch_get_one(&tok, 1);
         if (llama_decode(g_state.ctx, next) != 0) {
             LOGW("nativeGenerateTokens: llama_decode (next token) failed at gen=%d", n_gen);
@@ -755,9 +785,9 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
     }
 
     bool stopped = g_state.shouldStop.load();
-    LOGI("nativeGenerateTokens: done gen=%d stopped=%d", n_gen, stopped);
+    LOGI("nativeGenerateTokens: done gen=%d stopped=%d seq=%d", n_gen, stopped, (int)seq);
 
-    // Emit generation_complete
+    // Emit generation_complete — [SESSION 4 FIX] pass (int)seq as 9th argument
     {
         auto now = std::chrono::steady_clock::now();
         int elapsed_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -769,7 +799,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
         if (cbEnv) {
             emit_to_kotlin(cbEnv, "generation_complete", accumulated.c_str(),
                            n_prompt, n_gen, n_prompt + n_gen,
-                           tps, ttft_ms, 1.0, "", 0);
+                           tps, ttft_ms, (int)seq, 1.0, "", 0);
             if (nd) g_jvm->DetachCurrentThread();
         }
     }

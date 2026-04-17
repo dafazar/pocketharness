@@ -30,6 +30,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
+import 'package:kanmongo/core/ai/native_event_dispatcher.dart';
 
 class LlamaService {
   // ── Singleton ──────────────────────────────────────────────────────────────
@@ -38,7 +39,6 @@ class LlamaService {
 
   // ── Platform channels ──────────────────────────────────────────────────────
   static const _platform     = MethodChannel('com.kanmongo.llama/engine');
-  static const _eventChannel = EventChannel('com.kanmongo.llama/stream');
 
   // ── SharedPreferences keys ─────────────────────────────────────────────────
   static const _keyLastModelPath = 'llama_last_model_path';
@@ -252,44 +252,47 @@ class LlamaService {
     final genStartMs = DateTime.now().millisecondsSinceEpoch;
     int tokenCount = 0;
 
-    // Gabungkan system prompt override + messages
+    // Build prompt
     final effectiveMessages = [
       if (systemPromptOverride != null && systemPromptOverride.isNotEmpty)
         ChatMessage.system(systemPromptOverride),
       ...messages,
     ];
-
     final prompt = _buildChatMLPrompt(effectiveMessages);
+
+    // Use a per-call StreamController. Events arrive via NativeEventDispatcher
+    // (the single owner of the EventChannel subscription) instead of subscribing
+    // directly. Direct subscription would replace NativeEventDispatcher's native
+    // eventSink, breaking OfflineAiService event delivery permanently.
     final controller = StreamController<String>();
-    StreamSubscription? sub;
+
+    // Register handler with NativeEventDispatcher
+    void onEvent(Map<dynamic, dynamic> event) {
+      if (controller.isClosed) return;
+      final type = event['type'] as String?;
+      switch (type) {
+        case 'token':
+          final t = event['token'] as String? ?? '';
+          if (t.isNotEmpty) controller.add(t);
+          break;
+        case 'done':
+        case 'generation_complete':
+          if (!controller.isClosed) controller.close();
+          break;
+        case 'error':
+          final msg = event['message'] as String? ?? 'Unknown error';
+          if (!controller.isClosed) {
+            controller.addError(LlamaException(msg));
+            controller.close();
+          }
+          break;
+        // Ignore model_loaded, loading_progress, memory_warning — not relevant here
+      }
+    }
+
+    NativeEventDispatcher.instance.registerLlamaService(onEvent);
 
     try {
-      sub = _eventChannel.receiveBroadcastStream().listen(
-        (event) {
-          if (event is! Map) return;
-          final type = event['type'] as String?;
-          switch (type) {
-            case 'token':
-              final t = event['token'] as String? ?? '';
-              if (t.isNotEmpty) controller.add(t);
-              break;
-            case 'done':
-              controller.close();
-              break;
-            case 'error':
-              controller.addError(
-                LlamaException(event['message'] as String? ?? 'Unknown error'),
-              );
-              controller.close();
-              break;
-          }
-        },
-        onError: (e) {
-          controller.addError(e);
-          controller.close();
-        },
-      );
-
       await _platform.invokeMethod('generateTokens', {
         'prompt':        prompt,
         'temperature':   cfg.temperature,
@@ -303,6 +306,9 @@ class LlamaService {
         'mirostatEta':   cfg.mirostatEta,
         'minP':          cfg.minP,
         'penalizeNl':    cfg.penalizeNl,
+        'seq':           0,   // LlamaService always uses seq=0; NativeEventDispatcher
+                               // broadcasts to both handlers and OfflineAiService
+                               // filters by its own _currentActiveSeq independently.
       });
 
       await for (final token in controller.stream) {
@@ -314,10 +320,12 @@ class LlamaService {
       debugPrint('[LlamaService] generateStream error: $e');
       rethrow;
     } finally {
-      await sub?.cancel();
+      // Unregister immediately so NativeEventDispatcher stops routing events here.
+      // OfflineAiService remains registered and unaffected.
+      NativeEventDispatcher.instance.unregisterLlamaService();
       if (!controller.isClosed) await controller.close();
       if (_status == ModelStatus.generating) _setStatus(ModelStatus.loaded);
-      // Rekam metrik performa sesi ini
+      // Record performance metrics
       final elapsedMs = DateTime.now().millisecondsSinceEpoch - genStartMs;
       if (tokenCount > 0 && elapsedMs > 0) {
         _lastMetrics = ModelPerformanceMetrics(

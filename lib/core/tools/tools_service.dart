@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, MethodChannel;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -54,6 +54,12 @@ class ToolsService {
   static const String _kExtractedRunId  = 'tools_extracted_run_id';
   static const String _kPermissionsSet   = 'tools_permissions_set_v2';
   static const String _assetsToolsPrefix = 'assets/tools';
+
+  // MethodChannel to NativeEnvPlugin for chmod via Java File.setExecutable().
+  // Required because Process.run('/system/bin/chmod') fails with EACCES on
+  // Android API 29+ (SELinux untrusted_app domain blocks execve on system bins).
+  static const MethodChannel _nativeEnv =
+      MethodChannel('com.kanmongo.app/native_env');
 
   late String _toolsRoot;
   late String _abi;
@@ -274,23 +280,57 @@ class ToolsService {
     debugPrint('[ToolsService] Extracted $done files.');
   }
 
-  /// chmod sync (fire-and-forget) saat extract.
+  /// chmod sync — fire-and-forget during tar extraction.
+  /// Delegates to _chmodFile() which uses NativeEnvPlugin (Java File.setExecutable).
+  /// Does NOT call Process.run directly to avoid EACCES on Android API 29+.
   void _chmodFileSync(String path, String mode) {
-    // Non-blocking, jangan await — extract harus cepat
-    Process.run('/system/bin/chmod', [mode, path]).catchError((_) async {
-      await Process.run('chmod', [mode, path]).catchError((_) async => ProcessResult(0, 1, '', ''));
-      return ProcessResult(0, 0, '', '');
+    _chmodFile(path, mode).catchError((Object e) {
+      debugPrint('[ToolsService] _chmodFileSync error for $path: $e');
+      return false;
     });
   }
 
-  /// chmod satu file — coba semua metode yang ada di Android.
+  /// chmod a single file on Android.
+  ///
+  /// Priority:
+  ///   1. NativeEnvPlugin.chmodExecutable → Java File.setExecutable(true, false)
+  ///      Works inside the Android sandbox on all API levels. No shell needed.
+  ///   2. Process.run('/system/bin/chmod', ...) — last resort fallback for
+  ///      rooted devices or emulators where shell execution is permitted.
+  ///
+  /// [mode] is accepted for API compatibility. For '644' (read-only) the
+  /// NativeEnvPlugin still sets readable; setExecutable is still called but
+  /// the effect is equivalent to +r on a file that Node won't run directly.
   Future<bool> _chmodFile(String path, String mode) async {
+    // ── Primary: NativeEnvPlugin via MethodChannel ──────────────────────────
+    try {
+      final bool? ok = await _nativeEnv.invokeMethod<bool>(
+        'chmodExecutable',
+        {'path': path},
+      );
+      if (ok == true) {
+        debugPrint('[ToolsService] chmod ✅ (NativeEnvPlugin) $path');
+        return true;
+      }
+      debugPrint('[ToolsService] chmod ❌ (NativeEnvPlugin returned false) $path');
+    } catch (e) {
+      debugPrint('[ToolsService] chmod NativeEnvPlugin error: $e — trying Process.run fallback');
+    }
+
+    // ── Fallback: Process.run (rooted devices / emulator only) ──────────────
     for (final cmd in ['/system/bin/chmod', '/bin/chmod', 'chmod']) {
       try {
         final r = await Process.run(cmd, [mode, path]);
-        if (r.exitCode == 0) return true;
-      } catch (_) { continue; }
+        if (r.exitCode == 0) {
+          debugPrint('[ToolsService] chmod ✅ (Process.run $cmd) $path');
+          return true;
+        }
+      } catch (_) {
+        continue;
+      }
     }
+
+    debugPrint('[ToolsService] chmod ❌ ALL methods failed for $path');
     return false;
   }
 
@@ -335,19 +375,37 @@ class ToolsService {
       }
     }
 
-    // 5. Fallback: chmod +x node binary via recursive
-    try {
-      for (final cmd in ['/system/bin/chmod', '/bin/chmod', 'chmod']) {
-        try {
-          final r = await Process.run(cmd, ['-R', 'u+x', '$_toolsRoot/$_abi/node']);
-          if (r.exitCode == 0) break;
-        } catch (_) { continue; }
-      }
-    } catch (e) {
-      debugPrint('[ToolsService] Warning chmod -R: $e');
+    // 5. Belt-and-suspenders: ensure node binary specifically is executable.
+    if (File(nodePath).existsSync()) {
+      final nodeOk = await _chmodFile(nodePath, '755');
+      debugPrint('[ToolsService] chmod node (final check): ${nodeOk ? "✅" : "❌"} $nodePath');
     }
 
-    debugPrint('[ToolsService] Permissions applied.');
+    // 6. Recursive pass: chmod every non-script file under _toolsRoot/$_abi.
+    //    Catches files missed by the per-directory loops above.
+    try {
+      final rootDir = Directory('$_toolsRoot/$_abi');
+      if (rootDir.existsSync()) {
+        await for (final entity in rootDir.list(recursive: true)) {
+          if (entity is File) {
+            final name = entity.path.split('/').last;
+            if (!name.endsWith('.js') &&
+                !name.endsWith('.json') &&
+                !name.endsWith('.md') &&
+                !name.endsWith('.txt') &&
+                !name.endsWith('.css') &&
+                !name.endsWith('.html')) {
+              await _chmodFile(entity.path, '755');
+            }
+          }
+        }
+        debugPrint('[ToolsService] chmod recursive pass: ✅');
+      }
+    } catch (e) {
+      debugPrint('[ToolsService] Warning chmod recursive: $e');
+    }
+
+    debugPrint('[ToolsService] Permissions applied (NativeEnvPlugin primary).');
   }
 
   Map<String, String> _buildEnv([Map<String, String>? extra]) {
