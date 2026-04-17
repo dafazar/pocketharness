@@ -402,9 +402,60 @@ jobs:
             fi
 
             # ── python3 ──────────────────────────────────────────────────────
-            # Termux package dir is python3 (not python)
-            extract_termux_bin "p" "python3" "python3" "usr/bin/python3" "$BIN_DEST/python3" "$TERMUX_ARCH" || \
-              extract_termux_bin "p" "python" "python3" "usr/bin/python3" "$BIN_DEST/python3" "$TERMUX_ARCH" || true
+            # Termux python3 requires shared libs — use chaquopy/python-android standalone
+            # which ships a self-contained python3 binary for Android (Bionic libc)
+            _PY_ARCH=""
+            case "$TERMUX_ARCH" in
+              aarch64) _PY_ARCH="aarch64" ;;
+              x86_64)  _PY_ARCH="x86_64"  ;;
+            esac
+            # Try: python-android standalone from Chaquopy (releases on GitHub)
+            _PY_INSTALLED=0
+            _PY_VER="3.11"
+            _PY_URL="https://github.com/chaquopy/python-android/releases/download/3.11/python3.11-${_PY_ARCH}.zip"
+            if curl -fsSL --max-time 60 "$_PY_URL" -o "/tmp/py_android.zip" 2>/dev/null; then
+              mkdir -p "/tmp/py_android_${TERMUX_ARCH}"
+              unzip -q "/tmp/py_android.zip" -d "/tmp/py_android_${TERMUX_ARCH}" 2>/dev/null || true
+              _PY_BIN=$(find "/tmp/py_android_${TERMUX_ARCH}" -name "python3*" -type f 2>/dev/null | head -1)
+              if [ -n "$_PY_BIN" ]; then
+                cp "$_PY_BIN" "$BIN_DEST/python3"
+                chmod 755 "$BIN_DEST/python3"
+                echo "      ✅ python3 bundled (chaquopy standalone)"
+                _PY_INSTALLED=1
+              fi
+              rm -rf "/tmp/py_android_${TERMUX_ARCH}" "/tmp/py_android.zip"
+            fi
+            # Fallback: try Termux deb with deeper path search
+            if [ "$_PY_INSTALLED" -eq 0 ]; then
+              _PY_DEB=$(curl -sf "${TERMUX_POOL}/p/python3/" \
+                | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
+                | grep -v 'dbgsym\|dev\|doc\|lib' | head -1 || true)
+              if [ -n "$_PY_DEB" ]; then
+                curl -fsSL "${TERMUX_POOL}/p/python3/${_PY_DEB}" -o "/tmp/py3_${TERMUX_ARCH}.deb"
+                _PY_DIR="/tmp/deb_py3_${TERMUX_ARCH}"
+                rm -rf "$_PY_DIR" && mkdir -p "$_PY_DIR"
+                cd "$_PY_DIR"
+                ar x "/tmp/py3_${TERMUX_ARCH}.deb"
+                _PY_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+                if [ -n "$_PY_TAR" ]; then
+                  tar -xf "$_PY_TAR" 2>/dev/null || true
+                  # Termux installs to data/data/com.termux/files/usr/bin/
+                  _PY_BIN=$(find . -name "python3.1*" -type f 2>/dev/null \
+                    | grep -v 'dbgsym\|include\|share\|\.py$' | head -1)
+                  [ -z "$_PY_BIN" ] && _PY_BIN=$(find . -name "python3" -type f 2>/dev/null \
+                    | grep -v 'dbgsym\|include\|share\|\.py$' | head -1)
+                  if [ -n "$_PY_BIN" ]; then
+                    cp "$_PY_BIN" "$OLDPWD/$BIN_DEST/python3"
+                    chmod 755 "$OLDPWD/$BIN_DEST/python3"
+                    echo "      ✅ python3 bundled (termux deb)"
+                    _PY_INSTALLED=1
+                  fi
+                fi
+                cd "$OLDPWD"
+                rm -rf "$_PY_DIR" "/tmp/py3_${TERMUX_ARCH}.deb"
+              fi
+            fi
+            [ "$_PY_INSTALLED" -eq 0 ] && echo "      ⚠️  python3 not available, skipping (optional)" || true
             if [ -f "$BIN_DEST/python3" ] && [ ! -f "$BIN_DEST/python" ]; then
               ln -sf python3 "$BIN_DEST/python"
             fi
@@ -420,37 +471,45 @@ jobs:
             extract_termux_bin "f" "ffmpeg" "ffmpeg" "usr/bin/ffmpeg" "$BIN_DEST/ffmpeg" "$TERMUX_ARCH"
             extract_termux_bin "f" "ffmpeg" "ffprobe" "usr/bin/ffprobe" "$BIN_DEST/ffprobe" "$TERMUX_ARCH"
 
-            # ── imagemagick (convert, identify, mogrify) ─────────────────────
-            # All binaries are in the single 'imagemagick' package
-            extract_termux_bin "i" "imagemagick" "imagemagick" "usr/bin/convert" "$BIN_DEST/convert" "$TERMUX_ARCH" || true
-            if [ -f "$BIN_DEST/convert" ]; then
-              # identify and mogrify are also in the same deb — extract directly
-              _IM_EXDIR="/tmp/deb_im_reuse_${TERMUX_ARCH}"
-              _IM_DEB_NAME=$(curl -sf "${TERMUX_POOL}/i/imagemagick/" \
-                | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
-                | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
-              if [ -n "$_IM_DEB_NAME" ]; then
-                curl -fsSL "${TERMUX_POOL}/i/imagemagick/${_IM_DEB_NAME}" -o "/tmp/im_${TERMUX_ARCH}.deb"
-                rm -rf "$_IM_EXDIR" && mkdir -p "$_IM_EXDIR"
-                cd "$_IM_EXDIR"
-                ar x "/tmp/im_${TERMUX_ARCH}.deb"
-                _IM_TAR=$(ls data.tar.* 2>/dev/null | head -1)
-                if [ -n "$_IM_TAR" ]; then
-                  tar -xf "$_IM_TAR" 2>/dev/null || true
-                  for _BIN in identify mogrify magick; do
-                    _BP=$(find . -name "$_BIN" -type f 2>/dev/null | grep -v 'man\|doc' | head -1)
-                    if [ -n "$_BP" ]; then
-                      cp "$_BP" "$OLDPWD/$BIN_DEST/$_BIN"
-                      chmod 755 "$OLDPWD/$BIN_DEST/$_BIN"
-                      echo "      ✅ imagemagick-${_BIN} bundled"
-                    fi
-                  done
+            # ── imagemagick (convert, identify, mogrify, magick) ─────────────
+            # Termux imagemagick installs to data/data/com.termux/files/usr/bin/
+            _IM_DEB_NAME=$(curl -sf "${TERMUX_POOL}/i/imagemagick/" \
+              | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
+              | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
+            if [ -n "$_IM_DEB_NAME" ]; then
+              curl -fsSL "${TERMUX_POOL}/i/imagemagick/${_IM_DEB_NAME}" -o "/tmp/im_${TERMUX_ARCH}.deb"
+              _IM_EXDIR="/tmp/deb_im_${TERMUX_ARCH}"
+              rm -rf "$_IM_EXDIR" && mkdir -p "$_IM_EXDIR"
+              cd "$_IM_EXDIR"
+              ar x "/tmp/im_${TERMUX_ARCH}.deb"
+              _IM_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+              if [ -n "$_IM_TAR" ]; then
+                tar -xf "$_IM_TAR" 2>/dev/null || true
+                _IM_BUNDLED=0
+                for _BIN in magick convert identify mogrify; do
+                  # Search all paths including termux prefix
+                  _BP=$(find . -name "$_BIN" -type f 2>/dev/null \
+                    | grep -v 'man\|doc\|include\|\.h$' | head -1)
+                  if [ -n "$_BP" ]; then
+                    cp "$_BP" "$OLDPWD/$BIN_DEST/$_BIN"
+                    chmod 755 "$OLDPWD/$BIN_DEST/$_BIN"
+                    echo "      ✅ imagemagick-${_BIN} bundled"
+                    _IM_BUNDLED=$((_IM_BUNDLED + 1))
+                  fi
+                done
+                # If only magick found, create symlinks for legacy names
+                if [ -f "$OLDPWD/$BIN_DEST/magick" ]; then
+                  [ ! -f "$OLDPWD/$BIN_DEST/convert"  ] && ln -sf magick "$OLDPWD/$BIN_DEST/convert"
+                  [ ! -f "$OLDPWD/$BIN_DEST/identify" ] && ln -sf magick "$OLDPWD/$BIN_DEST/identify"
+                  [ ! -f "$OLDPWD/$BIN_DEST/mogrify" ]  && ln -sf magick "$OLDPWD/$BIN_DEST/mogrify"
+                  echo "      ✅ imagemagick symlinks created (convert/identify/mogrify → magick)"
                 fi
-                cd "$OLDPWD"
-                rm -rf "$_IM_EXDIR" "/tmp/im_${TERMUX_ARCH}.deb"
+                [ "$_IM_BUNDLED" -eq 0 ] && echo "      ⚠️  imagemagick binaries not found in deb" || true
               fi
+              cd "$OLDPWD"
+              rm -rf "$_IM_EXDIR" "/tmp/im_${TERMUX_ARCH}.deb"
             else
-              echo "      ⚠️  imagemagick not available, skipping"
+              echo "      ⚠️  imagemagick not available, skipping (optional)"
             fi
           done
 
@@ -636,15 +695,39 @@ jobs:
             extract_termux_bin "p" "procps" "procps-pkill" "usr/bin/pkill" "$BIN_DEST/pkill" "$TERMUX_ARCH"
 
             # ── exiftool ─────────────────────────────────────────────────────
-            # Termux package: libimage-exiftool-perl (pool l/) or perl-image-exiftool (pool p/)
-            # Binary path: usr/bin/exiftool
-            extract_termux_bin "l" "libimage-exiftool-perl" "exiftool" "usr/bin/exiftool" "$BIN_DEST/exiftool" "$TERMUX_ARCH" || true
-            if [ ! -f "$BIN_DEST/exiftool" ]; then
-              extract_termux_bin "p" "perl-image-exiftool" "exiftool" "usr/bin/exiftool" "$BIN_DEST/exiftool" "$TERMUX_ARCH" || true
-            fi
-            if [ ! -f "$BIN_DEST/exiftool" ]; then
-              echo "      ⚠️  exiftool not available for $TERMUX_ARCH, skipping (optional)"
-            fi
+            # Termux package names vary: libimage-exiftool-perl, perl-image-exiftool, exiftool
+            # Binary is a Perl script — also try direct 'exiftool' package
+            _ET_INSTALLED=0
+            for _ET_PKG_INFO in "l libimage-exiftool-perl" "p perl-image-exiftool" "e exiftool"; do
+              _ET_POOL_L=$(echo "$_ET_PKG_INFO" | cut -d' ' -f1)
+              _ET_PKG=$(echo "$_ET_PKG_INFO" | cut -d' ' -f2)
+              if [ "$_ET_INSTALLED" -eq 1 ]; then break; fi
+              _ET_DEB=$(curl -sf "${TERMUX_POOL}/${_ET_POOL_L}/${_ET_PKG}/" \
+                | grep -oP 'href="\K[^"]*\.deb' \
+                | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
+              if [ -n "$_ET_DEB" ]; then
+                curl -fsSL "${TERMUX_POOL}/${_ET_POOL_L}/${_ET_PKG}/${_ET_DEB}" -o "/tmp/et_${TERMUX_ARCH}.deb"
+                _ET_DIR="/tmp/deb_et_${TERMUX_ARCH}"
+                rm -rf "$_ET_DIR" && mkdir -p "$_ET_DIR"
+                cd "$_ET_DIR"
+                ar x "/tmp/et_${TERMUX_ARCH}.deb"
+                _ET_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+                if [ -n "$_ET_TAR" ]; then
+                  tar -xf "$_ET_TAR" 2>/dev/null || true
+                  _ET_BIN=$(find . -name "exiftool" -type f 2>/dev/null \
+                    | grep -v 'man\|doc' | head -1)
+                  if [ -n "$_ET_BIN" ]; then
+                    cp "$_ET_BIN" "$OLDPWD/$BIN_DEST/exiftool"
+                    chmod 755 "$OLDPWD/$BIN_DEST/exiftool"
+                    echo "      ✅ exiftool bundled (${_ET_PKG})"
+                    _ET_INSTALLED=1
+                  fi
+                fi
+                cd "$OLDPWD"
+                rm -rf "$_ET_DIR" "/tmp/et_${TERMUX_ARCH}.deb"
+              fi
+            done
+            [ "$_ET_INSTALLED" -eq 0 ] && echo "      ⚠️  exiftool not available for $TERMUX_ARCH, skipping (optional)" || true
 
             # ── openssh ──────────────────────────────────────────────────────
             extract_termux_bin "o" "openssh" "openssh" "usr/bin/ssh" "$BIN_DEST/ssh" "$TERMUX_ARCH"
