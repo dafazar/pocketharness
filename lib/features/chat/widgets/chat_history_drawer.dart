@@ -581,7 +581,7 @@ class _SessionTile extends StatelessWidget {
       child: ListTile(
         selected: isSelected,
         selectedColor: c.accent,
-        selectedTileColor: c.accent.withOpacity(0.08),
+        selectedTileColor: c.accent.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         leading: Text(
           _aiModeEmoji(session.lastAiMode),

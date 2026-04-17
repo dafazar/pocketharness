@@ -75,9 +75,9 @@ class _StubBody extends StatelessWidget {
             Container(
               width: 88, height: 88,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.10),
+                color: iconColor.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: iconColor.withOpacity(0.25), width: 1.5),
+                border: Border.all(color: iconColor.withValues(alpha: 0.25), width: 1.5),
               ),
               child: Icon(icon, color: iconColor, size: 44),
             ),
@@ -85,9 +85,9 @@ class _StubBody extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.10),
+                color: iconColor.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: iconColor.withOpacity(0.30)),
+                border: Border.all(color: iconColor.withValues(alpha: 0.30)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

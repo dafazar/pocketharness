@@ -185,16 +185,16 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget>
         margin: const EdgeInsets.only(top: 8, bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: c.surface.withOpacity(0.95),
+          color: c.surface.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: _state == _SaveState.saved
-                ? c.correct.withOpacity(0.5)
-                : c.accent.withOpacity(0.35),
+                ? c.correct.withValues(alpha: 0.5)
+                : c.accent.withValues(alpha: 0.35),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -261,7 +261,7 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget>
                       style: TextStyle(fontSize: 12, color: c.accent)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: c.accent,
-                    side: BorderSide(color: c.accent.withOpacity(0.4)),
+                    side: BorderSide(color: c.accent.withValues(alpha: 0.4)),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 8),
                     minimumSize: Size.zero,
@@ -302,9 +302,9 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget>
         margin: const EdgeInsets.only(top: 6, bottom: 2),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: c.correct.withOpacity(0.12),
+          color: c.correct.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: c.correct.withOpacity(0.3)),
+          border: Border.all(color: c.correct.withValues(alpha: 0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,7 +409,7 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget>
                       style: TextStyle(fontSize: 12, color: c.accent)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: c.accent,
-                    side: BorderSide(color: c.accent.withOpacity(0.4)),
+                    side: BorderSide(color: c.accent.withValues(alpha: 0.4)),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 7),
                     minimumSize: Size.zero,

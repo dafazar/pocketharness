@@ -353,7 +353,7 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.accent.withOpacity(0.25)),
+        border: Border.all(color: c.accent.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

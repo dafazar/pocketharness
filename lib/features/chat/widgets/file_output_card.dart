@@ -62,12 +62,12 @@ class _FileOutputCardState extends State<FileOutputCard>
       child: Container(
         margin: const EdgeInsets.only(top: 8, bottom: 4),
         decoration: BoxDecoration(
-          color: c.surface.withOpacity(0.97),
+          color: c.surface.withValues(alpha: 0.97),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: c.accent.withOpacity(0.3)),
+          border: Border.all(color: c.accent.withValues(alpha: 0.3)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.07),
+              color: Colors.black.withValues(alpha: 0.07),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -281,9 +281,9 @@ class _FileOutputItemState extends State<_FileOutputItem> {
   Widget _buildSaved(KmColors c) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
-          color: c.correct.withOpacity(0.1),
+          color: c.correct.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: c.correct.withOpacity(0.25)),
+          border: Border.all(color: c.correct.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
@@ -368,7 +368,7 @@ class _FileOutputItemState extends State<_FileOutputItem> {
                 icon: Icon(Icons.copy_rounded, size: 13, color: c.accent),
                 label: Text('Salin', style: TextStyle(color: c.accent, fontSize: 11)),
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: c.accent.withOpacity(0.4)),
+                  side: BorderSide(color: c.accent.withValues(alpha: 0.4)),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,

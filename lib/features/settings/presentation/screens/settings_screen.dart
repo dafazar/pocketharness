@@ -474,7 +474,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blueAccent.withOpacity(0.15),
+                  color: Colors.blueAccent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.code, color: Colors.blueAccent, size: 20),
@@ -492,7 +492,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.greenAccent.withOpacity(0.15),
+                  color: Colors.greenAccent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.smart_toy_outlined,

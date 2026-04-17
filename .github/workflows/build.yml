@@ -194,6 +194,7 @@ jobs:
           fi
 
       - name: "📦 Bundle Node.js (Termux/Bionic) + Claude Code + CLI tools"
+        id: bundle-node-tools
         if: steps.cache-tools.outputs.cache-hit != 'true' || steps.validate-cache.outputs.needs_rebuild == 'true'
         run: |
           set -euo pipefail
@@ -453,6 +454,9 @@ jobs:
             fi
           done
 
+          # Export CLAUDE_CODE_VERSION for use in subsequent steps
+          echo "claude_code_version=${CLAUDE_CODE_VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: "📦 Bundle CLI tools (sox/yt-dlp/vim/exiftool/misc)"
         if: steps.cache-tools.outputs.cache-hit != 'true' || steps.validate-cache.outputs.needs_rebuild == 'true'
         env:
@@ -461,6 +465,10 @@ jobs:
           set -euo pipefail
           ABIS="${{ steps.abis.outputs.abis }}"
           TOOLS_DIR="assets/tools"
+          # Re-define variables from step 1 (each run: block is a separate shell)
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          NODE_VERSION="${{ steps.resolve-nodejs.outputs.node_version }}"
+          CLAUDE_CODE_VERSION="${{ steps.bundle-node-tools.outputs.claude_code_version || 'unknown' }}"
 
           # Redefine extract_termux_bin helper (needed in split step)
           extract_termux_bin() {

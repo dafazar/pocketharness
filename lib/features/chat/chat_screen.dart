@@ -513,7 +513,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             height: _webResearchEnabled ? 32 : 0,
             child: _webResearchEnabled
                 ? Container(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Row(
                       children: [
@@ -537,7 +537,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity(0.5),
+                                  .withValues(alpha: 0.5),
                               fontSize: 11,
                               fontStyle: FontStyle.italic,
                             ),
@@ -563,9 +563,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: KmColors.of(context).accent.withOpacity(0.10),
+                        color: KmColors.of(context).accent.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: KmColors.of(context).accent.withOpacity(0.3)),
+                        border: Border.all(color: KmColors.of(context).accent.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -614,12 +614,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                   height: 36,
                   decoration: BoxDecoration(
                     color: _webResearchEnabled
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
                         : Colors.transparent,
                     border: Border.all(
                       color: _webResearchEnabled
                           ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                          : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -628,7 +628,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     size: 18,
                     color: _webResearchEnabled
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -3834,7 +3834,7 @@ class _TypingIndicator extends StatelessWidget {
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
-                                  .withOpacity(0.5),
+                                  .withValues(alpha: 0.5),
                               fontSize: 11,
                               fontStyle: FontStyle.italic,
                             ),
@@ -4235,7 +4235,7 @@ class _CodeToolTile extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.15),
+                  color: iconColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: iconColor, size: 22),

@@ -39,7 +39,7 @@ class _WebResearchSourcesCardState extends State<WebResearchSourcesCard> {
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: accent.withOpacity(0.3)),
+        border: Border.all(color: accent.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
         color: c.surface,
       ),
@@ -75,7 +75,7 @@ class _WebResearchSourcesCardState extends State<WebResearchSourcesCard> {
                         turns: _isExpanded ? 0.5 : 0,
                         duration: const Duration(milliseconds: 200),
                         child: Icon(Icons.expand_more_rounded,
-                            color: c.onSurface.withOpacity(0.5)),
+                            color: c.onSurface.withValues(alpha: 0.5)),
                       ),
                     ],
                   ),
@@ -85,7 +85,7 @@ class _WebResearchSourcesCardState extends State<WebResearchSourcesCard> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: c.onSurface.withOpacity(0.5),
+                      color: c.onSurface.withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                   ),
@@ -117,7 +117,7 @@ class _WebResearchSourcesCardState extends State<WebResearchSourcesCard> {
                 Text(
                   '${widget.sources.length} sumber · $_fetchedCount dibaca',
                   style: TextStyle(
-                    color: c.onSurface.withOpacity(0.45),
+                    color: c.onSurface.withValues(alpha: 0.45),
                     fontSize: 11,
                   ),
                 ),
@@ -133,7 +133,7 @@ class _WebResearchSourcesCardState extends State<WebResearchSourcesCard> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: accent.withOpacity(0.15),
+        color: accent.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -176,7 +176,7 @@ class _SourceTile extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Divider(height: 1, thickness: 1, color: c.outline.withOpacity(0.15)),
+        Divider(height: 1, thickness: 1, color: c.outline.withValues(alpha: 0.15)),
         InkWell(
           onTap: _open,
           child: Padding(
@@ -195,7 +195,7 @@ class _SourceTile extends StatelessWidget {
                     errorBuilder: (_, __, ___) => Icon(
                       Icons.public,
                       size: 20,
-                      color: c.onSurface.withOpacity(0.4),
+                      color: c.onSurface.withValues(alpha: 0.4),
                     ),
                   ),
                 ),
@@ -218,7 +218,7 @@ class _SourceTile extends StatelessWidget {
                       Text(
                         source.domain,
                         style: TextStyle(
-                          color: c.onSurface.withOpacity(0.5),
+                          color: c.onSurface.withValues(alpha: 0.5),
                           fontSize: 11,
                         ),
                       ),
@@ -226,7 +226,7 @@ class _SourceTile extends StatelessWidget {
                         Text(
                           source.snippet,
                           style: TextStyle(
-                            color: c.onSurface.withOpacity(0.6),
+                            color: c.onSurface.withValues(alpha: 0.6),
                             fontSize: 12,
                           ),
                           maxLines: 2,
@@ -243,7 +243,7 @@ class _SourceTile extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.12),
+                      color: Colors.green.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Text(
