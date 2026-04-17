@@ -30,6 +30,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:kanmongo/features/chat/widgets/file_output_card.dart';
+import 'package:kanmongo/data/services/smart_file_output_service.dart';
 
 // ── Task History Model ────────────────────────────────────────────────────────
 
@@ -71,6 +73,10 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
   ProcessedFile? _pendingFile;
   bool _processingFile = false;
   String _processingFileName = '';
+
+  // Smart file output (Claude-like file delivery after agent completes)
+  List<SmartFileOutput> _agentSmartOutputs = [];
+  String _lastAgentTask = '';
 
   @override
   void initState() {
@@ -248,12 +254,14 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
     }
 
     String fullTask = task.trim();
+    _lastAgentTask = fullTask;
     final file = _pendingFile;
     if (mounted) setState(() {
       _pendingFile  = null;
       _running      = true;
       _canSend      = false;
       _statusText   = '🤖 Agent memulai…';
+      _agentSmartOutputs = [];
     });
 
     if (file != null) {
@@ -285,10 +293,26 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
         _addStep(step);
         record.steps.add(step);
       },
-      onDone: () => setState(() {
-        _running    = false;
-        _statusText = '✅ Task selesai';
-      }),
+      onDone: () {
+        if (!mounted) return;
+        // ── Smart File Output detection after agent completes ─────────────────
+        final allContent = _steps
+            .where((s) => s.type == AgentStepType.result || s.type == AgentStepType.tool)
+            .map((s) => s.content)
+            .join('\n');
+        final smartOutputs = SmartFileOutputService.instance.extractFromAiResponse(
+          aiResponse: allContent,
+          userMessage: _lastAgentTask,
+          originalFilename: null,
+        );
+        setState(() {
+          _running    = false;
+          _statusText = '✅ Task selesai';
+          if (smartOutputs.isNotEmpty) {
+            _agentSmartOutputs = smartOutputs;
+          }
+        });
+      },
       onError: (_) => setState(() {
         _running    = false;
         _statusText = '';
@@ -309,9 +333,11 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
     _stop();
     if (mounted) setState(() {
       _steps.clear();
-      _statusText  = '';
-      _pendingFile = null;
-      _canSend     = false;
+      _statusText       = '';
+      _pendingFile      = null;
+      _canSend          = false;
+      _agentSmartOutputs = [];
+      _lastAgentTask    = '';
     });
   }
 
@@ -444,6 +470,13 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
                   },
                 ),
         ),
+
+        // Smart File Output Card (shown after agent completes with file outputs)
+        if (_agentSmartOutputs.isNotEmpty && !_running)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: FileOutputCard(outputs: _agentSmartOutputs),
+          ),
 
         // Status bar bawah
         if (_running || _statusText.isNotEmpty)

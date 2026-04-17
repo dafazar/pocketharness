@@ -61,6 +61,15 @@ class ChatSessionNotifier extends StateNotifier<ChatSession> {
     state = state.copyWith(messages: msgs, updatedAt: DateTime.now());
   }
 
+  // 3b. Replace pesan berdasarkan id spesifik (untuk inline run output)
+  void replaceMessageById(String id, ChatMessage msg) {
+    final idx = state.messages.indexWhere((m) => m.id == id);
+    if (idx < 0) return;
+    final msgs = List<ChatMessage>.from(state.messages);
+    msgs[idx] = msg;
+    state = state.copyWith(messages: msgs, updatedAt: DateTime.now());
+  }
+
   // 4. Hapus satu pesan berdasarkan id
   void deleteMessage(String id) {
     state = state.copyWith(

@@ -25,6 +25,7 @@ import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:kanmongo/data/services/terminal_service.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,6 +152,7 @@ class _ArtifactPanelState extends State<ArtifactPanel>
   final Map<String, WebViewController>     _webCtrls = {};
 
   bool _isSaving = false;
+  bool _isRunningInline = false;
 
   @override
   void initState() {
@@ -290,12 +292,28 @@ class _ArtifactPanelState extends State<ArtifactPanel>
                 onPressed: () => _shareContent(active),
               ),
             if (_isRunnable(active))
-              IconButton(
-                icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                color: Colors.green,
-                tooltip: 'Jalankan di Terminal',
-                onPressed: () => _runInTerminal(context, active),
-              ),
+              _isRunningInline
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent),
+                    ),
+                  )
+                : Row(mainAxisSize: MainAxisSize.min, children: [
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+                      color: Colors.greenAccent,
+                      tooltip: 'Jalankan Inline (output di sini)',
+                      onPressed: () => _runInline(context, active),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                      color: Colors.green,
+                      tooltip: 'Jalankan di Terminal',
+                      onPressed: () => _runInTerminal(context, active),
+                    ),
+                  ]),
           ],
           IconButton(
             icon: const Icon(Icons.close_rounded, size: 18),
@@ -647,6 +665,94 @@ class _ArtifactPanelState extends State<ArtifactPanel>
     final file    = File('${dir.path}/$name');
     await file.writeAsString(content);
     await Share.shareXFiles([XFile(file.path)], text: item.title);
+  }
+
+  // ── Inline run: eksekusi via TerminalService, output tampil di dialog ────────
+  Future<void> _runInline(BuildContext context, ArtifactItem item) async {
+    if (_isRunningInline) return;
+    final ctrl    = _editorCtrls[item.id];
+    final content = ctrl?.text ?? item.content;
+    final lang    = item.language.toLowerCase();
+    final ext     = _extensionFor(item.language);
+    final dir     = await getTemporaryDirectory();
+    final file    = File('${dir.path}/run_artifact$ext');
+    await file.writeAsString(content);
+    final cmd = _buildRunCommand(lang, file.path);
+    if (cmd.isEmpty) {
+      if (!mounted) return;
+      showTopSnack(context, 'Bahasa "$lang" tidak bisa dijalankan inline', isError: true);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _isRunningInline = true);
+    try {
+      await TerminalService.instance.init();
+      final result = await TerminalService.instance.run(
+        cmd,
+        timeout: const Duration(seconds: 60),
+      );
+      if (!mounted) return;
+      final output = result.stdout.trim().isNotEmpty
+          ? result.stdout.trim()
+          : result.stderr.trim().isNotEmpty
+              ? result.stderr.trim()
+              : '(tidak ada output)';
+      showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: Row(children: [
+            const Icon(Icons.terminal, color: Colors.greenAccent, size: 18),
+            const SizedBox(width: 8),
+            Flexible(child: Text('Output: ${item.title}',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                overflow: TextOverflow.ellipsis)),
+          ]),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (result.exitCode != 0)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text('⚠️ Exit code: ${result.exitCode}',
+                        style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                  ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      output,
+                      style: const TextStyle(
+                        fontFamily: 'monospace', fontSize: 12,
+                        color: Colors.greenAccent, height: 1.5),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(_),
+              child: const Text('Tutup', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(_);
+                if (mounted) context.push('/terminal', extra: {'initialCommand': cmd, 'autoRun': true});
+              },
+              child: const Text('Buka Terminal', style: TextStyle(color: Colors.blueAccent)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) showTopSnack(context, 'Error: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isRunningInline = false);
+    }
   }
 
   void _runInTerminal(BuildContext context, ArtifactItem item) async {

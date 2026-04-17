@@ -53,10 +53,13 @@ import 'package:kanmongo/features/chat/providers/chat_session_provider.dart';
 import 'package:kanmongo/features/chat/widgets/artifact_panel.dart';
 import 'package:kanmongo/features/chat/widgets/code_block_widget.dart';
 import 'package:kanmongo/features/chat/widgets/file_edit_response_widget.dart';
+import 'package:kanmongo/features/chat/widgets/file_output_card.dart';
 import 'package:kanmongo/data/models/chat_models.dart' as new_models;
 import 'package:kanmongo/data/services/history_service.dart';
 import 'package:kanmongo/features/chat/widgets/web_research_sources_card.dart';
 import 'package:kanmongo/data/services/web_research_service.dart';
+import 'package:kanmongo/data/services/terminal_service.dart';
+import 'package:kanmongo/data/services/smart_file_output_service.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -102,6 +105,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
 
   // ── File edit result (shown below last AI message after offline generation) ─
   FileEditResult? _pendingFileEditResult;
+
+  // ── Smart File Output (Claude-like file delivery) ─────────────────────────
+  List<SmartFileOutput> _smartFileOutputs = [];
+  String _lastUserMessage = '';
 
   // ── OCR ───────────────────────────────────────────────────────────────────
   bool _isProcessingOcr = false;
@@ -453,19 +460,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
           artifactCtrl:   _artifactCtrl,
         );
 
-        // Show FileEditResponseWidget below the last AI message when pending
-        if (isLastAssistant && _pendingFileEditResult != null && !_isGenerating) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              bubble,
-              Padding(
-                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
-                child: FileEditResponseWidget(result: _pendingFileEditResult!),
-              ),
-            ],
-          );
+        // Show FileOutputCard (smart) below the last AI message when pending
+        if (isLastAssistant && !_isGenerating) {
+          final fileWidgets = <Widget>[bubble];
+          if (_smartFileOutputs.isNotEmpty) {
+            fileWidgets.add(Padding(
+              padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+              child: FileOutputCard(outputs: _smartFileOutputs),
+            ));
+          } else if (_pendingFileEditResult != null) {
+            fileWidgets.add(Padding(
+              padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
+              child: FileEditResponseWidget(result: _pendingFileEditResult!),
+            ));
+          }
+          if (fileWidgets.length > 1) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: fileWidgets,
+            );
+          }
         }
 
         return bubble;
@@ -868,6 +883,82 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     );
   }
 
+  // ── Auto-push semua code block dari respons AI ke ArtifactPanel ──────────
+  // Dipanggil di setiap onDone callback streaming.
+  void _autoPushCodeBlocksToArtifact(String fullResponse) {
+    if (fullResponse.isEmpty) return;
+    final regex = RegExp(r'```(\w*)\n([\s\S]*?)```');
+    final matches = regex.allMatches(fullResponse);
+    for (final m in matches) {
+      final lang    = (m.group(1) ?? '').trim();
+      final code    = (m.group(2) ?? '').trim();
+      if (code.isEmpty) continue;
+      final ext     = lang.isNotEmpty ? lang : 'txt';
+      final title   = (lang == 'html' || lang == 'markdown' || lang == 'md')
+          ? (lang == 'html' ? 'preview.html' : 'doc.md')
+          : 'code.$ext';
+      final mode    = (lang == 'html' || lang == 'markdown' || lang == 'md')
+          ? ArtifactMode.preview
+          : ArtifactMode.code;
+      _artifactCtrl.push(ArtifactItem(
+        mode:     mode,
+        title:    title,
+        language: lang,
+        content:  code,
+      ));
+    }
+  }
+
+  // ── Inline run_command: eksekusi perintah via TerminalService,
+  //    hasilnya muncul sebagai bubble AI baru tanpa redirect ke /terminal ──
+  Future<void> _runCommandInline(String command) async {
+    if (command.trim().isEmpty) return;
+    // Tambahkan bubble "menjalankan..."
+    final runningId = const Uuid().v4();
+    ref.read(chatSessionProvider.notifier).addMessage(chat_models.ChatMessage(
+      id: runningId,
+      role: 'assistant',
+      content: '⚙️ Menjalankan: `$command`\n\n_Harap tunggu..._',
+      createdAt: DateTime.now(),
+      isStreaming: true,
+    ));
+    _scrollToBottom();
+    try {
+      await TerminalService.instance.init();
+      final result = await TerminalService.instance.run(
+        command,
+        timeout: const Duration(seconds: 60),
+      );
+      final output = (result.stdout.trim().isNotEmpty
+          ? result.stdout.trim()
+          : result.stderr.trim().isNotEmpty
+              ? result.stderr.trim()
+              : '(tidak ada output)');
+      ref.read(chatSessionProvider.notifier).replaceMessageById(
+        runningId,
+        chat_models.ChatMessage(
+          id: runningId,
+          role: 'assistant',
+          content: '⚙️ `$command`\n\n```\n$output\n```\n'
+              '${result.exitCode != 0 ? "\n⚠️ Exit code: ${result.exitCode}" : ""}',
+          createdAt: DateTime.now(),
+        ),
+      );
+    } catch (e) {
+      ref.read(chatSessionProvider.notifier).replaceMessageById(
+        runningId,
+        chat_models.ChatMessage(
+          id: runningId,
+          role: 'assistant',
+          content: '❌ Gagal menjalankan `$command`\n\nError: $e',
+          createdAt: DateTime.now(),
+          isError: true,
+        ),
+      );
+    }
+    _scrollToBottom();
+  }
+
   Future<void> _sendMessage() async {
     // Capture BEFORE any clearing — B1
     final rawInputText        = _inputCtrl.text.trim();
@@ -876,9 +967,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     if (rawInputText.isEmpty && attachmentsSnapshot.isEmpty) return;
     if (_isGenerating) return;
 
-    // Clear previous file edit result when user sends a new message
-    if (_pendingFileEditResult != null) {
-      setState(() { _pendingFileEditResult = null; });
+    // Track last user message for smart file intent detection
+    _lastUserMessage = rawInputText;
+
+    // Clear previous file output results when user sends a new message
+    if (_pendingFileEditResult != null || _smartFileOutputs.isNotEmpty) {
+      setState(() {
+        _pendingFileEditResult = null;
+        _smartFileOutputs = [];
+      });
     }
 
     // ── Adaptive Edit Mode: full pipeline — B3 ──────────────────────────────
@@ -1450,46 +1547,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         _genSub = null;
         _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
 
-        // ── File edit result detection ───────────────────────────────────────
-        // If text-based files were attached, offer to save the AI response as a file.
-        if (payloads.isNotEmpty) {
-          const textExts = {
-            'txt', 'md', 'dart', 'py', 'js', 'ts', 'html', 'css', 'json',
-            'xml', 'csv', 'kt', 'java', 'cpp', 'c', 'h', 'yaml', 'yml',
-            'toml', 'ini', 'log', 'sql', 'sh', 'bat',
-          };
-          final textPayloads = payloads
-              .where((pl) => pl.textContent != null && pl.textContent!.isNotEmpty)
-              .toList();
-          if (textPayloads.isNotEmpty) {
-            final first = textPayloads.first;
-            final ext = first.filename.contains('.')
-                ? first.filename.split('.').last.toLowerCase()
-                : 'txt';
-            if (textExts.contains(ext)) {
-              final currentMsgs = ref.read(chatSessionProvider).messages;
-              final lastAi = currentMsgs.lastWhere(
-                (m) => m.role == 'assistant',
-                orElse: () => chat_models.ChatMessage(
-      id: const Uuid().v4(),
-      role: 'assistant',
-      content: '',
-      createdAt: DateTime.now(),
-      isStreaming: true,
-    ),
-              );
-              if (lastAi.content.isNotEmpty && mounted) {
-                setState(() {
-                  _pendingFileEditResult = FileEditResult(
-                    originalFilename: first.filename,
-                    textContent:      lastAi.content,
-                    outputExtension:  ext == 'md' ? 'md' : 'txt',
-                    description:      'Hasil edit AI untuk: ${first.filename}',
-                  );
-                });
-              }
-            }
-          }
+        // ── Auto-push code blocks ke ArtifactPanel ───────────────────────────
+        final msgs = ref.read(chatSessionProvider).messages;
+        final lastAi = msgs.lastWhere(
+          (m) => m.role == 'assistant' && m.content.isNotEmpty,
+          orElse: () => chat_models.ChatMessage(id: '', role: 'assistant', content: '', createdAt: DateTime.now()),
+        );
+        if (lastAi.content.isNotEmpty) _autoPushCodeBlocksToArtifact(lastAi.content);
+
+        // ── Smart File Output detection ───────────────────────────────────────
+        if (lastAi.content.isNotEmpty) {
+          _detectAndSetFileEditResult(payloads, lastAi.content);
         }
       },
       onError: (Object e) {
@@ -1545,6 +1613,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         setState(() { _isGenerating = false; });
         _genSub = null;
         _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
+        // ── Auto-push code blocks ke ArtifactPanel ───────────────────────────
+        final msgs = ref.read(chatSessionProvider).messages;
+        final lastAi = msgs.lastWhere(
+          (m) => m.role == 'assistant' && m.content.isNotEmpty,
+          orElse: () => chat_models.ChatMessage(id: '', role: 'assistant', content: '', createdAt: DateTime.now()),
+        );
+        if (lastAi.content.isNotEmpty) _autoPushCodeBlocksToArtifact(lastAi.content);
+        // Smart file output detection
+        if (lastAi.content.isNotEmpty) {
+          _detectAndSetFileEditResult(payloads, lastAi.content);
+        }
       },
       onError: (Object e) {
         if (!mounted) return;
@@ -1602,15 +1681,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         setState(() { _isGenerating = false; });
         _genSub = null;
         _autoSaveCurrentSession(ref.read(chatSessionProvider).messages);
-        // Detect file edit result untuk semua mode
-        if (payloads.isNotEmpty) {
-          final msgs = ref.read(chatSessionProvider).messages;
-          final lastAi = msgs.lastWhere(
-            (m) => m.role == 'assistant',
-            orElse: () => chat_models.ChatMessage(
-              id: const Uuid().v4(), role: 'assistant',
-              content: '', createdAt: DateTime.now()),
-          );
+        // ── Auto-push code blocks ke ArtifactPanel ───────────────────────────
+        final allMsgs = ref.read(chatSessionProvider).messages;
+        final lastAi = allMsgs.lastWhere(
+          (m) => m.role == 'assistant' && m.content.isNotEmpty,
+          orElse: () => chat_models.ChatMessage(id: '', role: 'assistant', content: '', createdAt: DateTime.now()),
+        );
+        if (lastAi.content.isNotEmpty) _autoPushCodeBlocksToArtifact(lastAi.content);
+        // Smart file output detection for all modes
+        if (lastAi.content.isNotEmpty) {
           _detectAndSetFileEditResult(payloads, lastAi.content);
         }
       },
@@ -1643,12 +1722,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     }
   }
 
-  // ─── Detect & set FileEditResult for any AI mode ────────────────────────────
+  // ─── Detect & set FileEditResult / SmartFileOutput for any AI mode ──────────
 
   void _detectAndSetFileEditResult(
     List<ChatAttachmentPayload> payloads,
     String aiContent,
   ) {
+    if (aiContent.isEmpty) return;
+    if (!mounted) return;
+
+    final svc = SmartFileOutputService.instance;
+
+    // ── Smart intent detection: extract code blocks from AI response ──────────
+    final smartOutputs = svc.extractFromAiResponse(
+      aiResponse: aiContent,
+      userMessage: _lastUserMessage,
+      originalFilename: payloads.isNotEmpty ? payloads.first.filename : null,
+    );
+
+    // If AI response contains code blocks OR user had file intent → show smart card
+    if (smartOutputs.isNotEmpty &&
+        (svc.hasFileIntent(_lastUserMessage) ||
+            payloads.isNotEmpty ||
+            smartOutputs.any((o) => o.content.split('\n').length > 5))) {
+      setState(() {
+        _smartFileOutputs = smartOutputs;
+        _pendingFileEditResult = null;
+      });
+      return;
+    }
+
+    // ── Legacy fallback: attachment-based detection ───────────────────────────
     const textExts = {
       'txt', 'md', 'dart', 'py', 'js', 'ts', 'html', 'css', 'json',
       'xml', 'csv', 'kt', 'java', 'cpp', 'c', 'h', 'yaml', 'yml',
@@ -1657,13 +1761,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final textPayloads = payloads
         .where((pl) => pl.textContent != null && pl.textContent!.isNotEmpty)
         .toList();
-    if (textPayloads.isEmpty || aiContent.isEmpty) return;
+    if (textPayloads.isEmpty) return;
     final first = textPayloads.first;
     final ext = first.filename.contains('.')
         ? first.filename.split('.').last.toLowerCase()
         : 'txt';
     if (!textExts.contains(ext)) return;
-    if (!mounted) return;
     setState(() {
       _pendingFileEditResult = FileEditResult(
         originalFilename: first.filename,
@@ -2220,6 +2323,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         _lastTextPayloads     = [];
         _lastEditedFilename   = null;
         _pendingFileEditResult = null;
+        _smartFileOutputs     = [];
+        _lastUserMessage      = '';
       });
       _inputCtrl.clear();
     }

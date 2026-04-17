@@ -2,8 +2,8 @@
 // KanMonAI — Claude Code CLI Process Manager
 //
 // Manages the Claude Code CLI process lifecycle:
-//   • Ensures llama.cpp HTTP server is running
-//   • Launches Claude Code with correct env vars
+//   • Detects active AI source (Online/BulkApi/Offline) automatically
+//   • Launches Claude Code with correct env vars per AI source
 //   • Streams typed output events to UI
 //   • Handles stdin injection for user responses
 //   • Parses output for tool use, file edits, prompts
@@ -16,6 +16,9 @@ import 'package:flutter/foundation.dart';
 import 'package:kanmongo/data/services/claude_code_installer.dart';
 import 'package:kanmongo/data/services/llama_http_server.dart';
 import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:kanmongo/data/services/puter_ai_service.dart';
+import 'package:kanmongo/data/services/bulk_api_service.dart';
+import 'package:kanmongo/core/tools/tools_service.dart';
 
 // ── Session State ─────────────────────────────────────────────────────────────
 
@@ -165,13 +168,6 @@ class ClaudeCodeService {
       );
     }
 
-    // Guard: model must be loaded
-    if (!LlamaService.instance.isModelLoaded) {
-      throw StateError(
-        'No AI model loaded. Load a model in Settings → Offline AI first.',
-      );
-    }
-
     // Save params for potential retry
     _lastWorkDir = workDir;
     _lastInitialPrompt = initialPrompt;
@@ -180,34 +176,8 @@ class ClaudeCodeService {
     _setState(ClaudeCodeSessionState.starting);
     debugPrint('[ClaudeCodeService] Starting in workDir: $workDir');
 
-    // Ensure llama HTTP server is running
-    try {
-      await LlamaHttpServer.instance.start();
-      debugPrint('[ClaudeCodeService] LlamaHttpServer started/already running');
-    } catch (e) {
-      debugPrint('[ClaudeCodeService] Failed to start LlamaHttpServer: $e');
-      _setState(ClaudeCodeSessionState.error);
-      rethrow;
-    }
-
-    // Let the server stabilise
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    // Build environment
-    final env = {
-      'ANTHROPIC_BASE_URL':
-          'http://localhost:${LlamaHttpServer.instance.port}',
-      'ANTHROPIC_API_KEY': 'kanmon-local-llama',
-      'ANTHROPIC_MODEL': 'local',
-      'HOME': '/data/data/com.termux/files/home',
-      'PATH':
-          '/data/data/com.termux/files/usr/bin:/system/bin:/system/xbin',
-      'PREFIX': '/data/data/com.termux/files/usr',
-      'LD_LIBRARY_PATH': '/data/data/com.termux/files/usr/lib',
-      'TMPDIR': '/data/data/com.termux/files/usr/tmp',
-      'TERM': 'xterm-256color',
-      'LANG': 'en_US.UTF-8',
-    };
+    // ── Deteksi AI source aktif & bangun environment ──────────────────────────
+    final Map<String, String> env = await _buildAiEnvironment();
 
     // Get node invocation command
     final nodeCmd = ClaudeCodeInstaller.instance.getNodeInvocationCommand();
@@ -279,6 +249,77 @@ class ClaudeCodeService {
 
     debugPrint('[ClaudeCodeService] Session started: ${session.id}');
     return session;
+  }
+
+  // ── Deteksi AI source aktif → bangun env vars yang tepat ─────────────────────
+  Future<Map<String, String>> _buildAiEnvironment() async {
+    // Tentukan PATH dari bundled tools + Termux (jika tersedia)
+    final binDir = ToolsService.instance.isReady
+        ? ToolsService.instance.binDir
+        : '/data/data/com.termux/files/usr/bin';
+    final basePath =
+        '$binDir:/data/data/com.termux/files/usr/bin:/system/bin:/system/xbin';
+
+    final baseEnv = <String, String>{
+      'HOME':             '/data/data/com.termux/files/home',
+      'PATH':             basePath,
+      'PREFIX':           '/data/data/com.termux/files/usr',
+      'LD_LIBRARY_PATH':  '/data/data/com.termux/files/usr/lib',
+      'TMPDIR':           '/data/data/com.termux/files/usr/tmp',
+      'TERM':             'xterm-256color',
+      'LANG':             'en_US.UTF-8',
+    };
+
+    // 1. Cek Online AI (Puter) — prioritas tertinggi
+    final puter = PuterAiService.instance;
+    await puter.load();
+    if (puter.isEnabled) {
+      debugPrint('[ClaudeCodeService] Using Online AI (Puter): ${puter.baseUrl}');
+      return {
+        ...baseEnv,
+        'ANTHROPIC_BASE_URL': puter.baseUrl,
+        'ANTHROPIC_API_KEY':  puter.apiKey.isNotEmpty ? puter.apiKey : 'kanmon-online',
+        'ANTHROPIC_MODEL':    puter.selectedModel,
+      };
+    }
+
+    // 2. Cek Bulk API — pakai key pertama yang aktif
+    final bulk = BulkApiService.instance;
+    await bulk.load();
+    if (bulk.enabled && bulk.activeKeys.isNotEmpty) {
+      final key = bulk.activeKeys.first;
+      // Bulk API biasanya OpenAI-compatible — set base URL provider
+      final providerUrl = key.provider.apiUrl.isNotEmpty
+          ? key.provider.apiUrl
+          : 'https://api.openai.com/v1';
+      debugPrint('[ClaudeCodeService] Using Bulk API: $providerUrl model=${key.provider.defaultModel}');
+      return {
+        ...baseEnv,
+        'ANTHROPIC_BASE_URL': providerUrl,
+        'ANTHROPIC_API_KEY':  key.apiKey,
+        'ANTHROPIC_MODEL':    key.provider.defaultModel,
+      };
+    }
+
+    // 3. Fallback ke Offline AI (llama.cpp local server)
+    if (!LlamaService.instance.isModelLoaded) {
+      throw StateError(
+        'Tidak ada sumber AI yang aktif.\n\n'
+        'Aktifkan Online AI, Bulk API, atau muat model Offline AI di Settings.',
+      );
+    }
+
+    debugPrint('[ClaudeCodeService] Using Offline AI (llama.cpp)');
+    // Pastikan llama HTTP server berjalan
+    await LlamaHttpServer.instance.start();
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    return {
+      ...baseEnv,
+      'ANTHROPIC_BASE_URL': 'http://localhost:${LlamaHttpServer.instance.port}',
+      'ANTHROPIC_API_KEY':  'kanmon-local-llama',
+      'ANTHROPIC_MODEL':    'local',
+    };
   }
 
   // ── Send Input ────────────────────────────────────────────────────────────────

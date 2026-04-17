@@ -22,6 +22,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:kanmongo/core/theme/km_colors.dart';
 import 'package:kanmongo/features/chat/widgets/artifact_panel.dart';
+import 'package:kanmongo/data/services/terminal_service.dart';
 import 'package:kanmongo/shared/utils/top_snack.dart';
 
 class CodeBlockWidget extends StatefulWidget {
@@ -43,9 +44,14 @@ class CodeBlockWidget extends StatefulWidget {
 class _CodeBlockWidgetState extends State<CodeBlockWidget> {
   bool _isEditing = false;
   bool _isSaving  = false;
+  bool _isRunning = false;
   late TextEditingController _editCtrl;
 
-  static const _runnable = ['python', 'py', 'javascript', 'js', 'shell', 'sh', 'bash'];
+  static const _runnable = [
+    'python', 'py', 'javascript', 'js', 'shell', 'sh', 'bash',
+    'ruby', 'rb', 'node', 'typescript', 'ts', 'perl', 'pl',
+    'dart', 'kotlin', 'kt', 'java', 'cpp', 'c',
+  ];
 
   @override
   void initState() {
@@ -131,27 +137,111 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
   }
 
   Future<void> _runCode() async {
+    if (_isRunning) return;
     final lang = widget.language.toLowerCase();
     String cmd = '';
     try {
+      final tmp = await getTemporaryDirectory();
       if (['python', 'py'].contains(lang)) {
-        final tmp = await getTemporaryDirectory();
-        final f   = File('${tmp.path}/run_temp.py')..createSync();
-        await File('${tmp.path}/run_temp.py').writeAsString(widget.code);
+        final f = File('${tmp.path}/run_temp.py');
+        await f.writeAsString(widget.code);
         cmd = 'python3 ${f.path}';
-      } else if (['js', 'javascript'].contains(lang)) {
-        final tmp = await getTemporaryDirectory();
-        final f   = File('${tmp.path}/run_temp.js')..createSync();
-        await File('${tmp.path}/run_temp.js').writeAsString(widget.code);
+      } else if (['js', 'javascript', 'node'].contains(lang)) {
+        final f = File('${tmp.path}/run_temp.js');
+        await f.writeAsString(widget.code);
         cmd = 'node ${f.path}';
+      } else if (['ts', 'typescript'].contains(lang)) {
+        final f = File('${tmp.path}/run_temp.ts');
+        await f.writeAsString(widget.code);
+        cmd = 'npx ts-node ${f.path}';
       } else if (['sh', 'bash', 'shell'].contains(lang)) {
-        cmd = widget.code.split('\n').first.trim();
+        final f = File('${tmp.path}/run_temp.sh');
+        await f.writeAsString(widget.code);
+        cmd = 'bash ${f.path}';
+      } else if (['ruby', 'rb'].contains(lang)) {
+        final f = File('${tmp.path}/run_temp.rb');
+        await f.writeAsString(widget.code);
+        cmd = 'ruby ${f.path}';
+      } else if (['perl', 'pl'].contains(lang)) {
+        final f = File('${tmp.path}/run_temp.pl');
+        await f.writeAsString(widget.code);
+        cmd = 'perl ${f.path}';
+      } else {
+        // Fallback: redirect ke terminal untuk bahasa compile
+        if (!mounted) return;
+        context.push('/terminal', extra: {
+          'initialCommand': widget.code.split('\n').first.trim(),
+          'autoRun': false,
+        });
+        return;
       }
     } catch (e) {
-      debugPrint('[CodeBlock] RunCode prep error: $e');
+      if (mounted) showTopSnack(context, 'Persiapan gagal: $e', isError: true);
+      return;
     }
+
     if (!mounted) return;
-    context.push('/terminal', extra: {'initialCommand': cmd, 'autoRun': true});
+    setState(() => _isRunning = true);
+
+    // Coba eksekusi inline via TerminalService
+    try {
+      await TerminalService.instance.init();
+      final result = await TerminalService.instance.run(
+        cmd,
+        timeout: const Duration(seconds: 60),
+      );
+      if (!mounted) return;
+      final output = result.stdout.trim().isNotEmpty
+          ? result.stdout.trim()
+          : result.stderr.trim().isNotEmpty
+              ? result.stderr.trim()
+              : '(tidak ada output)';
+      // Tampilkan output dalam dialog
+      showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: Row(children: [
+            const Icon(Icons.terminal, color: Colors.greenAccent, size: 18),
+            const SizedBox(width: 8),
+            Text('Output: ${widget.language}',
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
+          ]),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: SelectableText(
+                output,
+                style: const TextStyle(
+                  fontFamily: 'monospace', fontSize: 12, color: Colors.greenAccent),
+              ),
+            ),
+          ),
+          actions: [
+            if (result.exitCode != 0)
+              Text('Exit: ${result.exitCode}',
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
+            TextButton(
+              onPressed: () => Navigator.pop(_),
+              child: const Text('Tutup', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(_);
+                context.push('/terminal', extra: {'initialCommand': cmd, 'autoRun': true});
+              },
+              child: const Text('Buka Terminal', style: TextStyle(color: Colors.blueAccent)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      // Fallback: buka terminal
+      if (!mounted) return;
+      context.push('/terminal', extra: {'initialCommand': cmd, 'autoRun': true});
+    } finally {
+      if (mounted) setState(() => _isRunning = false);
+    }
   }
 
   // ── Syntax highlight ──────────────────────────────────────────────────────
@@ -307,8 +397,16 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
                     },
                   ),
                 if (isRunnable)
-                  _HeaderBtn(Icons.play_arrow_rounded,    'Jalankan', _runCode,
-                      color: Colors.greenAccent),
+                  _isRunning
+                    ? const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: SizedBox(
+                          width: 14, height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.greenAccent)),
+                      )
+                    : _HeaderBtn(Icons.play_arrow_rounded, 'Jalankan', _runCode,
+                          color: Colors.greenAccent),
               ],
             ),
           ),

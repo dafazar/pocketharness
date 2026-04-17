@@ -128,12 +128,26 @@ jobs:
       - name: "💻 Resolve code-server version"
         id: resolve-codeserver
         run: |
-          CS_VERSION=$(curl -sf https://registry.npmjs.org/code-server/latest \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "")
-          if [ -z "$CS_VERSION" ]; then
-            CS_VERSION="4.93.1"
-          fi
-          echo "  📌 code-server version: $CS_VERSION"
+          # code-server >= 4.100.0 requires Node.js v22+.
+          # Our Android Termux Node.js is v20 — must stay on last v20-compatible release.
+          # MAX_COMPATIBLE: last code-server version confirmed to work with Node v20.
+          MAX_COMPATIBLE="4.96.2"
+          CS_VERSION=$(curl -sf https://registry.npmjs.org/code-server \
+            | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+versions = list(data.get('versions', {}).keys())
+
+def ver_tuple(v):
+    try: return tuple(int(x) for x in v.split('.'))
+    except: return (0,)
+
+max_ok = tuple(int(x) for x in '${MAX_COMPATIBLE}'.split('.'))
+compatible = [v for v in versions if ver_tuple(v) <= max_ok]
+compatible.sort(key=ver_tuple, reverse=True)
+print(compatible[0] if compatible else '${MAX_COMPATIBLE}')
+" 2>/dev/null || echo "$MAX_COMPATIBLE")
+          echo "  📌 code-server version: $CS_VERSION (max Node-v20-compatible: $MAX_COMPATIBLE)"
           echo "cs_version=$CS_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: "🟢 Resolve Node.js LTS version"
@@ -809,7 +823,7 @@ jobs:
 
       - name: "🏗️ Build iOS — no codesign"
         if: steps.ios_sign.outputs.signed != 'true'
-        run: flutter build ios --release --no-codesign --dart-define=CODE_SERVER_VERSION=4.93.1
+        run: flutter build ios --release --no-codesign --dart-define=CODE_SERVER_VERSION=4.96.2
 
       - name: "📤 Upload iOS (no-sign) → GitHub Release"
         if: steps.ios_sign.outputs.signed != 'true'
@@ -831,7 +845,7 @@ jobs:
           OBFSTR=""
           [ "${{ github.event.inputs.enable_obfuscation }}" != "false" ] \
             && OBFSTR="--obfuscate --split-debug-info=build/debug-info-ios" || true
-          flutter build ipa --release $OBFSTR --dart-define=CODE_SERVER_VERSION=4.93.1
+          flutter build ipa --release $OBFSTR --dart-define=CODE_SERVER_VERSION=4.96.2
 
       - name: "📤 Upload IPA → GitHub Release"
         if: steps.ios_sign.outputs.signed == 'true'
