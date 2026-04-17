@@ -297,7 +297,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
         if (!mounted) return;
         // ── Smart File Output detection after agent completes ─────────────────
         final allContent = _steps
-            .where((s) => s.type == AgentStepType.result || s.type == AgentStepType.tool)
+            .where((s) => s.type == AgentStepType.answer || s.type == AgentStepType.toolResult)
             .map((s) => s.content)
             .join('\n');
         final smartOutputs = SmartFileOutputService.instance.extractFromAiResponse(

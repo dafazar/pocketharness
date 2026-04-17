@@ -319,42 +319,58 @@ jobs:
             mkdir -p "$BIN_DEST"
 
             # Helper: download & extract single binary from Termux deb
+            # Uses basename matching so it works regardless of Termux prefix path
+            # (e.g. ./data/data/com.termux/files/usr/bin/git OR ./usr/bin/git)
             extract_termux_bin() {
               local POOL_L="$1" PKG_DIR="$2" PKG_NAME="$3" BIN_SUBPATH="$4" DEST="$5" T_ARCH="$6"
+              local BIN_BASENAME
+              BIN_BASENAME=$(basename "$BIN_SUBPATH")
+              # Resolve DEST to absolute path BEFORE any cd, so cp works correctly regardless of cwd
+              local ABS_DEST
+              ABS_DEST="$(cd "$(dirname "$DEST")" 2>/dev/null && pwd)/$(basename "$DEST")" || \
+                ABS_DEST="$(pwd)/$DEST"
               local DEB_NAME
               DEB_NAME=$(curl -sf "${TERMUX_POOL}/${POOL_L}/${PKG_DIR}/" \
-                | grep -oP 'href="\K[^"]*'${T_ARCH}'[^"]*\.deb' \
+                | grep -oP 'href="\K[^"]*'"${T_ARCH}"'[^"]*\.deb' \
                 | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
               if [ -z "$DEB_NAME" ]; then
                 echo "      ⚠️  $PKG_NAME not found for $T_ARCH, skipping"
-                return 0
+                return 1
               fi
               curl -fsSL "${TERMUX_POOL}/${POOL_L}/${PKG_DIR}/${DEB_NAME}" -o "/tmp/${PKG_NAME}_${T_ARCH}.deb"
               local EXDIR="/tmp/deb_${PKG_NAME}_${T_ARCH}"
-              mkdir -p "$EXDIR"
-              cd "$EXDIR"
+              rm -rf "$EXDIR" && mkdir -p "$EXDIR"
+              pushd "$EXDIR" > /dev/null
               ar x "/tmp/${PKG_NAME}_${T_ARCH}.deb"
               local DATA_TAR
               DATA_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+              local FOUND=0
               if [ -n "$DATA_TAR" ]; then
                 tar -xf "$DATA_TAR" 2>/dev/null || true
                 local BIN_PATH
-                BIN_PATH=$(find . -path "*/${BIN_SUBPATH}" -type f | head -1)
+                # Try exact subpath first, then basename fallback (handles different Termux prefix layouts)
+                BIN_PATH=$(find . -path "*/${BIN_SUBPATH}" -type f 2>/dev/null | head -1)
+                if [ -z "$BIN_PATH" ]; then
+                  BIN_PATH=$(find . -name "${BIN_BASENAME}" -type f 2>/dev/null \
+                    | grep -v 'dbgsym\|include\|share/man\|\.h$' | head -1)
+                fi
                 if [ -n "$BIN_PATH" ]; then
-                  mkdir -p "$(dirname "$DEST")"
-                  cp "$BIN_PATH" "$DEST"
-                  chmod 755 "$DEST"
+                  mkdir -p "$(dirname "$ABS_DEST")"
+                  cp "$BIN_PATH" "$ABS_DEST"
+                  chmod 755 "$ABS_DEST"
                   echo "      ✅ $PKG_NAME bundled"
+                  FOUND=1
                 else
-                  echo "      ⚠️  ${BIN_SUBPATH} not found in $PKG_NAME deb"
+                  echo "      ⚠️  ${BIN_BASENAME} not found in $PKG_NAME deb"
                 fi
               fi
-              cd "$OLDPWD"
+              popd > /dev/null
               rm -rf "$EXDIR" "/tmp/${PKG_NAME}_${T_ARCH}.deb"
+              return $((1 - FOUND))
             }
 
             # ── git ──────────────────────────────────────────────────────────
-            extract_termux_bin "g" "git" "git" "usr/bin/git" "$BIN_DEST/git" "$TERMUX_ARCH"
+            extract_termux_bin "g" "git" "git" "usr/bin/git" "$BIN_DEST/git" "$TERMUX_ARCH" || true
 
             # ── ripgrep ──────────────────────────────────────────────────────
             extract_termux_bin "r" "ripgrep" "ripgrep" "usr/bin/rg" "$BIN_DEST/rg" "$TERMUX_ARCH"
@@ -385,7 +401,9 @@ jobs:
             fi
 
             # ── python3 ──────────────────────────────────────────────────────
-            extract_termux_bin "p" "python" "python" "usr/bin/python3" "$BIN_DEST/python3" "$TERMUX_ARCH"
+            # Termux package dir is python3 (not python)
+            extract_termux_bin "p" "python3" "python3" "usr/bin/python3" "$BIN_DEST/python3" "$TERMUX_ARCH" || \
+              extract_termux_bin "p" "python" "python3" "usr/bin/python3" "$BIN_DEST/python3" "$TERMUX_ARCH" || true
             if [ -f "$BIN_DEST/python3" ] && [ ! -f "$BIN_DEST/python" ]; then
               ln -sf python3 "$BIN_DEST/python"
             fi
@@ -402,22 +420,111 @@ jobs:
             extract_termux_bin "f" "ffmpeg" "ffprobe" "usr/bin/ffprobe" "$BIN_DEST/ffprobe" "$TERMUX_ARCH"
 
             # ── imagemagick (convert, identify, mogrify) ─────────────────────
-            extract_termux_bin "i" "imagemagick" "imagemagick" "usr/bin/convert" "$BIN_DEST/convert" "$TERMUX_ARCH"
-            extract_termux_bin "i" "imagemagick" "imagemagick-identify" "usr/bin/identify" "$BIN_DEST/identify" "$TERMUX_ARCH"
-            extract_termux_bin "i" "imagemagick" "imagemagick-mogrify" "usr/bin/mogrify" "$BIN_DEST/mogrify" "$TERMUX_ARCH"
+            # All binaries are in the single 'imagemagick' package
+            extract_termux_bin "i" "imagemagick" "imagemagick" "usr/bin/convert" "$BIN_DEST/convert" "$TERMUX_ARCH" || true
+            if [ -f "$BIN_DEST/convert" ]; then
+              # identify and mogrify are also in the same deb — extract directly
+              _IM_EXDIR="/tmp/deb_im_reuse_${TERMUX_ARCH}"
+              _IM_DEB_NAME=$(curl -sf "${TERMUX_POOL}/i/imagemagick/" \
+                | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
+                | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
+              if [ -n "$_IM_DEB_NAME" ]; then
+                curl -fsSL "${TERMUX_POOL}/i/imagemagick/${_IM_DEB_NAME}" -o "/tmp/im_${TERMUX_ARCH}.deb"
+                rm -rf "$_IM_EXDIR" && mkdir -p "$_IM_EXDIR"
+                cd "$_IM_EXDIR"
+                ar x "/tmp/im_${TERMUX_ARCH}.deb"
+                _IM_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+                if [ -n "$_IM_TAR" ]; then
+                  tar -xf "$_IM_TAR" 2>/dev/null || true
+                  for _BIN in identify mogrify magick; do
+                    _BP=$(find . -name "$_BIN" -type f 2>/dev/null | grep -v 'man\|doc' | head -1)
+                    if [ -n "$_BP" ]; then
+                      cp "$_BP" "$OLDPWD/$BIN_DEST/$_BIN"
+                      chmod 755 "$OLDPWD/$BIN_DEST/$_BIN"
+                      echo "      ✅ imagemagick-${_BIN} bundled"
+                    fi
+                  done
+                fi
+                cd "$OLDPWD"
+                rm -rf "$_IM_EXDIR" "/tmp/im_${TERMUX_ARCH}.deb"
+              fi
+            else
+              echo "      ⚠️  imagemagick not available, skipping"
+            fi
 
             # ── sox + soxi ───────────────────────────────────────────────────
-            extract_termux_bin "s" "sox" "sox" "usr/bin/sox" "$BIN_DEST/sox" "$TERMUX_ARCH"
-            extract_termux_bin "s" "sox" "sox-soxi" "usr/bin/soxi" "$BIN_DEST/soxi" "$TERMUX_ARCH"
+            # Both sox and soxi binaries are in the main 'sox' package
+            extract_termux_bin "s" "sox" "sox" "usr/bin/sox" "$BIN_DEST/sox" "$TERMUX_ARCH" || true
+            if [ ! -f "$BIN_DEST/soxi" ] && [ -f "$BIN_DEST/sox" ]; then
+              # soxi is also in the same sox deb — re-extract
+              _SOX_DEB=$(curl -sf "${TERMUX_POOL}/s/sox/" \
+                | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
+                | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
+              if [ -n "$_SOX_DEB" ]; then
+                curl -fsSL "${TERMUX_POOL}/s/sox/${_SOX_DEB}" -o "/tmp/sox2_${TERMUX_ARCH}.deb"
+                _SOX_DIR="/tmp/deb_sox2_${TERMUX_ARCH}"
+                rm -rf "$_SOX_DIR" && mkdir -p "$_SOX_DIR"
+                cd "$_SOX_DIR"
+                ar x "/tmp/sox2_${TERMUX_ARCH}.deb"
+                _SOX_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+                if [ -n "$_SOX_TAR" ]; then
+                  tar -xf "$_SOX_TAR" 2>/dev/null || true
+                  _SOXI=$(find . -name "soxi" -type f 2>/dev/null | head -1)
+                  if [ -n "$_SOXI" ]; then
+                    cp "$_SOXI" "$OLDPWD/$BIN_DEST/soxi"
+                    chmod 755 "$OLDPWD/$BIN_DEST/soxi"
+                    echo "      ✅ sox-soxi bundled"
+                  else
+                    # soxi is often a symlink to sox in newer versions
+                    ln -sf sox "$OLDPWD/$BIN_DEST/soxi"
+                    echo "      ✅ sox-soxi (symlink to sox)"
+                  fi
+                fi
+                cd "$OLDPWD"
+                rm -rf "$_SOX_DIR" "/tmp/sox2_${TERMUX_ARCH}.deb"
+              fi
+            fi
 
             # ── yt-dlp ───────────────────────────────────────────────────────
-            extract_termux_bin "y" "yt-dlp" "yt-dlp" "usr/bin/yt-dlp" "$BIN_DEST/yt-dlp" "$TERMUX_ARCH"
+            # yt-dlp in Termux is a Python script (arch-independent)
+            # Pool letter 'y', dir 'yt-dlp', binary 'usr/bin/yt-dlp'
+            extract_termux_bin "y" "yt-dlp" "yt-dlp" "usr/bin/yt-dlp" "$BIN_DEST/yt-dlp" "$TERMUX_ARCH" || {
+              # Fallback: yt-dlp may be arch-independent, try without arch filter
+              _YT_DEB=$(curl -sf "${TERMUX_POOL}/y/yt-dlp/" \
+                | grep -oP 'href="\K[^"]*\.deb' \
+                | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
+              if [ -n "$_YT_DEB" ]; then
+                curl -fsSL "${TERMUX_POOL}/y/yt-dlp/${_YT_DEB}" -o "/tmp/ytdlp.deb"
+                _YT_DIR="/tmp/deb_ytdlp"
+                rm -rf "$_YT_DIR" && mkdir -p "$_YT_DIR"
+                cd "$_YT_DIR"
+                ar x "/tmp/ytdlp.deb"
+                _YT_TAR=$(ls data.tar.* 2>/dev/null | head -1)
+                if [ -n "$_YT_TAR" ]; then
+                  tar -xf "$_YT_TAR" 2>/dev/null || true
+                  _YT=$(find . -name "yt-dlp" -type f 2>/dev/null | head -1)
+                  if [ -n "$_YT" ]; then
+                    cp "$_YT" "$OLDPWD/$BIN_DEST/yt-dlp"
+                    chmod 755 "$OLDPWD/$BIN_DEST/yt-dlp"
+                    echo "      ✅ yt-dlp bundled (fallback)"
+                  fi
+                fi
+                cd "$OLDPWD"
+                rm -rf "$_YT_DIR" "/tmp/ytdlp.deb"
+              else
+                echo "      ⚠️  yt-dlp not available in Termux pool, skipping (optional)"
+              fi
+            }
 
             # ── nano ─────────────────────────────────────────────────────────
             extract_termux_bin "n" "nano" "nano" "usr/bin/nano" "$BIN_DEST/nano" "$TERMUX_ARCH"
 
             # ── vim ──────────────────────────────────────────────────────────
-            extract_termux_bin "v" "vim" "vim" "usr/bin/vim" "$BIN_DEST/vim" "$TERMUX_ARCH"
+            # In Termux: vim binary is vim.basic inside vim-runtime package (pool v/vim-runtime/)
+            # The basename fallback in extract_termux_bin will find vim.basic and copy as vim
+            extract_termux_bin "v" "vim-runtime" "vim" "usr/bin/vim.basic" "$BIN_DEST/vim" "$TERMUX_ARCH" || \
+              extract_termux_bin "v" "vim" "vim" "usr/bin/vim" "$BIN_DEST/vim" "$TERMUX_ARCH" || \
+              echo "      ⚠️  vim not available, skipping (optional)"
 
             # ── pv (pipe viewer) ─────────────────────────────────────────────
             extract_termux_bin "p" "pv" "pv" "usr/bin/pv" "$BIN_DEST/pv" "$TERMUX_ARCH"
@@ -453,7 +560,15 @@ jobs:
             extract_termux_bin "p" "procps" "procps-pkill" "usr/bin/pkill" "$BIN_DEST/pkill" "$TERMUX_ARCH"
 
             # ── exiftool ─────────────────────────────────────────────────────
-            extract_termux_bin "p" "perl-image-exiftool" "exiftool" "usr/bin/exiftool" "$BIN_DEST/exiftool" "$TERMUX_ARCH"
+            # Termux package: libimage-exiftool-perl (pool l/) or perl-image-exiftool (pool p/)
+            # Binary path: usr/bin/exiftool
+            extract_termux_bin "l" "libimage-exiftool-perl" "exiftool" "usr/bin/exiftool" "$BIN_DEST/exiftool" "$TERMUX_ARCH" || true
+            if [ ! -f "$BIN_DEST/exiftool" ]; then
+              extract_termux_bin "p" "perl-image-exiftool" "exiftool" "usr/bin/exiftool" "$BIN_DEST/exiftool" "$TERMUX_ARCH" || true
+            fi
+            if [ ! -f "$BIN_DEST/exiftool" ]; then
+              echo "      ⚠️  exiftool not available for $TERMUX_ARCH, skipping (optional)"
+            fi
 
             # ── openssh ──────────────────────────────────────────────────────
             extract_termux_bin "o" "openssh" "openssh" "usr/bin/ssh" "$BIN_DEST/ssh" "$TERMUX_ARCH"
@@ -464,8 +579,8 @@ jobs:
             extract_termux_bin "s" "strace" "strace" "usr/bin/strace" "$BIN_DEST/strace" "$TERMUX_ARCH"
 
             echo ""
-            echo "    📋 bin/ inventory ($ABI): $(ls "$BIN_DEST/" | wc -l) files"
-            ls "$BIN_DEST/" | awk '{print "      " $0}' || true
+            echo "    📋 bin/ inventory ($ABI): $(find "$BIN_DEST/" -maxdepth 1 ! -type d | wc -l) files"
+            ls -la "$BIN_DEST/" | tail -n +4 | awk '{print "      " $0}' || true
 
             # ── Launcher scripts ──────────────────────────────────────────────
             mkdir -p "$TOOLS_DIR/$ABI/launcher"
@@ -585,15 +700,16 @@ jobs:
 
             # Cek isi tarball — harus ada node, claude-code, code-server
             echo "  🔍 Checking tarball contents for $ABI..."
-            HAS_NODE=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "/$ABI/node$" || echo "0")
-            HAS_CC=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "@anthropic-ai/claude-code/cli.js" || echo "0")
-            HAS_CS=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "code-server" || echo "0")
-            HAS_GIT=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/git$" || echo "0")
-            HAS_PYTHON=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/python3$" || echo "0")
-            HAS_BUSYBOX=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/busybox$" || echo "0")
-            HAS_CURL=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/curl$" || echo "0")
-            HAS_FFMPEG=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/ffmpeg$" || echo "0")
-            HAS_JQ=$(tar -tzf "$TARBALL" 2>/dev/null | grep -c "bin/jq$" || echo "0")
+            # Use arithmetic to avoid "[: 0\n: integer expression expected" from grep -c + $()
+            HAS_NODE=0;    tar -tzf "$TARBALL" 2>/dev/null | grep -q "${ABI}/node$"                       && HAS_NODE=1    || true
+            HAS_CC=0;      tar -tzf "$TARBALL" 2>/dev/null | grep -q "@anthropic-ai/claude-code/cli.js"   && HAS_CC=1      || true
+            HAS_CS=0;      tar -tzf "$TARBALL" 2>/dev/null | grep -q "code-server"                        && HAS_CS=1      || true
+            HAS_GIT=0;     tar -tzf "$TARBALL" 2>/dev/null | grep -q "bin/git$"                           && HAS_GIT=1     || true
+            HAS_PYTHON=0;  tar -tzf "$TARBALL" 2>/dev/null | grep -q "bin/python3$"                       && HAS_PYTHON=1  || true
+            HAS_BUSYBOX=0; tar -tzf "$TARBALL" 2>/dev/null | grep -q "bin/busybox$"                       && HAS_BUSYBOX=1 || true
+            HAS_CURL=0;    tar -tzf "$TARBALL" 2>/dev/null | grep -q "bin/curl$"                          && HAS_CURL=1    || true
+            HAS_FFMPEG=0;  tar -tzf "$TARBALL" 2>/dev/null | grep -q "bin/ffmpeg$"                        && HAS_FFMPEG=1  || true
+            HAS_JQ=0;      tar -tzf "$TARBALL" 2>/dev/null | grep -q "bin/jq$"                            && HAS_JQ=1      || true
             [ "$HAS_NODE" -gt 0 ]    && echo "    ✅ node"       || echo "    ⚠️  node NOT found"
             [ "$HAS_CC" -gt 0 ]      && echo "    ✅ claude-code" || echo "    ⚠️  claude-code NOT found"
             [ "$HAS_CS" -gt 0 ]      && echo "    ✅ code-server" || echo "    ⚠️  code-server NOT found"

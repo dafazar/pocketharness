@@ -1622,7 +1622,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         if (lastAi.content.isNotEmpty) _autoPushCodeBlocksToArtifact(lastAi.content);
         // Smart file output detection
         if (lastAi.content.isNotEmpty) {
-          _detectAndSetFileEditResult(payloads, lastAi.content);
+          _detectAndSetFileEditResult(const [], lastAi.content);
         }
       },
       onError: (Object e) {
