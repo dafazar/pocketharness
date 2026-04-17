@@ -5,17 +5,22 @@
 // Singleton dengan semua member yang dibutuhkan:
 //   • instance singleton
 //   • isModelLoaded (bool getter)
+//   • isGenerating (bool getter)                ← DITAMBAHKAN
 //   • status & statusStream (ModelStatus)
-//   • loadProgressStream (Stream<double>)      ← DITAMBAHKAN
+//   • loadProgressStream (Stream<double>)
 //   • currentModel (LlamaModelInfo?)
-//   • lastLoadedModelPath (String?)             ← DITAMBAHKAN
-//   • lastLoadedModelId (String?)               ← DITAMBAHKAN
-//   • initialize()                              ← DITAMBAHKAN
-//   • loadSettings()                            ← DITAMBAHKAN
-//   • loadModel(...) → Future<bool>             ← DIUBAH (void → bool)
+//   • lastLoadedModelPath (String?)
+//   • lastLoadedModelId (String?)
+//   • lastLoadError (String?)                   ← DITAMBAHKAN
+//   • lastMetrics (ModelPerformanceMetrics?)    ← DITAMBAHKAN
+//   • initialize()
+//   • loadSettings()
+//   • loadModel(...) → Future<bool>
 //   • releaseModel()
-//   • getAvailableMemoryMb() → Future<int>      ← DITAMBAHKAN
-//   • generateStream({messages, config, systemPromptOverride}) ← DIUPDATE
+//   • getAvailableMemoryMb() → Future<int>
+//   • generateStream({messages, config, systemPromptOverride})
+//   • stopGeneration()                          ← DITAMBAHKAN
+//   • getContextUsagePercent(messages) → double ← DITAMBAHKAN
 //   • saveSettings()
 // =============================================================================
 
@@ -40,10 +45,12 @@ class LlamaService {
   static const _keyLastModelId   = 'llama_last_model_id';
 
   // ── Internal state ─────────────────────────────────────────────────────────
-  ModelStatus      _status       = ModelStatus.notLoaded;
-  LlamaModelInfo?  _currentModel;
-  String?          _lastLoadedModelPath;
-  String?          _lastLoadedModelId;
+  ModelStatus               _status             = ModelStatus.notLoaded;
+  LlamaModelInfo?           _currentModel;
+  String?                   _lastLoadedModelPath;
+  String?                   _lastLoadedModelId;
+  String?                   _lastLoadError;
+  ModelPerformanceMetrics?  _lastMetrics;
 
   final StreamController<ModelStatus> _statusCtrl =
       StreamController<ModelStatus>.broadcast();
@@ -54,14 +61,20 @@ class LlamaService {
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  ModelStatus         get status             => _status;
-  Stream<ModelStatus> get statusStream       => _statusCtrl.stream;
-  Stream<double>      get loadProgressStream => _loadProgressCtrl.stream;
-  bool                get isModelLoaded =>
+  ModelStatus              get status             => _status;
+  Stream<ModelStatus>      get statusStream       => _statusCtrl.stream;
+  Stream<double>           get loadProgressStream => _loadProgressCtrl.stream;
+  bool                     get isModelLoaded =>
       _status == ModelStatus.loaded || _status == ModelStatus.generating;
-  LlamaModelInfo?     get currentModel        => _currentModel;
-  String?             get lastLoadedModelPath  => _lastLoadedModelPath;
-  String?             get lastLoadedModelId    => _lastLoadedModelId;
+  /// True selama inferensi sedang berjalan.
+  bool                     get isGenerating       => _status == ModelStatus.generating;
+  LlamaModelInfo?          get currentModel       => _currentModel;
+  String?                  get lastLoadedModelPath => _lastLoadedModelPath;
+  String?                  get lastLoadedModelId   => _lastLoadedModelId;
+  /// Pesan error terakhir dari loadModel (null jika belum pernah error).
+  String?                  get lastLoadError       => _lastLoadError;
+  /// Metrik performa dari sesi generateStream terakhir (null jika belum ada).
+  ModelPerformanceMetrics? get lastMetrics         => _lastMetrics;
 
   // ── initialize ─────────────────────────────────────────────────────────────
   // Dipanggil sekali saat app start (setelah ModelManagerService.load()).
@@ -166,16 +179,19 @@ class LlamaService {
 
       _emitProgress(1.0);
       _setStatus(ModelStatus.loaded);
+      _lastLoadError = null;
       debugPrint('[LlamaService] ✅ Model loaded: ${modelInfo.name}');
       return true;
 
     } on PlatformException catch (e) {
       debugPrint('[LlamaService] ❌ PlatformException: ${e.code} ${e.message}');
+      _lastLoadError = '${e.code}: ${e.message}';
       _setStatus(ModelStatus.error);
       _emitProgress(0.0);
       return false;
     } catch (e) {
       debugPrint('[LlamaService] ❌ Error: $e');
+      _lastLoadError = e.toString();
       _setStatus(ModelStatus.error);
       _emitProgress(0.0);
       return false;
@@ -233,6 +249,8 @@ class LlamaService {
 
     _setStatus(ModelStatus.generating);
     debugPrint('[LlamaService] generateStream — ${messages.length} messages');
+    final genStartMs = DateTime.now().millisecondsSinceEpoch;
+    int tokenCount = 0;
 
     // Gabungkan system prompt override + messages
     final effectiveMessages = [
@@ -288,6 +306,7 @@ class LlamaService {
       });
 
       await for (final token in controller.stream) {
+        tokenCount++;
         yield token;
       }
 
@@ -298,7 +317,50 @@ class LlamaService {
       await sub?.cancel();
       if (!controller.isClosed) await controller.close();
       if (_status == ModelStatus.generating) _setStatus(ModelStatus.loaded);
+      // Rekam metrik performa sesi ini
+      final elapsedMs = DateTime.now().millisecondsSinceEpoch - genStartMs;
+      if (tokenCount > 0 && elapsedMs > 0) {
+        _lastMetrics = ModelPerformanceMetrics(
+          loadTimeMs: 0,
+          promptEvalMs: 0,
+          evalMs: elapsedMs,
+          promptTokens: 0,
+          evalTokens: tokenCount,
+          tokensPerSecond: tokenCount / (elapsedMs / 1000.0),
+          peakMemoryMb: 0,
+        );
+      }
     }
+  }
+
+  // ── stopGeneration ─────────────────────────────────────────────────────────
+  // Menghentikan inferensi yang sedang berjalan via platform channel.
+
+  Future<void> stopGeneration() async {
+    debugPrint('[LlamaService] stopGeneration()');
+    try {
+      await _platform.invokeMethod('stopGeneration');
+    } catch (e) {
+      debugPrint('[LlamaService] stopGeneration error (non-fatal): $e');
+    } finally {
+      if (_status == ModelStatus.generating) _setStatus(ModelStatus.loaded);
+    }
+  }
+
+  // ── getContextUsagePercent ─────────────────────────────────────────────────
+  // Estimasi lokal penggunaan context window (0–100).
+  // Menggunakan jumlah karakter sebagai proxy token count.
+
+  double getContextUsagePercent(List<ChatMessage> messages) {
+    final contextSize = _currentModel?.contextLength ??
+        LlamaModelConfig.defaultConfig.contextSize;
+    // Estimasi: ~4 karakter per token
+    final estimatedTokens = messages.fold<int>(
+      0,
+      (sum, m) => sum + (m.content.length / 4).ceil(),
+    );
+    final percent = (estimatedTokens / contextSize) * 100.0;
+    return percent.clamp(0.0, 100.0);
   }
 
   // ── saveSettings ───────────────────────────────────────────────────────────
