@@ -2333,6 +2333,9 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
 
     return StatefulBuilder(
       builder: (ctx, setLocal) {
+        // FIX 2: Selalu refresh _cfg dari service agar tidak stale setelah import
+        _cfg = widget.svc.offline;
+
         final loadedPath  = LlamaService.instance.currentModel?.path ?? offlineSvc.loadedModelPath;
         final isReady     = LlamaService.instance.isModelLoaded;
         final isLoading   = LlamaService.instance.status == ModelStatus.loading || _isLoadingModel;
@@ -2367,47 +2370,69 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
                   setState(() {});
                 },
               )
-            else
-              FilledButton.icon(
-                icon: isLoading
-                    ? const SizedBox(width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2,
-                          color: Colors.white))
-                    : const Icon(Icons.play_arrow_rounded),
-                label: Text(isLoading ? 'Memuat...' : 'Load Model Aktif'),
-                onPressed: isLoading || _cfg.activeModelPath.isEmpty ? null : () async {
-                  setLocal(() => _isLoadingModel = true);
-                  final modelInfo = LlamaModelInfo(
-                    id            : _cfg.activeModelPath.hashCode.toString(),
-                    name          : _cfg.activeModelPath.split('/').last,
-                    path          : _cfg.activeModelPath,
-                    sizeBytes     : 0,
-                    format        : 'gguf',
-                    quantization  : QuantizationType.unknown,
-                    estimatedRamMb: 0,
-                    contextLength : _cfg.contextSize,
-                    isDownloaded  : true,
-                  );
-                  final config = LlamaModelConfig(
-                    contextSize      : _cfg.contextSize,
-                    gpuLayers        : _cfg.gpuLayers,
-                    nBatch           : 512,
-                    nThreads         : 4,
-                    useFlashAttention: false,
-                    useMemoryLock    : false,
-                    ropeFreqBase     : 0.0,
-                    ropeFreqScale    : 0.0,
-                    chatTemplate     : ChatTemplate.auto,
-                  );
-                  await LlamaService.instance.loadModel(modelInfo, config: config);
-                  // Mirror state back to OfflineAiService for UI indicators
-                  if (LlamaService.instance.isModelLoaded) {
-                    offlineSvc.syncFromLlamaService(_cfg.activeModelPath);
-                  }
-                  setLocal(() => _isLoadingModel = false);
-                  setState(() {});
-                },
-              ),
+            else ...[
+              // FIX 3: Jika activeModelPath kosong tapi ada model lokal,
+              // gunakan model pertama yang tersedia sebagai fallback.
+              Builder(builder: (ctx2) {
+                String targetPath = _cfg.activeModelPath;
+                if (targetPath.isEmpty && localModels.isNotEmpty) {
+                  targetPath = localModels.first.path;
+                }
+                final canLoad = !isLoading && targetPath.isNotEmpty;
+
+                return FilledButton.icon(
+                  icon: isLoading
+                      ? const SizedBox(width: 16, height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2,
+                            color: Colors.white))
+                      : const Icon(Icons.play_arrow_rounded),
+                  label: Text(isLoading ? 'Memuat...' : 'Load Model Aktif'),
+                  onPressed: canLoad ? () async {
+                    setLocal(() => _isLoadingModel = true);
+
+                    // Jika pakai fallback model pertama, simpan sebagai aktif
+                    if (_cfg.activeModelPath.isEmpty && localModels.isNotEmpty) {
+                      final fallback = localModels.first;
+                      await ModelManagerService.instance.setActive(fallback.id);
+                      final svc = AiSourceSettingsService.instance;
+                      final updated = svc.offline.copyWith(activeModelPath: fallback.path);
+                      svc.saveOffline(updated);
+                      _cfg = updated;
+                      targetPath = fallback.path;
+                    }
+
+                    final modelInfo = LlamaModelInfo(
+                      id            : targetPath.hashCode.toString(),
+                      name          : targetPath.split('/').last,
+                      path          : targetPath,
+                      sizeBytes     : 0,
+                      format        : 'gguf',
+                      quantization  : QuantizationType.unknown,
+                      estimatedRamMb: 0,
+                      contextLength : _cfg.contextSize,
+                      isDownloaded  : true,
+                    );
+                    final config = LlamaModelConfig(
+                      contextSize      : _cfg.contextSize,
+                      gpuLayers        : _cfg.gpuLayers,
+                      nBatch           : 512,
+                      nThreads         : 4,
+                      useFlashAttention: false,
+                      useMemoryLock    : false,
+                      ropeFreqBase     : 0.0,
+                      ropeFreqScale    : 0.0,
+                      chatTemplate     : ChatTemplate.auto,
+                    );
+                    await LlamaService.instance.loadModel(modelInfo, config: config);
+                    if (LlamaService.instance.isModelLoaded) {
+                      offlineSvc.syncFromLlamaService(targetPath);
+                    }
+                    setLocal(() => _isLoadingModel = false);
+                    setState(() {});
+                  } : null,
+                );
+              }),
+            ],
 
             const SizedBox(height: 24),
 

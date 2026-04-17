@@ -298,7 +298,11 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
       // Perbarui state isLoaded di semua model
       await _service.scanLocalModels();
     } else {
-      _showSnackbar('❌ Gagal memuat ${model.name}', color: c.wrong);
+      final errDetail = LlamaService.instance.lastLoadError;
+      final msg = errDetail != null
+          ? '❌ Gagal memuat ${model.name}: $errDetail'
+          : '❌ Gagal memuat ${model.name}';
+      _showSnackbar(msg, color: c.wrong);
     }
   }
 
@@ -543,10 +547,11 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
         svc.saveOffline(svc.offline.copyWith(activeModelPath: model.path));
         _showSnackbar('✅ ${model.name} siap digunakan!', color: c.correct);
       } else {
-        _showSnackbar(
-          '⚠️ ${model.name} diimport tapi gagal dimuat. Coba muat manual dari daftar.',
-          color: c.warning,
-        );
+        final errDetail = LlamaService.instance.lastLoadError;
+        final warnMsg = errDetail != null
+            ? '⚠️ ${model.name} diimport tapi gagal dimuat: $errDetail'
+            : '⚠️ ${model.name} diimport tapi gagal dimuat. Coba muat manual dari daftar.';
+        _showSnackbar(warnMsg, color: c.warning);
       }
     } else {
       _showSnackbar(
@@ -830,7 +835,7 @@ class _LocalModelsTab extends StatelessWidget {
                       final model = models[i];
                       return _LocalModelCard(
                         model      : model,
-                        onLoad     : () => onLoadModel(model),
+                        onLoad     : (_) => onLoadModel(model),
                         onDelete   : () => onDeleteModel(model),
                       );
                     },
@@ -919,7 +924,7 @@ class _RamHeader extends StatelessWidget {
 
 class _LocalModelCard extends StatefulWidget {
   final LocalModelInfo model;
-  final VoidCallback onLoad;
+  final Future<void> Function(LocalModelInfo) onLoad;
   final VoidCallback onDelete;
 
   const _LocalModelCard({
@@ -940,7 +945,7 @@ class _LocalModelCardState extends State<_LocalModelCard> {
     if (_isLoading) return;
     if (mounted) setState(() => _isLoading = true);
     try {
-      await Future.microtask(widget.onLoad);
+      await widget.onLoad(widget.model);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

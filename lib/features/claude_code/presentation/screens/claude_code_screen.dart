@@ -402,7 +402,7 @@ class _ClaudeCodeScreenState extends ConsumerState<ClaudeCodeScreen> {
         IconButton(
           icon: const Icon(Icons.settings_outlined, color: Color(0xFF999999)),
           tooltip: 'Model settings',
-          onPressed: () => context.go('/settings/offline-ai'),
+          onPressed: () => context.push('/offline-ai'),
         ),
       ],
     );
@@ -662,7 +662,7 @@ class _ClaudeCodeScreenState extends ConsumerState<ClaudeCodeScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        onPressed: () => context.go('/settings/offline-ai'),
+                        onPressed: () => context.push('/offline-ai'),
                         child: const Text('Open Model Settings'),
                       ),
                     ],
