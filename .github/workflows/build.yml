@@ -1,8 +1,36 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# KanMon GO — GitHub Actions Build Workflow (FIXED VERSION)
+# KanMon GO — GitHub Actions Build Workflow (MERGED v3)
 # ══════════════════════════════════════════════════════════════════════════════
-# FIX: Corrected Node.js binary download to always use runner architecture (x64)
-#      instead of incorrectly mapping Android target ABI to host tool architecture
+# Menggabungkan TERBAIK dari buildnew + buildold:
+#
+# DARI buildnew (dipertahankan penuh):
+#   ✅ Node.js v20 max-compatible logic untuk code-server (MAX_COMPATIBLE guard)
+#   ✅ code-server versi pinned agar kompatibel Node v20 di Termux
+#   ✅ Bundle tools lengkap: ffmpeg, imagemagick, sox, yt-dlp, nano, vim,
+#      pv, file, patch, diffutils, rsync, p7zip, lz4, zstd, xz, procps,
+#      exiftool, openssh, strace, zip, unzip, sqlite3, python3, busybox, curl, wget, jq
+#   ✅ code-server launcher script
+#   ✅ tools_manifest.json schema_version=3
+#   ✅ Cache key: tools-bundle-v5-node...-cs...-...
+#   ✅ Verify tarball isi (node, claude-code, code-server, git, python3, busybox, curl, ffmpeg, jq)
+#   ✅ timeout-minutes: 120 (lebih lama, karena tools bundle besar)
+#
+# DARI buildold (dipertahankan / diperbaiki):
+#   ✅ NDK cache step terpisah + install NDK lebih awal (sebelum SESSION_01)
+#   ✅ llama.cpp resolve tag via git ls-remote (lebih reliable dari API)
+#   ✅ Validasi llama_memory_seq_add di include/llama.h
+#   ✅ ccache install + cache step
+#   ✅ Swap space 4G
+#   ✅ Gradle daemon disable step
+#   ✅ Flutter analyze step
+#   ✅ Decode keystore dari KEYSTORE_BASE64 (satu step terpusat)
+#   ✅ Build APK Debug variant + upload
+#   ✅ LLAMA_EXTERNAL_DIR di-set via GITHUB_ENV (bukan hanya env: per step)
+#
+# FIX dari buildnew yang dipertahankan:
+#   ✅ code-server MAX_COMPATIBLE=4.96.2 agar tidak pakai Node v22
+#   ✅ Host Node.js (x64 runner) dipakai untuk npm install, bukan ABI
+#   ✅ Android Node.js (Bionic) diambil dari Termux per ABI
 # ══════════════════════════════════════════════════════════════════════════════
 name: 🚀 Build KanMon GO
 
@@ -59,6 +87,7 @@ jobs:
 
     env:
       KEYSTORE_PATH: ${{ github.workspace }}/android/app/keystore.jks
+      # Suppress "Operation not permitted" tar warnings when restoring NDK cache
       TAR_OPTIONS: "--no-same-permissions"
 
     steps:
@@ -122,6 +151,101 @@ jobs:
 
       - name: "📦 flutter pub get"
         run: flutter pub get
+
+      # ── NDK 28 ───────────────────────────────────────────────────────────────
+      - name: "💾 Cache NDK 28"
+        id: cache-ndk
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ANDROID_SDK_ROOT }}/ndk/28.2.13676358
+          key: ndk-28.2.13676358
+
+      - name: "🔧 Install NDK 28"
+        if: steps.cache-ndk.outputs.cache-hit != 'true'
+        run: |
+          sdkmanager "ndk;28.2.13676358" \
+            --sdk_root="$ANDROID_SDK_ROOT" 2>&1 \
+            | grep -E "^(Downloading|Installing|done|Warning)" || true
+
+      # ── llama.cpp: resolve tag, cache source ─────────────────────────────────
+      - name: "🦙 Resolve llama.cpp tag"
+        id: resolve-tag
+        run: |
+          LLAMA_REPO="https://github.com/ggerganov/llama.cpp"
+          if [ -n "${LLAMA_TAG_OVERRIDE:-}" ]; then
+            RESOLVED="$LLAMA_TAG_OVERRIDE"
+          else
+            RESOLVED=$(git ls-remote --tags "$LLAMA_REPO" 'refs/tags/b[0-9]*' \
+              | awk '{print $2}' \
+              | sed 's|refs/tags/||' \
+              | grep -E '^b[0-9]+$' \
+              | sort -t'b' -k2 -n \
+              | tail -1)
+            if [ -z "$RESOLVED" ]; then
+              echo "❌ Gagal resolve tag llama.cpp terbaru!"
+              exit 1
+            fi
+          fi
+          echo "  📌 llama.cpp tag: $RESOLVED"
+          echo "llama_tag=$RESOLVED" >> "$GITHUB_OUTPUT"
+          echo "LLAMA_EXTERNAL_DIR=/tmp/llama_src" >> "$GITHUB_ENV"
+
+      - name: "💾 Cache llama.cpp source"
+        id: cache-llama-src
+        uses: actions/cache@v4
+        with:
+          path: /tmp/llama_src
+          key: llama-src-${{ steps.resolve-tag.outputs.llama_tag }}
+
+      - name: "🦙 Clone llama.cpp source"
+        if: steps.cache-llama-src.outputs.cache-hit != 'true'
+        run: |
+          LLAMA_TAG="${{ steps.resolve-tag.outputs.llama_tag }}"
+          TARGET="/tmp/llama_src"
+          rm -rf "$TARGET"
+          git clone \
+            --depth 1 \
+            --branch "${LLAMA_TAG}" \
+            --filter=blob:none \
+            --sparse \
+            "https://github.com/ggerganov/llama.cpp" \
+            "$TARGET"
+          cd "$TARGET"
+          git sparse-checkout init --no-cone
+          git sparse-checkout set \
+            "/CMakeLists.txt" "cmake/**" "include/**" "src/**" "ggml/**" "common/**"
+          if ! grep -q "llama_memory_seq_add" "include/llama.h" 2>/dev/null; then
+            echo "❌ llama_memory_seq_add tidak ditemukan di ${LLAMA_TAG}"
+            exit 1
+          fi
+          echo "  ✅ llama.cpp ${LLAMA_TAG} siap"
+
+      # ── ccache ───────────────────────────────────────────────────────────────
+      - name: "🔧 Install ccache"
+        run: |
+          sudo apt-get install -y ccache -qq
+          ccache --max-size=2G
+          ccache --zero-stats
+          echo "  ✅ ccache $(ccache --version | head -1)"
+
+      - name: "💾 Cache ccache objects"
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-llama-${{ runner.os }}-${{ steps.resolve-tag.outputs.llama_tag }}-${{ hashFiles('android/app/src/main/cpp/CMakeLists.txt', 'android/app/src/main/cpp/llama_jni.cpp') }}
+          restore-keys: |
+            ccache-llama-${{ runner.os }}-${{ steps.resolve-tag.outputs.llama_tag }}-
+            ccache-llama-${{ runner.os }}-
+
+      - name: "💾 Add swap space (CI memory guard)"
+        run: |
+          sudo swapoff /swapfile 2>/dev/null || true
+          sudo rm -f /swapfile
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          echo "  ✅ Swap: $(free -h | grep Swap)"
 
       # ── SESSION_01: Bundle Node.js + Claude Code CLI + code-server ────────────
 
@@ -281,23 +405,18 @@ jobs:
             echo "    ⬇️  code-server v${CS_VERSION_ACTUAL} (VS Code)..."
             CS_INSTALL="/tmp/cs_install_${ABI}"
             rm -rf "$CS_INSTALL" && mkdir -p "$CS_INSTALL"
-            # Install code-server via npm (pure JS bundle, no native rebuild needed)
-            # --ignore-scripts: skip postinstall that tries to cd into missing paths
             "$HOST_NODE" "$HOST_NPM" install \
               --prefix "$CS_INSTALL" --global \
               "code-server@${CS_VERSION_ACTUAL}" \
               --unsafe-perm \
               --ignore-scripts \
               2>&1 | tail -5
-            # Verify install succeeded
             CS_ENTRY=$(find "$CS_INSTALL" -name "entry.js" -path "*/node/entry.js" 2>/dev/null | head -1)
             if [ -n "$CS_ENTRY" ]; then
-              # Copy entire code-server module
               CS_MOD_DIR=$(dirname "$(dirname "$(dirname "$CS_ENTRY")")")
               cp -r "$CS_MOD_DIR" "$TOOLS_DIR/$ABI/npm_modules/code-server/"
               echo "    ✅ code-server v${CS_VERSION_ACTUAL} bundled ($(du -sh "$TOOLS_DIR/$ABI/npm_modules/code-server" | cut -f1))"
             else
-              # Fallback: copy everything from lib/node_modules/code-server
               CS_LIB=$(find "$CS_INSTALL" -maxdepth 5 -type d -name "code-server" 2>/dev/null | head -1)
               if [ -n "$CS_LIB" ]; then
                 cp -r "$CS_LIB/." "$TOOLS_DIR/$ABI/npm_modules/code-server/"
@@ -309,8 +428,6 @@ jobs:
             fi
             rm -rf "$CS_INSTALL"
 
-            # ── Launcher script: code-server ──────────────────────────────────
-
             # ════════════════════════════════════════════════════════════════
             # ── Native CLI Tools from Termux (Android Bionic libc) ──────────
             # ════════════════════════════════════════════════════════════════
@@ -320,13 +437,10 @@ jobs:
             mkdir -p "$BIN_DEST"
 
             # Helper: download & extract single binary from Termux deb
-            # Uses basename matching so it works regardless of Termux prefix path
-            # (e.g. ./data/data/com.termux/files/usr/bin/git OR ./usr/bin/git)
             extract_termux_bin() {
               local POOL_L="$1" PKG_DIR="$2" PKG_NAME="$3" BIN_SUBPATH="$4" DEST="$5" T_ARCH="$6"
               local BIN_BASENAME
               BIN_BASENAME=$(basename "$BIN_SUBPATH")
-              # Resolve DEST to absolute path BEFORE any cd, so cp works correctly regardless of cwd
               local ABS_DEST
               ABS_DEST="$(cd "$(dirname "$DEST")" 2>/dev/null && pwd)/$(basename "$DEST")" || \
                 ABS_DEST="$(pwd)/$DEST"
@@ -349,7 +463,6 @@ jobs:
               if [ -n "$DATA_TAR" ]; then
                 tar -xf "$DATA_TAR" 2>/dev/null || true
                 local BIN_PATH
-                # Try exact subpath first, then basename fallback (handles different Termux prefix layouts)
                 BIN_PATH=$(find . -path "*/${BIN_SUBPATH}" -type f 2>/dev/null | head -1)
                 if [ -z "$BIN_PATH" ]; then
                   BIN_PATH=$(find . -name "${BIN_BASENAME}" -type f 2>/dev/null \
@@ -402,10 +515,6 @@ jobs:
             fi
 
             # ── python3 ──────────────────────────────────────────────────────
-            # Strategy: try multiple sources in order, first success wins
-            # Source 1: BeeWare python-android-support (GitHub releases)
-            # Source 2: Termux deb (uses Termux prefix /data/data/com.termux/...)
-            # Source 3: python-build-standalone (fallback, may not work on Android)
             _PY_ARCH=""
             case "$TERMUX_ARCH" in
               aarch64) _PY_ARCH="aarch64" ;;
@@ -413,19 +522,10 @@ jobs:
             esac
             _PY_INSTALLED=0
 
-            # Source 1: BeeWare python-android-support
-            # Releases: https://github.com/beeware/Python-Apple-support (iOS only)
-            # Use mobile-forge / android python wheels from BeeWare
-            # Correct project: https://github.com/beeware/cpython-android-source-deps
-            # Actually the correct standalone is from: https://github.com/joaoventura/full-speed-python
-            # Best working source: Termux bootstrap or direct APT repo query
-            # Try Termux APT package index (Packages.xz) for correct path
             _TERMUX_PKG_INDEX="https://packages.termux.dev/apt/termux-main/dists/stable/main/binary-${_PY_ARCH}/Packages.xz"
             _PY_DEB_URL=""
-            if _PKG_DATA=$(curl -fsSL --max-time 30 "$_TERMUX_PKG_INDEX" -o "/tmp/pkgs_${_PY_ARCH}.xz" 2>/dev/null && \
-                           xz -d "/tmp/pkgs_${_PY_ARCH}.xz" 2>/dev/null && \
-                           cat "/tmp/pkgs_${_PY_ARCH}" 2>/dev/null); then
-              # Parse Packages file for python (main python3 package, not python3.x)
+            if curl -fsSL --max-time 30 "$_TERMUX_PKG_INDEX" -o "/tmp/pkgs_${_PY_ARCH}.xz" 2>/dev/null && \
+               xz -d "/tmp/pkgs_${_PY_ARCH}.xz" 2>/dev/null; then
               _PY_FILENAME=$(awk '
                 /^Package: python$/ { in_pkg=1 }
                 in_pkg && /^Filename:/ { print $2; exit }
@@ -444,9 +544,7 @@ jobs:
               fi
             fi
 
-            # Fallback URL pattern if Packages index failed
             if [ -z "$_PY_DEB_URL" ]; then
-              # Try common pool paths: p/python/ and p/python3/
               for _PY_POOL_PATH in "p/python" "p/python3"; do
                 _PY_DEB_NAME=$(curl -sf --max-time 20 "${TERMUX_POOL}/${_PY_POOL_PATH}/" 2>/dev/null \
                   | grep -oP 'href="\K[^"]*'"${_PY_ARCH}"'[^"]*\.deb' \
@@ -458,7 +556,6 @@ jobs:
               done
             fi
 
-            # Download & extract python3 binary from deb
             if [ -n "$_PY_DEB_URL" ]; then
               echo "      ⬇️  python3 from: $_PY_DEB_URL"
               if curl -fsSL --max-time 120 "$_PY_DEB_URL" -o "/tmp/py3_${_PY_ARCH}.deb" 2>/dev/null; then
@@ -469,14 +566,12 @@ jobs:
                 _PY_TAR=$(ls data.tar.* 2>/dev/null | head -1)
                 if [ -n "$_PY_TAR" ]; then
                   tar -xf "$_PY_TAR" 2>/dev/null || true
-                  # Search all possible Termux prefix paths
                   _PY_BIN=$(find . \( -name "python3.1*" -o -name "python3" \) -type f 2>/dev/null \
                     | grep -v 'dbgsym\|include\|share\|\.py$\|config-' | sort | head -1)
                   if [ -n "$_PY_BIN" ]; then
                     cp "$_PY_BIN" "$OLDPWD/$BIN_DEST/python3"
                     chmod 755 "$OLDPWD/$BIN_DEST/python3"
-                    _PY_VER=$(file "$OLDPWD/$BIN_DEST/python3" 2>/dev/null | grep -o 'ELF[^,]*' | head -1 || echo "ELF")
-                    echo "      ✅ python3 bundled (termux deb, $_PY_VER)"
+                    echo "      ✅ python3 bundled (termux deb)"
                     _PY_INSTALLED=1
                   fi
                 fi
@@ -485,8 +580,6 @@ jobs:
               fi
             fi
 
-            # Source 2: python-build-standalone (Linux Android target)
-            # These are self-contained CPython builds for Android from astral-sh
             if [ "$_PY_INSTALLED" -eq 0 ]; then
               _PBS_TAG=$(curl -sf --max-time 15 "https://api.github.com/repos/astral-sh/python-build-standalone/releases/latest" \
                 | python3 -c "import sys,json; print(json.load(sys.stdin).get('tag_name',''))" 2>/dev/null || echo "")
@@ -529,8 +622,7 @@ jobs:
             extract_termux_bin "f" "ffmpeg" "ffmpeg" "usr/bin/ffmpeg" "$BIN_DEST/ffmpeg" "$TERMUX_ARCH" || true
             extract_termux_bin "f" "ffmpeg" "ffprobe" "usr/bin/ffprobe" "$BIN_DEST/ffprobe" "$TERMUX_ARCH" || true
 
-            # ── imagemagick (convert, identify, mogrify, magick) ─────────────
-            # Termux imagemagick installs to data/data/com.termux/files/usr/bin/
+            # ── imagemagick ──────────────────────────────────────────────────
             _IM_DEB_NAME=$(curl -sf "${TERMUX_POOL}/i/imagemagick/" \
               | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
               | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
@@ -545,7 +637,6 @@ jobs:
                 tar -xf "$_IM_TAR" 2>/dev/null || true
                 _IM_BUNDLED=0
                 for _BIN in magick convert identify mogrify; do
-                  # Search all paths including termux prefix
                   _BP=$(find . -name "$_BIN" -type f 2>/dev/null \
                     | grep -v 'man\|doc\|include\|\.h$' | head -1)
                   if [ -n "$_BP" ]; then
@@ -555,11 +646,10 @@ jobs:
                     _IM_BUNDLED=$((_IM_BUNDLED + 1))
                   fi
                 done
-                # If only magick found, create symlinks for legacy names
                 if [ -f "$OLDPWD/$BIN_DEST/magick" ]; then
                   [ ! -f "$OLDPWD/$BIN_DEST/convert"  ] && ln -sf magick "$OLDPWD/$BIN_DEST/convert"
                   [ ! -f "$OLDPWD/$BIN_DEST/identify" ] && ln -sf magick "$OLDPWD/$BIN_DEST/identify"
-                  [ ! -f "$OLDPWD/$BIN_DEST/mogrify" ]  && ln -sf magick "$OLDPWD/$BIN_DEST/mogrify"
+                  [ ! -f "$OLDPWD/$BIN_DEST/mogrify"  ] && ln -sf magick "$OLDPWD/$BIN_DEST/mogrify"
                   echo "      ✅ imagemagick symlinks created (convert/identify/mogrify → magick)"
                 fi
                 [ "$_IM_BUNDLED" -eq 0 ] && echo "      ⚠️  imagemagick binaries not found in deb" || true
@@ -582,12 +672,10 @@ jobs:
           set -euo pipefail
           ABIS="${{ steps.abis.outputs.abis }}"
           TOOLS_DIR="assets/tools"
-          # Re-define variables from step 1 (each run: block is a separate shell)
           BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           NODE_VERSION="${{ steps.resolve-nodejs.outputs.node_version }}"
           CLAUDE_CODE_VERSION="${{ steps.bundle-node-tools.outputs.claude_code_version || 'unknown' }}"
 
-          # Redefine extract_termux_bin helper (needed in split step)
           extract_termux_bin() {
             local POOL_L="$1" PKG_DIR="$2" PKG_NAME="$3" BIN_SUBPATH="$4" DEST="$5" T_ARCH="$6"
             local BIN_BASENAME
@@ -646,10 +734,8 @@ jobs:
             mkdir -p "$BIN_DEST"
 
             # ── sox + soxi ───────────────────────────────────────────────────
-            # Both sox and soxi binaries are in the main 'sox' package
             extract_termux_bin "s" "sox" "sox" "usr/bin/sox" "$BIN_DEST/sox" "$TERMUX_ARCH" || true
             if [ ! -f "$BIN_DEST/soxi" ] && [ -f "$BIN_DEST/sox" ]; then
-              # soxi is also in the same sox deb — re-extract
               _SOX_DEB=$(curl -sf "${TERMUX_POOL}/s/sox/" \
                 | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
                 | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
@@ -668,7 +754,6 @@ jobs:
                     chmod 755 "$OLDPWD/$BIN_DEST/soxi"
                     echo "      ✅ sox-soxi bundled"
                   else
-                    # soxi is often a symlink to sox in newer versions
                     ln -sf sox "$OLDPWD/$BIN_DEST/soxi"
                     echo "      ✅ sox-soxi (symlink to sox)"
                   fi
@@ -679,10 +764,7 @@ jobs:
             fi
 
             # ── yt-dlp ───────────────────────────────────────────────────────
-            # yt-dlp in Termux is a Python script (arch-independent)
-            # Pool letter 'y', dir 'yt-dlp', binary 'usr/bin/yt-dlp'
             extract_termux_bin "y" "yt-dlp" "yt-dlp" "usr/bin/yt-dlp" "$BIN_DEST/yt-dlp" "$TERMUX_ARCH" || {
-              # Fallback: yt-dlp may be arch-independent, try without arch filter
               _YT_DEB=$(curl -sf "${TERMUX_POOL}/y/yt-dlp/" \
                 | grep -oP 'href="\K[^"]*\.deb' \
                 | grep -v 'dbgsym\|dev\|doc' | head -1 || true)
@@ -713,8 +795,6 @@ jobs:
             extract_termux_bin "n" "nano" "nano" "usr/bin/nano" "$BIN_DEST/nano" "$TERMUX_ARCH" || true
 
             # ── vim ──────────────────────────────────────────────────────────
-            # In Termux: vim binary is vim.basic inside vim-runtime package (pool v/vim-runtime/)
-            # The basename fallback in extract_termux_bin will find vim.basic and copy as vim
             extract_termux_bin "v" "vim-runtime" "vim" "usr/bin/vim.basic" "$BIN_DEST/vim" "$TERMUX_ARCH" || \
               extract_termux_bin "v" "vim" "vim" "usr/bin/vim" "$BIN_DEST/vim" "$TERMUX_ARCH" || \
               echo "      ⚠️  vim not available, skipping (optional)"
@@ -753,8 +833,6 @@ jobs:
             extract_termux_bin "p" "procps" "procps-pkill" "usr/bin/pkill" "$BIN_DEST/pkill" "$TERMUX_ARCH" || true
 
             # ── exiftool ─────────────────────────────────────────────────────
-            # Termux package names vary: libimage-exiftool-perl, perl-image-exiftool, exiftool
-            # Binary is a Perl script — also try direct 'exiftool' package
             _ET_INSTALLED=0
             for _ET_PKG_INFO in "l libimage-exiftool-perl" "p perl-image-exiftool" "e exiftool"; do
               _ET_POOL_L=$(echo "$_ET_PKG_INFO" | cut -d' ' -f1)
@@ -800,7 +878,7 @@ jobs:
             ls -la "$BIN_DEST/" | tail -n +4 | awk '{print "      " $0}' || true
 
             # ── Launcher scripts ──────────────────────────────────────────────
-            mkdir -p "$TOOLS_DIR/$ABI/launcher"
+            mkdir -p "assets/tools/$ABI/launcher"
 
             # Claude Code launcher
             printf '%s\n' \
@@ -810,16 +888,14 @@ jobs:
               'export NODE_NO_WARNINGS=1' \
               'export CLAUDE_CODE_DISABLE_TELEMETRY=1' \
               'exec "$TOOLS/node" "$TOOLS/npm_modules/@anthropic-ai/claude-code/cli.js" "$@"' \
-              > "$TOOLS_DIR/$ABI/launcher/claude_code_launcher.sh"
-            chmod 755 "$TOOLS_DIR/$ABI/launcher/claude_code_launcher.sh"
+              > "assets/tools/$ABI/launcher/claude_code_launcher.sh"
+            chmod 755 "assets/tools/$ABI/launcher/claude_code_launcher.sh"
 
             # code-server (VS Code) launcher
             CS_ENTRY_REL="npm_modules/code-server/out/node/entry.js"
-            # Try to find real entry point path
-            FOUND_ENTRY=$(find "$TOOLS_DIR/$ABI/npm_modules/code-server" -name "entry.js" -path "*/node/entry.js" 2>/dev/null | head -1)
+            FOUND_ENTRY=$(find "assets/tools/$ABI/npm_modules/code-server" -name "entry.js" -path "*/node/entry.js" 2>/dev/null | head -1)
             if [ -n "$FOUND_ENTRY" ]; then
-              # Make path relative to $TOOLS_DIR/$ABI
-              CS_ENTRY_REL="${FOUND_ENTRY#$TOOLS_DIR/$ABI/}"
+              CS_ENTRY_REL="${FOUND_ENTRY#assets/tools/$ABI/}"
             fi
             printf '%s\n' \
               '#!/bin/sh' \
@@ -830,24 +906,22 @@ jobs:
               'export XDG_CONFIG_HOME="${TOOLS}/vscode-config"' \
               'mkdir -p "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"' \
               "exec \"\$TOOLS/node\" \"\$TOOLS/${CS_ENTRY_REL}\" \"\$@\"" \
-              > "$TOOLS_DIR/$ABI/launcher/code_server_launcher.sh"
-            chmod 755 "$TOOLS_DIR/$ABI/launcher/code_server_launcher.sh"
+              > "assets/tools/$ABI/launcher/code_server_launcher.sh"
+            chmod 755 "assets/tools/$ABI/launcher/code_server_launcher.sh"
             echo "    ✅ Launchers created"
 
             # ── Pack per-ABI tarball ──────────────────────────────────────────
             echo "    📦 Creating tools_${ABI}.tar.gz ..."
-            tar -czf "$TOOLS_DIR/tools_${ABI}.tar.gz" \
-              -C "$TOOLS_DIR" \
+            tar -czf "assets/tools/tools_${ABI}.tar.gz" \
+              -C "assets/tools" \
               "$ABI"
-            TARBALL_SIZE=$(du -sh "$TOOLS_DIR/tools_${ABI}.tar.gz" | cut -f1)
+            TARBALL_SIZE=$(du -sh "assets/tools/tools_${ABI}.tar.gz" | cut -f1)
             echo "    ✅ tools_${ABI}.tar.gz  ($TARBALL_SIZE)"
 
-            # Clean up unpacked dir
-            rm -rf "$TOOLS_DIR/$ABI"
+            rm -rf "assets/tools/$ABI"
           done
 
           # ── Generate tools_manifest.json ──────────────────────────────────
-          # Use printf+jq (pure bash) — avoids python3 heredoc indentation issues in YAML
           ABIS_JSON="["
           _FIRST_ABI=1
           for _A in $ABIS; do
@@ -867,12 +941,12 @@ jobs:
             printf '"code_server_version":"%s",' "${{ steps.resolve-codeserver.outputs.cs_version }}"
             printf '"abis":%s,' "${ABIS_JSON}"
             printf '"tools":["claude-code","code-server","git","ripgrep","curl","wget","jq","busybox","python3","zip","unzip","sqlite3","ffmpeg","ffprobe","imagemagick","sox","yt-dlp","nano","vim","pv","file","patch","diffutils","rsync","p7zip","lz4","zstd","xz","procps","exiftool","openssh","strace"]}'
-          } > "${TOOLS_DIR}/tools_manifest.json"
+          } > "assets/tools/tools_manifest.json"
           echo "  ✅ tools_manifest.json generated"
 
           echo ""
           echo "  ✅ Bundle complete:"
-          ls -lh "$TOOLS_DIR/"
+          ls -lh "assets/tools/"
 
       # ── Verify tools bundle before build ─────────────────────────────────
 
@@ -884,7 +958,6 @@ jobs:
           echo "  Contents of $TOOLS_DIR:"
           ls -lh "$TOOLS_DIR/" 2>/dev/null || echo "  (empty or not found)"
 
-          # Wajib ada tools_manifest.json
           if [ ! -f "$TOOLS_DIR/tools_manifest.json" ]; then
             echo ""
             echo "  ❌ FATAL: tools_manifest.json NOT found in $TOOLS_DIR/"
@@ -897,7 +970,6 @@ jobs:
             exit 1
           fi
 
-          # Cek tarball ABI sesuai target
           ABIS="${{ steps.abis.outputs.abis }}"
           for ABI in $ABIS; do
             TARBALL="$TOOLS_DIR/tools_${ABI}.tar.gz"
@@ -908,9 +980,7 @@ jobs:
             SIZE=$(du -sh "$TARBALL" | cut -f1)
             echo "  ✅ $TARBALL ($SIZE)"
 
-            # Cek isi tarball — harus ada node, claude-code, code-server
             echo "  🔍 Checking tarball contents for $ABI..."
-            # Use arithmetic to avoid "[: 0\n: integer expression expected" from grep -c + $()
             HAS_NODE=0;    tar -tzf "$TARBALL" 2>/dev/null | grep -q "${ABI}/node$"                       && HAS_NODE=1    || true
             HAS_CC=0;      tar -tzf "$TARBALL" 2>/dev/null | grep -q "@anthropic-ai/claude-code/cli.js"   && HAS_CC=1      || true
             HAS_CS=0;      tar -tzf "$TARBALL" 2>/dev/null | grep -q "code-server"                        && HAS_CS=1      || true
@@ -936,56 +1006,65 @@ jobs:
           echo ""
           echo "  ✅ All tools verified — proceeding to Flutter build."
 
-      # ── SESSION_02: Build Flutter APK ─────────────────────────────────────
+      # ── Gradle & Flutter analyze ──────────────────────────────────────────
 
-      - name: "📌 Resolve llama.cpp tag"
-        id: resolve-tag
+      - name: "🔧 Disable Gradle daemon (CI)"
         run: |
-          curl -sf https://api.github.com/repos/ggerganov/llama.cpp/releases \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['tag_name'])" > /tmp/llama_tag 2>/dev/null || echo "b8604" > /tmp/llama_tag
-          LLAMA_TAG=$(cat /tmp/llama_tag)
-          echo "llama_tag=$LLAMA_TAG" >> "$GITHUB_OUTPUT"
-          echo "  📌 llama.cpp: $LLAMA_TAG"
+          GRADLE_PROPS="android/gradle.properties"
+          if grep -q "org.gradle.daemon=" "$GRADLE_PROPS"; then
+            sed -i 's/org.gradle.daemon=.*/org.gradle.daemon=false/' "$GRADLE_PROPS"
+            echo "  ✅ Replaced: org.gradle.daemon=false"
+          else
+            echo "org.gradle.daemon=false" >> "$GRADLE_PROPS"
+            echo "  ✅ Added: org.gradle.daemon=false"
+          fi
 
-      - name: "💾 Cache llama.cpp source"
-        id: cache-llama
-        uses: actions/cache@v4
-        with:
-          path: /tmp/llama_src
-          key: llama-src-${{ steps.resolve-tag.outputs.llama_tag }}
+      - name: "🔎 Flutter analyze"
+        if: |
+          github.event.inputs.build_target == 'apk-release' ||
+          github.event.inputs.build_target == 'aab'         ||
+          github.event.inputs.build_target == 'all-android'
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 || true
 
-      - name: "🦙 Clone llama.cpp (sparse)"
-        if: steps.cache-llama.outputs.cache-hit != 'true'
+      - name: "🔑 Decode keystore"
+        if: |
+          github.event_name == 'push'                              ||
+          github.event.inputs.build_target == 'apk-release'       ||
+          github.event.inputs.build_target == 'apk-release-arm64' ||
+          github.event.inputs.build_target == 'apk-split-abi'     ||
+          github.event.inputs.build_target == 'aab'                ||
+          github.event.inputs.build_target == 'all-android'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          LLAMA_TAG="${{ steps.resolve-tag.outputs.llama_tag }}"
-          DEST="/tmp/llama_src"
-          rm -rf "$DEST"
-          echo "  🔗 Cloning llama.cpp $LLAMA_TAG ..."
-          git clone \
-            --depth 1 \
-            --branch "$LLAMA_TAG" \
-            --filter=blob:none \
-            --sparse \
-            https://github.com/ggerganov/llama.cpp "$DEST"
-          cd "$DEST"
-          git sparse-checkout init --no-cone
-          git sparse-checkout set \
-            "CMakeLists.txt" \
-            "cmake/**" \
-            "include/**" \
-            "src/**" \
-            "ggml/**" \
-            "common/**"
-          echo "  ✅ llama.cpp $LLAMA_TAG ready at $DEST"
-          ls "$DEST"
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "⚠️  KEYSTORE_BASE64 tidak di-set → pakai debug signing"
+          else
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/keystore.jks
+            echo "  ✅ Keystore decoded"
+          fi
 
-      - name: "🔧 Install NDK + CMake"
+      # ══════════════════════════════════════════════════════════════════════════
+      # BUILD VARIANTS
+      # ══════════════════════════════════════════════════════════════════════════
+
+      - name: "🔨 Build APK Debug"
+        if: github.event.inputs.build_target == 'apk-debug'
         run: |
-          sdkmanager \
-            "ndk;28.2.13676358" \
-            "cmake;3.22.1" \
-            --sdk_root="$ANDROID_SDK_ROOT" 2>&1 | grep -E "^(Downloading|Installing|done)" || true
-          echo "  ✅ NDK 28.2.13676358 + CMake 3.22.1 installed"
+          flutter build apk --debug --dart-define=CODE_SERVER_VERSION=${{ steps.resolve-codeserver.outputs.cs_version }}
+          echo "  📦 $(du -sh build/app/outputs/flutter-apk/app-debug.apk | cut -f1)  app-debug.apk"
+
+      - name: "📤 Upload APK Debug → GitHub Release"
+        if: github.event.inputs.build_target == 'apk-debug'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="gf-latest-debug"
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          gh release create "$TAG" "build/app/outputs/flutter-apk/app-debug.apk" \
+            --title "KanMon GO Debug #${{ github.run_number }}" \
+            --notes "Debug build #${{ github.run_number }}" \
+            --prerelease
 
       - name: "🏗️ Build APK arm64 (release)"
         if: |
@@ -997,7 +1076,6 @@ jobs:
           KEY_STORE_PASSWORD:   ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS:            ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:         ${{ secrets.KEY_PASSWORD }}
-          LLAMA_EXTERNAL_DIR:   /tmp/llama_src
         run: |
           [ ! -f "android/app/keystore.jks" ] || [ -z "$KEY_STORE_PASSWORD" ] && unset KEYSTORE_PATH || true
           OBFSTR=""
@@ -1032,7 +1110,6 @@ jobs:
           KEY_STORE_PASSWORD:   ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS:            ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:         ${{ secrets.KEY_PASSWORD }}
-          LLAMA_EXTERNAL_DIR:   /tmp/llama_src
         run: |
           [ ! -f "android/app/keystore.jks" ] || [ -z "$KEY_STORE_PASSWORD" ] && unset KEYSTORE_PATH || true
           OBFSTR=""
@@ -1067,7 +1144,6 @@ jobs:
           KEY_STORE_PASSWORD:   ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS:            ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:         ${{ secrets.KEY_PASSWORD }}
-          LLAMA_EXTERNAL_DIR:   /tmp/llama_src
         run: |
           [ ! -f "android/app/keystore.jks" ] || [ -z "$KEY_STORE_PASSWORD" ] && unset KEYSTORE_PATH || true
           OBFSTR=""
