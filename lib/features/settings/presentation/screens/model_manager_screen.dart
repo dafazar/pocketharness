@@ -835,7 +835,7 @@ class _LocalModelsTab extends StatelessWidget {
                       final model = models[i];
                       return _LocalModelCard(
                         model      : model,
-                        onLoad     : () => onLoadModel(model),
+                        onLoad     : (_) => onLoadModel(model),
                         onDelete   : () => onDeleteModel(model),
                       );
                     },

@@ -225,7 +225,7 @@ class _FileEditResponseWidgetState extends State<FileEditResponseWidget>
                 child: Text(
                   widget.result.originalFilename,
                   style: TextStyle(
-                    color: c.textMain,
+                    color: c.text,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
