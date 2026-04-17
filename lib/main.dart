@@ -39,22 +39,16 @@ import 'package:kanmongo/data/services/sfx_service.dart';
 import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 import 'package:kanmongo/firebase_options.dart';
 import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:kanmongo/data/services/first_setup_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ── 0. ToolsService — extract bundled CLI tools on first launch ──────────
-  // No-op after first extraction (<1ms due to SharedPreferences check).
-  try {
-    await ToolsService.instance.initialize(
-      onProgress: (p) {
-        debugPrint('[ToolsService] Extraction progress: ${(p * 100).toInt()}%');
-      },
-    );
-    debugPrint('[main] ToolsService ready (isReady=${ToolsService.instance.isReady})');
-  } catch (e) {
-    debugPrint('[main] ToolsService.initialize() gagal (lanjut): $e');
-  }
+  // ── 0. FirstSetupService — ekstrak bundled CLI tools di background ───────
+  // Tidak blocking: UI akan subscribe ke statusStream via FirstSetupScreen.
+  // Setelah tools ter-ekstrak, flag disimpan ke SharedPreferences agar
+  // launch berikutnya langsung skip (< 1ms).
+  unawaited(FirstSetupService.instance.runIfNeeded());
 
   // ── 1. Firebase ─────────────────────────────────────────────────────────────
   await Firebase.initializeApp(

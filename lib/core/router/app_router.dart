@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:kanmongo/features/splash/presentation/screens/splash_screen.dart';
+import 'package:kanmongo/features/setup/presentation/screens/first_setup_screen.dart';
 import 'package:kanmongo/features/home/presentation/screens/home_screen.dart';
 import 'package:kanmongo/features/notes/presentation/screens/notes_screen.dart';
 import 'package:kanmongo/features/ebook/presentation/screens/ebook_screen.dart';
@@ -98,7 +99,12 @@ final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
   debugLogDiagnostics: false,
   routes: [
-    GoRoute(path: '/splash', pageBuilder: (c, s) => _fade(const SplashScreen())),
+    GoRoute(
+      path: '/splash',
+      pageBuilder: (c, s) => _fade(
+        FirstSetupScreen(child: const SplashScreen()),
+      ),
+    ),
 
     // Auth
     GoRoute(path: '/auth/login',    pageBuilder: (c, s) => _slide(const LoginScreen())),
