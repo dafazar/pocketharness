@@ -58,7 +58,6 @@ class LlamaService {
   LlamaModelInfo? _currentModel;
   LlamaModelConfig _modelConfig    = LlamaModelConfig.defaultConfig;
   double _loadingProgress          = 0.0;
-  String? _lastLoadError;
   ModelPerformanceMetrics? _lastMetrics;
 
   /// StreamController aktif untuk generate yang sedang berjalan (nullable)
@@ -100,9 +99,6 @@ class LlamaService {
 
   /// Status model saat ini
   ModelStatus get status => _status;
-
-  /// Pesan error terakhir saat loadModel gagal (null jika sukses)
-  String? get lastLoadError => _lastLoadError;
 
   /// Apakah model sudah dimuat dan siap digunakan
   bool get isModelLoaded => _status == ModelStatus.loaded;
@@ -224,24 +220,20 @@ class LlamaService {
       });
 
       if (ok == true) {
-        _lastLoadError = null;
         _currentModel = model.copyWith(lastUsed: DateTime.now());
         _updateStatus(ModelStatus.loaded);
         debugPrint('[LlamaService] Model berhasil dimuat: ${model.name}');
         return true;
       } else {
-        _lastLoadError = 'Native loadModel mengembalikan false';
         _updateStatus(ModelStatus.error);
         debugPrint('[LlamaService] Native loadModel mengembalikan false');
         return false;
       }
     } on PlatformException catch (e) {
-      _lastLoadError = e.message ?? e.toString();
       _updateStatus(ModelStatus.error);
       debugPrint('[LlamaService] PlatformException saat loadModel: ${e.message}');
       return false;
     } catch (e) {
-      _lastLoadError = e.toString();
       _updateStatus(ModelStatus.error);
       debugPrint('[LlamaService] Error saat loadModel: $e');
       return false;
