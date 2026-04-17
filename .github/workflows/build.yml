@@ -133,20 +133,8 @@ jobs:
           # MAX_COMPATIBLE: last code-server version confirmed to work with Node v20.
           MAX_COMPATIBLE="4.96.2"
           CS_VERSION=$(curl -sf https://registry.npmjs.org/code-server \
-            | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-versions = list(data.get('versions', {}).keys())
-
-def ver_tuple(v):
-    try: return tuple(int(x) for x in v.split('.'))
-    except: return (0,)
-
-max_ok = tuple(int(x) for x in '${MAX_COMPATIBLE}'.split('.'))
-compatible = [v for v in versions if ver_tuple(v) <= max_ok]
-compatible.sort(key=ver_tuple, reverse=True)
-print(compatible[0] if compatible else '${MAX_COMPATIBLE}')
-" 2>/dev/null || echo "$MAX_COMPATIBLE")
+            | python3 -c "import sys,json; d=json.load(sys.stdin); vs=list(d.get('versions',{}).keys()); vt=lambda v: tuple(int(x) for x in v.split('.')) if all(x.isdigit() for x in v.split('.')) else (0,); mx=vt('${MAX_COMPATIBLE}'); ok=sorted([v for v in vs if vt(v)<=mx],key=vt,reverse=True); print(ok[0] if ok else '${MAX_COMPATIBLE}')" \
+            2>/dev/null || echo "$MAX_COMPATIBLE")
           echo "  📌 code-server version: $CS_VERSION (max Node-v20-compatible: $MAX_COMPATIBLE)"
           echo "cs_version=$CS_VERSION" >> "$GITHUB_OUTPUT"
 
