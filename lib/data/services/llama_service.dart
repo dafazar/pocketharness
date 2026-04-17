@@ -6,10 +6,16 @@
 //   • instance singleton
 //   • isModelLoaded (bool getter)
 //   • status & statusStream (ModelStatus)
+//   • loadProgressStream (Stream<double>)      ← DITAMBAHKAN
 //   • currentModel (LlamaModelInfo?)
-//   • loadModel(LlamaModelInfo, {LlamaModelConfig?})
+//   • lastLoadedModelPath (String?)             ← DITAMBAHKAN
+//   • lastLoadedModelId (String?)               ← DITAMBAHKAN
+//   • initialize()                              ← DITAMBAHKAN
+//   • loadSettings()                            ← DITAMBAHKAN
+//   • loadModel(...) → Future<bool>             ← DIUBAH (void → bool)
 //   • releaseModel()
-//   • generateStream({messages, config}) → Stream<String>
+//   • getAvailableMemoryMb() → Future<int>      ← DITAMBAHKAN
+//   • generateStream({messages, config, systemPromptOverride}) ← DIUPDATE
 //   • saveSettings()
 // =============================================================================
 
@@ -17,6 +23,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kanmongo/core/ai/llama_context.dart';
 
 class LlamaService {
@@ -28,29 +35,76 @@ class LlamaService {
   static const _platform     = MethodChannel('com.kanmongo.llama/engine');
   static const _eventChannel = EventChannel('com.kanmongo.llama/stream');
 
+  // ── SharedPreferences keys ─────────────────────────────────────────────────
+  static const _keyLastModelPath = 'llama_last_model_path';
+  static const _keyLastModelId   = 'llama_last_model_id';
+
   // ── Internal state ─────────────────────────────────────────────────────────
   ModelStatus      _status       = ModelStatus.notLoaded;
   LlamaModelInfo?  _currentModel;
+  String?          _lastLoadedModelPath;
+  String?          _lastLoadedModelId;
 
   final StreamController<ModelStatus> _statusCtrl =
       StreamController<ModelStatus>.broadcast();
 
+  // Stream progres pemuatan model (0.0 – 1.0)
+  final StreamController<double> _loadProgressCtrl =
+      StreamController<double>.broadcast();
+
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  ModelStatus     get status       => _status;
-  Stream<ModelStatus> get statusStream => _statusCtrl.stream;
-  bool            get isModelLoaded =>
+  ModelStatus         get status             => _status;
+  Stream<ModelStatus> get statusStream       => _statusCtrl.stream;
+  Stream<double>      get loadProgressStream => _loadProgressCtrl.stream;
+  bool                get isModelLoaded =>
       _status == ModelStatus.loaded || _status == ModelStatus.generating;
-  LlamaModelInfo? get currentModel => _currentModel;
+  LlamaModelInfo?     get currentModel        => _currentModel;
+  String?             get lastLoadedModelPath  => _lastLoadedModelPath;
+  String?             get lastLoadedModelId    => _lastLoadedModelId;
+
+  // ── initialize ─────────────────────────────────────────────────────────────
+  // Dipanggil sekali saat app start (setelah ModelManagerService.load()).
+  // Memuat persisted last-model info dari SharedPreferences.
+
+  Future<void> initialize() async {
+    debugPrint('[LlamaService] initialize()');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _lastLoadedModelPath = prefs.getString(_keyLastModelPath);
+      _lastLoadedModelId   = prefs.getString(_keyLastModelId);
+      debugPrint('[LlamaService] lastPath=$_lastLoadedModelPath');
+    } catch (e) {
+      debugPrint('[LlamaService] initialize() error (non-fatal): $e');
+    }
+  }
+
+  // ── loadSettings ───────────────────────────────────────────────────────────
+  // Muat ulang settings dari SharedPreferences.
+  // Dipanggil dari main.dart sebelum auto-load model.
+
+  Future<void> loadSettings() async {
+    debugPrint('[LlamaService] loadSettings()');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _lastLoadedModelPath = prefs.getString(_keyLastModelPath);
+      _lastLoadedModelId   = prefs.getString(_keyLastModelId);
+      debugPrint('[LlamaService] loadSettings — path=$_lastLoadedModelPath');
+    } catch (e) {
+      debugPrint('[LlamaService] loadSettings() error (non-fatal): $e');
+    }
+  }
 
   // ── loadModel ──────────────────────────────────────────────────────────────
+  // Return true jika berhasil, false jika gagal (tidak throw).
 
-  Future<void> loadModel(
+  Future<bool> loadModel(
     LlamaModelInfo modelInfo, {
     LlamaModelConfig? config,
   }) async {
     final cfg = config ?? LlamaModelConfig.defaultConfig;
     _setStatus(ModelStatus.loading);
+    _emitProgress(0.0);
     debugPrint('[LlamaService] loadModel: ${modelInfo.path}');
 
     try {
@@ -79,6 +133,8 @@ class LlamaService {
         }
       }
 
+      _emitProgress(0.2);
+
       final result = await _platform.invokeMethod<Map>('loadModel', {
         'modelPath':    modelInfo.path,
         'contextSize':  cfg.contextSize,
@@ -95,18 +151,34 @@ class LlamaService {
         throw LlamaException('Native loadModel gagal (handle=0)');
       }
 
-      _currentModel = modelInfo;
+      _currentModel        = modelInfo;
+      _lastLoadedModelPath = modelInfo.path;
+      _lastLoadedModelId   = modelInfo.id;
+
+      // Persist ke SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_keyLastModelPath, modelInfo.path);
+        await prefs.setString(_keyLastModelId,   modelInfo.id);
+      } catch (e) {
+        debugPrint('[LlamaService] persist lastModel error (non-fatal): $e');
+      }
+
+      _emitProgress(1.0);
       _setStatus(ModelStatus.loaded);
       debugPrint('[LlamaService] ✅ Model loaded: ${modelInfo.name}');
+      return true;
 
     } on PlatformException catch (e) {
       debugPrint('[LlamaService] ❌ PlatformException: ${e.code} ${e.message}');
       _setStatus(ModelStatus.error);
-      rethrow;
+      _emitProgress(0.0);
+      return false;
     } catch (e) {
       debugPrint('[LlamaService] ❌ Error: $e');
       _setStatus(ModelStatus.error);
-      rethrow;
+      _emitProgress(0.0);
+      return false;
     }
   }
 
@@ -120,14 +192,40 @@ class LlamaService {
     } finally {
       _currentModel = null;
       _setStatus(ModelStatus.notLoaded);
+      _emitProgress(0.0);
+    }
+  }
+
+  // ── getAvailableMemoryMb ───────────────────────────────────────────────────
+  // Query memori tersedia dari native layer.
+  // Digunakan oleh ModelManagerService untuk estimasi kelayakan model.
+
+  Future<int> getAvailableMemoryMb() async {
+    try {
+      final result = await _platform.invokeMethod<int>('getAvailableMemoryMb');
+      return result ?? 0;
+    } catch (e) {
+      debugPrint('[LlamaService] getAvailableMemoryMb error (non-fatal): $e');
+      // Fallback: baca /proc/meminfo langsung
+      try {
+        final meminfo = await File('/proc/meminfo').readAsString();
+        final match   = RegExp(r'MemAvailable:\s+(\d+)').firstMatch(meminfo);
+        if (match != null) {
+          return int.parse(match.group(1)!) ~/ 1024; // KB → MB
+        }
+      } catch (_) {}
+      return 0;
     }
   }
 
   // ── generateStream ─────────────────────────────────────────────────────────
+  // systemPromptOverride: jika diisi, disisipkan sebagai pesan system
+  // di awal prompt sebelum messages lainnya.
 
   Stream<String> generateStream({
     required List<ChatMessage> messages,
     InferenceConfig? config,
+    String? systemPromptOverride,
   }) async* {
     final cfg = config ?? InferenceConfig.defaultConfig;
 
@@ -136,7 +234,14 @@ class LlamaService {
     _setStatus(ModelStatus.generating);
     debugPrint('[LlamaService] generateStream — ${messages.length} messages');
 
-    final prompt = _buildChatMLPrompt(messages);
+    // Gabungkan system prompt override + messages
+    final effectiveMessages = [
+      if (systemPromptOverride != null && systemPromptOverride.isNotEmpty)
+        ChatMessage.system(systemPromptOverride),
+      ...messages,
+    ];
+
+    final prompt = _buildChatMLPrompt(effectiveMessages);
     final controller = StreamController<String>();
     StreamSubscription? sub;
 
@@ -215,6 +320,10 @@ class LlamaService {
   void _setStatus(ModelStatus s) {
     _status = s;
     if (!_statusCtrl.isClosed) _statusCtrl.add(s);
+  }
+
+  void _emitProgress(double value) {
+    if (!_loadProgressCtrl.isClosed) _loadProgressCtrl.add(value);
   }
 
   String _buildChatMLPrompt(List<ChatMessage> messages) {
