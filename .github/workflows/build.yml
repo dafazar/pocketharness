@@ -451,6 +451,7 @@ jobs:
             else
               echo "      ⚠️  imagemagick not available, skipping"
             fi
+          done
 
       - name: "📦 Bundle CLI tools (sox/yt-dlp/vim/exiftool/misc)"
         if: steps.cache-tools.outputs.cache-hit != 'true' || steps.validate-cache.outputs.needs_rebuild == 'true'
