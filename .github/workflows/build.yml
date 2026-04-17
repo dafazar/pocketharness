@@ -281,10 +281,12 @@ jobs:
             CS_INSTALL="/tmp/cs_install_${ABI}"
             rm -rf "$CS_INSTALL" && mkdir -p "$CS_INSTALL"
             # Install code-server via npm (pure JS bundle, no native rebuild needed)
+            # --ignore-scripts: skip postinstall that tries to cd into missing paths
             "$HOST_NODE" "$HOST_NPM" install \
               --prefix "$CS_INSTALL" --global \
               "code-server@${CS_VERSION_ACTUAL}" \
               --unsafe-perm \
+              --ignore-scripts \
               2>&1 | tail -5
             # Verify install succeeded
             CS_ENTRY=$(find "$CS_INSTALL" -name "entry.js" -path "*/node/entry.js" 2>/dev/null | head -1)
