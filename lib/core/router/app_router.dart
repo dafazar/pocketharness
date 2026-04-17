@@ -37,9 +37,6 @@ import 'package:kanmongo/shared/widgets/wallpaper_menu_shell.dart';
 // SESSION 03 — flat-path screens (query-param aware)
 import 'package:kanmongo/features/claude_code/claude_code_screen.dart';
 import 'package:kanmongo/features/vscode/vscode_screen.dart';
-// Legacy screens (backward compat)
-import 'package:kanmongo/features/claude_code/presentation/screens/claude_code_screen.dart' as legacy_claude;
-import 'package:kanmongo/features/vscode/presentation/screens/vscode_screen.dart' as legacy_vscode;
 
 class KmRoutes {
   static const login           = '/auth/login';
@@ -181,9 +178,7 @@ final GoRouter appRouter = GoRouter(
       name: 'vscode',
       pageBuilder: (c, s) {
         final path = s.uri.queryParameters['path'];
-        return _fade(path != null
-            ? VscodeScreen(initialPath: path)
-            : const legacy_vscode.VsCodeScreen());
+        return _fade(VscodeScreen(initialPath: path));
       },
     ),
     // SESSION 03: /claude-code — supports ?dir= query param
@@ -192,9 +187,7 @@ final GoRouter appRouter = GoRouter(
       name: 'claude-code',
       pageBuilder: (c, s) {
         final dir = s.uri.queryParameters['dir'];
-        return _fade(dir != null
-            ? ClaudeCodeTerminalScreen(workingDirectory: dir)
-            : const legacy_claude.ClaudeCodeScreen());
+        return _fade(ClaudeCodeTerminalScreen(workingDirectory: dir));
       },
     ),
     // C-005 fix: Privacy Policy screen
