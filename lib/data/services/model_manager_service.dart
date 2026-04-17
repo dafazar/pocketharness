@@ -165,7 +165,7 @@ class LocalModelInfo {
     format        : j['format'] as String? ?? 'gguf',
     quantization  : j['quantization'] as String? ?? 'unknown',
     estimatedRamMb: j['estimatedRamMb'] as int? ?? 0,
-    isLoaded      : j['isLoaded'] as bool? ?? false,
+    isLoaded      : false, // Bug #5 fix: jangan baca dari cache, selalu false saat cold start
     lastUsed      : j['lastUsed'] != null
         ? DateTime.tryParse(j['lastUsed'] as String)
         : null,

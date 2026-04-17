@@ -295,6 +295,8 @@ class _ModelManagerScreenState extends ConsumerState<ModelManagerScreen>
       final svc = AiSourceSettingsService.instance;
       svc.saveOffline(svc.offline.copyWith(activeModelPath: model.path));
       _showSnackbar('✅ ${model.name} berhasil dimuat!', color: c.correct);
+      // Bug #2 fix: tunggu microtask agar LlamaService.currentModel sudah terupdate sebelum scan
+      await Future.microtask(() {});
       // Perbarui state isLoaded di semua model
       await _service.scanLocalModels();
     } else {
@@ -946,6 +948,13 @@ class _LocalModelCardState extends State<_LocalModelCard> {
     if (mounted) setState(() => _isLoading = true);
     try {
       await widget.onLoad(widget.model);
+    } catch (e) {
+      // Bug #4 fix: tampilkan error ke user jika ada uncaught exception dari layer bawah
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error memuat model: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

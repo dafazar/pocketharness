@@ -199,6 +199,7 @@ class LlamaPlugin(
                     "getModelInfo"         -> handleGetModelInfo(call, result)
                     "getAvailableMemoryMb" -> handleGetAvailableMemory(result)
                     "getSystemInfo"        -> handleGetSystemInfo(result)
+                    "saveSettings"         -> result.success(null) // Bug #1 fix: stub agar tidak throw MissingPluginException
                     else                   -> {
                         Log.w(TAG, "Unknown method: ${call.method}")
                         result.notImplemented()
@@ -324,28 +325,22 @@ class LlamaPlugin(
             genJob?.cancel()
         }
 
-        // ─── STEP 5: Release previous model ─────────────────────────────────
-        if (modelHandle != 0L) {
-            Log.i(TAG, "loadModel: releasing previous model handle=$modelHandle")
-            pluginScope.launch {
+        // ─── STEP 5+6: Release previous model then load new one — single coroutine (Bug #7 & #8 fix)
+        // Thread.sleep di main thread dihapus. Release + load digabung agar sequential & tidak race condition.
+        val previousHandle = modelHandle
+        modelHandle = 0L // clear segera agar tidak ada coroutine lain yang pakai handle lama
+        Log.i(TAG, "loadModel: launching combined release+load coroutine (previousHandle=$previousHandle)")
+        pluginScope.launch {
+            // Release model lama dulu jika ada, secara sequential (bukan fire-and-forget)
+            if (previousHandle != 0L) {
                 try {
-                    nativeReleaseModel(modelHandle)
+                    nativeReleaseModel(previousHandle)
                     Log.i(TAG, "loadModel: previous model released")
                 } catch (e: Exception) {
                     Log.e(TAG, "loadModel: error releasing previous model - ${e.message}", e)
                 }
+                kotlinx.coroutines.delay(100) // suspend (non-blocking), beri waktu native cleanup
             }
-            // Give native layer time to cleanup
-            try {
-                Thread.sleep(300)
-            } catch (e: InterruptedException) {
-                Thread.currentThread().interrupt()
-            }
-        }
-
-        // ─── STEP 6: Call native loading in coroutine ──────────────────────
-        Log.i(TAG, "loadModel: launching native load coroutine")
-        pluginScope.launch {
             try {
                 Log.i(TAG, """
                     loadModel: calling nativeLoadModel with:

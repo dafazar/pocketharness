@@ -275,10 +275,12 @@ class OfflineAiService {
   }
 
   // ── Model Loading ──────────────────────────────────────────────────────────
+  // Bug #3 fix: isModelReadySafe tidak lagi memanggil channel langsung.
+  // Delegasikan ke LlamaService sebagai satu-satunya owner native bridge.
   Future<bool> isModelReadySafe() async {
     if (!_isReady) return false;
     try {
-      final nativeReady = await _methodCh.invokeMethod<bool>('isModelLoaded') ?? false;
+      final nativeReady = LlamaService.instance.isModelLoaded;
       if (!nativeReady) { _isReady = false; debugPrint('[OfflineAI] native=false reset'); }
       return nativeReady;
     } catch (_) { return false; }
@@ -580,18 +582,18 @@ class OfflineAiService {
 
   Future<void> reset() async { await unloadModel(); _error = null; }
 
+  // Bug #3 fix: delegasikan ke LlamaService, jangan panggil channel langsung
   Future<bool>   isModelLoaded() async {
-    try { return await _methodCh.invokeMethod<bool>('isModelLoaded') ?? false; }
+    try { return LlamaService.instance.isModelLoaded; }
     catch (_) { return false; }
   }
   Future<int>    getAvailableRamMb() async => _getAvailableRamMb();
   Future<String> getModelInfo() async {
     try {
-      final path = _loadedModelPath ?? '';
-      if (path.isEmpty) return '{"loaded":false}';
-      final result = await _methodCh.invokeMethod<Map>('getModelInfo', {'path': path});
-      if (result == null) return '{"loaded":false}';
-      return jsonEncode(Map<String, dynamic>.from(result));
+      // Bug #3 fix: delegasikan ke LlamaService, jangan panggil channel langsung
+      final info = LlamaService.instance.currentModel;
+      if (info == null) return '{"loaded":false}';
+      return jsonEncode({'loaded': true, 'path': info.path, 'name': info.name});
     } catch (_) { return '{"loaded":false}'; }
   }
 
