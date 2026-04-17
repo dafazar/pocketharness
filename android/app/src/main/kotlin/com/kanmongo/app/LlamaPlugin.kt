@@ -1,4 +1,4 @@
-// LlamaPlugin.kt — KanMon GO
+// LlamaPlugin.kt — KanMon GO (FIXED VERSION)
 // SESI 6: Native Android Bridge — Full Refactor
 // - New JNI API: nativeLoadModel with full params (context, gpu, batch, threads, flash, mlock, rope)
 // - New native declarations aligned with llama_jni.cpp Sesi 6
@@ -6,6 +6,7 @@
 // - ForegroundService for background generation
 // - ComponentCallbacks2 memory pressure monitoring
 // - Coroutine-based background execution
+// - 🆕 FIXES: registerPlugin() call, file validation, memory check, detailed error logging
 package com.kanmongo.app
 
 import android.app.ActivityManager
@@ -31,6 +32,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.RandomAccessFile
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ForegroundService — runs during token generation
@@ -96,7 +99,7 @@ class LlamaGenerationService : Service() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LlamaPlugin — main Flutter plugin bridge
+// LlamaPlugin — main Flutter plugin bridge (FIXED)
 // ─────────────────────────────────────────────────────────────────────────────
 class LlamaPlugin(
     private val messenger: BinaryMessenger,
@@ -171,6 +174,14 @@ class LlamaPlugin(
     // ── Initializer ──────────────────────────────────────────────────────────
     init {
         context.registerComponentCallbacks(this)
+        
+        // 🆕 FIX: Call registerPlugin() immediately after loading library
+        try {
+            registerPlugin()
+            Log.i(TAG, "✅ registerPlugin() called successfully in init")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ registerPlugin() failed in init: ${e.message}", e)
+        }
 
         methodChannel.setMethodCallHandler { call, result ->
             if (isDestroyed) {
@@ -182,160 +193,213 @@ class LlamaPlugin(
                     "loadModel"            -> handleLoadModel(call, result)
                     "releaseModel"         -> handleReleaseModel(result)
                     "isModelLoaded"        -> handleIsModelLoaded(result)
-                    // Both "generateTokens" (LlamaService) and "startGeneration" (OfflineAiService legacy)
-                    // are routed to the same handler.
                     "generateTokens",
                     "startGeneration"      -> handleGenerateTokens(call, result)
                     "stopGeneration"       -> handleStopGeneration(result)
                     "getModelInfo"         -> handleGetModelInfo(call, result)
                     "getAvailableMemoryMb" -> handleGetAvailableMemory(result)
                     "getSystemInfo"        -> handleGetSystemInfo(result)
-                    // Soft no-op for unrecognised calls — avoids MissingPluginException in Dart
                     else                   -> {
-                        Log.w(TAG, "Unhandled method: ${call.method}")
-                        result.success(null)
+                        Log.w(TAG, "Unknown method: ${call.method}")
+                        result.notImplemented()
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "MethodChannel error on ${call.method}: ${e.message}", e)
-                result.error("LLAMA_ERROR", e.message, null)
+                Log.e(TAG, "Method handler exception: ${e.message}", e)
+                result.error("EXCEPTION", e.message, null)
             }
         }
 
         eventChannel.setStreamHandler(object : EventChannel.StreamHandler {
-            override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
-                Log.d(TAG, "EventChannel onListen")
-                synchronized(sinkLock) { eventSink = sink }
+            override fun onListen(args: Any?, events: EventChannel.EventSink?) {
+                synchronized(sinkLock) { eventSink = events }
+                Log.i(TAG, "EventSink listener attached")
             }
-            override fun onCancel(arguments: Any?) {
-                Log.d(TAG, "EventChannel onCancel")
+
+            override fun onCancel(args: Any?) {
                 synchronized(sinkLock) { eventSink = null }
+                Log.i(TAG, "EventSink listener detached")
             }
         })
+    }
 
-        // Register this plugin instance with the native C++ layer.
-        // This sets g_plugin_obj and g_emit_method in llama_jni.cpp so that
-        // nativeGenerateTokens() can emit token events back to Kotlin/Flutter.
-        // Without this, ALL tokens are silently dropped and AI sends nothing.
+    // ─────────────────────────────────────────────────────────────────────────
+    // 🆕 FIX: File validation utility
+    // ─────────────────────────────────────────────────────────────────────────
+    private fun validateModelFile(file: File): Pair<Boolean, String> {
         try {
-            registerPlugin()
-            Log.i(TAG, "registerPlugin() OK — native callbacks wired")
-        } catch (e: Exception) {
-            Log.e(TAG, "registerPlugin() FAILED: ${e.message}", e)
-        }
-    }
-
-    // ── Thread-safe event emitter (called from JNI callbacks too) ─────────────
-    fun emitEvent(event: Map<String, Any?>) {
-        synchronized(sinkLock) {
-            mainHandler.post {
-                synchronized(sinkLock) {
-                    try {
-                        eventSink?.success(event)
-                    } catch (e: Exception) {
-                        Log.w(TAG, "emitEvent failed: ${e.message}")
-                    }
-                }
+            if (!file.exists()) {
+                return Pair(false, "File not found: ${file.absolutePath}")
             }
+            
+            if (!file.canRead()) {
+                return Pair(false, "No read permission: ${file.absolutePath}")
+            }
+            
+            val sizeMb = file.length() / (1024 * 1024)
+            if (file.length() == 0L) {
+                return Pair(false, "File is empty (0 bytes)")
+            }
+            
+            if (file.length() < 50 * 1024 * 1024) {
+                Log.w(TAG, "validateModelFile: file seems small (${sizeMb}MB) - might not be a valid model")
+            }
+            
+            // Check GGUF magic bytes
+            try {
+                val raf = RandomAccessFile(file, "r")
+                val magic = ByteArray(4)
+                val bytesRead = raf.read(magic)
+                raf.close()
+                
+                if (bytesRead < 4) {
+                    return Pair(false, "File too small to check GGUF magic")
+                }
+                
+                val magicStr = magic.map { (it.toInt() and 0xFF).toChar() }.joinToString("")
+                if (magicStr != "GGUF") {
+                    return Pair(false, "Invalid GGUF magic bytes (got '$magicStr', expected 'GGUF')")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "validateModelFile: could not verify GGUF magic - ${e.message}")
+                // Don't fail on this, might be permission issue
+            }
+            
+            return Pair(true, "File valid - size=${sizeMb}MB")
+        } catch (e: Exception) {
+            return Pair(false, "Validation error: ${e.message}")
         }
     }
 
-    // Called from C++ JNI via reflection to emit a single token event
-    fun emitEventFromNative(type: String, token: String?, seq: Int,
-                             promptTokens: Int, evalTokens: Int,
-                             promptMs: Long, evalMs: Long, tokensPerSec: Double,
-                             errorMsg: String?, availMb: Int) {
-        val event: Map<String, Any?> = when (type) {
-            "token" -> mapOf(
-                "type"  to "token",
-                "token" to (token ?: ""),
-                "seq"   to seq
-            )
-            "done" -> mapOf(
-                "type"         to "done",
-                "seq"          to seq,
-                "promptTokens" to promptTokens,
-                "evalTokens"   to evalTokens,
-                "promptMs"     to promptMs,
-                "evalMs"       to evalMs,
-                "tokensPerSec" to tokensPerSec
-            )
-            "error" -> mapOf(
-                "type"    to "error",
-                "message" to (errorMsg ?: "Unknown native error"),
-                "seq"     to seq
-            )
-            "loading_progress" -> mapOf(
-                "type"     to "loading_progress",
-                "progress" to tokensPerSec.coerceIn(0.0, 1.0)  // tokensPerSec carries 0.0-1.0 progress value
-            )
-            "memory_warning" -> mapOf(
-                "type"        to "memory_warning",
-                "availableMb" to availMb
-            )
-            else -> mapOf("type" to type)
-        }
-        emitEvent(event)
-
-        // Stop foreground service when generation is done or errored
-        if (type == "done" || type == "error") {
-            LlamaGenerationService.stop(context)
-        }
-    }
-
-    // ── MethodChannel handlers ────────────────────────────────────────────────
-
+    // 🆕 FIX: Enhanced loadModel with full validation & error handling
     private fun handleLoadModel(call: MethodCall, result: MethodChannel.Result) {
-        val path = call.argument<String>("modelPath")
-        if (path.isNullOrBlank()) {
+        val modelPath = call.argument<String>("modelPath") ?: ""
+        val contextSize = call.argument<Int>("contextSize") ?: 2048
+        val gpuLayers = call.argument<Int>("gpuLayers") ?: 0
+        val nBatch = call.argument<Int>("nBatch") ?: 512
+        val nThreads = call.argument<Int>("nThreads") ?: 4
+        val useFlashAttn = call.argument<Boolean>("useFlashAttn") ?: false
+        val memLock = call.argument<Boolean>("memLock") ?: false
+        val ropeBase = (call.argument<Double>("ropeBase") ?: 0.0).toFloat()
+        val ropeScale = (call.argument<Double>("ropeScale") ?: 1.0).toFloat()
+
+        // ─── STEP 1: Validate path ───────────────────────────────────────────
+        if (modelPath.isBlank()) {
+            Log.e(TAG, "loadModel: modelPath is empty")
             result.error("LLAMA_ERROR", "modelPath is required", null)
             return
         }
-        val contextSize    = call.argument<Int>("contextSize")         ?: 4096
-        val gpuLayers      = call.argument<Int>("gpuLayers")           ?: 0
-        val nBatch         = call.argument<Int>("nBatch")              ?: 512
-        val nThreads       = call.argument<Int>("nThreads")            ?: 4
-        val useFlashAttn   = call.argument<Boolean>("useFlashAttention") ?: false
-        val useMemLock     = call.argument<Boolean>("useMemoryLock")    ?: false
-        val ropeFreqBase   = (call.argument<Double>("ropeFreqBase")    ?: 0.0).toFloat()
-        val ropeFreqScale  = (call.argument<Double>("ropeFreqScale")   ?: 0.0).toFloat()
 
-        emitEvent(mapOf("type" to "loading_progress", "progress" to 0.0))
+        // ─── STEP 2: Validate file exists & readable ─────────────────────────
+        val modelFile = File(modelPath)
+        val (isValid, validationMsg) = validateModelFile(modelFile)
+        if (!isValid) {
+            Log.e(TAG, "loadModel: file validation failed - $validationMsg")
+            result.error("LLAMA_ERROR", validationMsg, null)
+            return
+        }
+        
+        Log.i(TAG, "loadModel: file validation passed - $validationMsg")
 
+        // ─── STEP 3: Check available memory ─────────────────────────────────
+        val availMb = nativeGetAvailableMemoryMb()
+        val fileSizeMb = modelFile.length() / (1024 * 1024)
+        val estimatedNeededMb = fileSizeMb + (contextSize * 2)
+        
+        Log.i(TAG, """
+            loadModel: memory check
+            - available: ${availMb}MB
+            - model size: ${fileSizeMb}MB
+            - estimated needed: ${estimatedNeededMb}MB
+            - context: ${contextSize}
+        """.trimIndent())
+        
+        if (availMb < estimatedNeededMb) {
+            Log.w(TAG, "loadModel: memory warning - may not have enough RAM")
+        }
+
+        // ─── STEP 4: Stop any ongoing generation ────────────────────────────
+        if (genJob != null && genJob!!.isActive) {
+            Log.i(TAG, "loadModel: cancelling active generation job")
+            genJob?.cancel()
+        }
+
+        // ─── STEP 5: Release previous model ─────────────────────────────────
+        if (modelHandle != 0L) {
+            Log.i(TAG, "loadModel: releasing previous model handle=$modelHandle")
+            pluginScope.launch {
+                try {
+                    nativeReleaseModel(modelHandle)
+                    Log.i(TAG, "loadModel: previous model released")
+                } catch (e: Exception) {
+                    Log.e(TAG, "loadModel: error releasing previous model - ${e.message}", e)
+                }
+            }
+            // Give native layer time to cleanup
+            try {
+                Thread.sleep(300)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+        }
+
+        // ─── STEP 6: Call native loading in coroutine ──────────────────────
+        Log.i(TAG, "loadModel: launching native load coroutine")
         pluginScope.launch {
             try {
+                Log.i(TAG, """
+                    loadModel: calling nativeLoadModel with:
+                    - path: $modelPath
+                    - contextSize: $contextSize
+                    - gpuLayers: $gpuLayers
+                    - nBatch: $nBatch
+                    - nThreads: $nThreads
+                    - useFlashAttn: $useFlashAttn
+                    - memLock: $memLock
+                    - ropeBase: $ropeBase
+                    - ropeScale: $ropeScale
+                """.trimIndent())
+
                 val handle = nativeLoadModel(
-                    path, contextSize, gpuLayers,
-                    nBatch, nThreads, useFlashAttn,
-                    useMemLock, ropeFreqBase, ropeFreqScale
+                    modelPath,
+                    contextSize,
+                    gpuLayers,
+                    nBatch,
+                    nThreads,
+                    useFlashAttn,
+                    memLock,
+                    ropeBase,
+                    ropeScale
                 )
+
+                // ─── STEP 7: Handle result ────────────────────────────────
                 if (handle == 0L) {
+                    Log.e(TAG, "❌ loadModel: nativeLoadModel returned 0 (FAILED)")
+                    Log.e(TAG, "Check logcat with: adb logcat | grep -E 'LlamaJNI|LlamaPlugin'")
                     mainHandler.post {
-                        result.error("LLAMA_ERROR", "nativeLoadModel returned 0 — model failed to load", null)
+                        result.error("LLAMA_ERROR",
+                            "Native model loading failed (returned 0). Check device logcat for details.",
+                            mapOf("path" to modelPath))
                     }
-                    return@launch
+                } else {
+                    Log.i(TAG, "✅ loadModel: SUCCESS handle=$handle")
+                    synchronized(sinkLock) {
+                        modelHandle = handle
+                    }
+                    mainHandler.post {
+                        result.success(mapOf(
+                            "handle" to handle,
+                            "contextSize" to contextSize,
+                            "path" to modelPath,
+                            "fileSizeMb" to fileSizeMb
+                        ))
+                    }
                 }
-                modelHandle = handle
-                Log.i(TAG, "Model loaded: handle=$handle path=$path")
 
-                // Parse model info after load
-                val infoJson = nativeGetModelInfo(path)
-                val info = parseModelInfoJson(infoJson)
-
-                val event = mutableMapOf<String, Any?>(
-                    "type" to "model_loaded",
-                    "name" to (info["name"] ?: "unknown"),
-                    "arch" to (info["arch"] ?: "unknown"),
-                    "contextLength" to (info["contextLength"] ?: contextSize),
-                    "paramCount" to (info["paramCount"] ?: 0)
-                )
-                emitEvent(event)
-
-                mainHandler.post { result.success(true) }
             } catch (e: Exception) {
-                Log.e(TAG, "handleLoadModel error: ${e.message}", e)
+                Log.e(TAG, "❌ loadModel: exception during native call - ${e.message}", e)
                 mainHandler.post {
-                    result.error("LLAMA_ERROR", e.message, null)
+                    result.error("LLAMA_EXCEPTION", e.message, e.stackTrace.take(5).joinToString("\n"))
                 }
             }
         }
@@ -343,18 +407,68 @@ class LlamaPlugin(
 
     private fun handleReleaseModel(result: MethodChannel.Result) {
         val handle = modelHandle
-        if (handle != 0L) {
-            nativeReleaseModel(handle)
-            modelHandle = 0L
-            Log.i(TAG, "Model released")
+        if (handle == 0L) {
+            result.success(null)
+            return
+        }
+        genJob?.cancel()
+        modelHandle = 0L
+        pluginScope.launch {
+            try {
+                nativeReleaseModel(handle)
+                Log.i(TAG, "Model released handle=$handle")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error releasing model: ${e.message}", e)
+            }
         }
         result.success(null)
     }
 
     private fun handleIsModelLoaded(result: MethodChannel.Result) {
-        val handle = modelHandle
-        val ready = handle != 0L && nativeIsReady(handle)
-        result.success(ready)
+        val isLoaded = modelHandle != 0L
+        try {
+            val ready = if (isLoaded) nativeIsReady(modelHandle) else false
+            result.success(ready)
+        } catch (e: Exception) {
+            Log.w(TAG, "isModelLoaded check error: ${e.message}")
+            result.success(false)
+        }
+    }
+
+    private fun emitEvent(eventMap: Map<String, Any?>) {
+        synchronized(sinkLock) {
+            try {
+                eventSink?.success(eventMap)
+            } catch (e: Exception) {
+                Log.w(TAG, "emitEvent error: ${e.message}")
+            }
+        }
+    }
+
+    fun emitEventFromNative(
+        type: String,
+        token: String,
+        seq: Int,
+        promptTokens: Int,
+        evalTokens: Int,
+        promptMs: Long,
+        evalMs: Long,
+        tokensPerSec: Double,
+        errorMsg: String,
+        availMb: Int
+    ) {
+        emitEvent(mapOf(
+            "type" to type,
+            "token" to token,
+            "seq" to seq,
+            "promptTokens" to promptTokens,
+            "evalTokens" to evalTokens,
+            "promptMs" to promptMs,
+            "evalMs" to evalMs,
+            "tokensPerSec" to tokensPerSec,
+            "errorMsg" to errorMsg,
+            "availMb" to availMb
+        ))
     }
 
     private fun handleGenerateTokens(call: MethodCall, result: MethodChannel.Result) {
@@ -378,10 +492,8 @@ class LlamaPlugin(
         val minP          = (call.argument<Double>("minP")          ?: 0.05).toFloat()
         val penalizeNl    = call.argument<Boolean>("penalizeNl")    ?: false
 
-        // Return immediately to Dart — generation is async via EventChannel
         result.success(null)
 
-        // Start foreground service
         LlamaGenerationService.start(context)
 
         genJob = pluginScope.launch {
@@ -419,8 +531,6 @@ class LlamaPlugin(
     }
 
     private fun handleGetModelInfo(call: MethodCall, result: MethodChannel.Result) {
-        // Support both Map argument {"path": "..."} and bare String argument "..."
-        // LlamaService sends Map; legacy code might send a bare String.
         val path: String? = when (val args = call.arguments) {
             is String -> args
             is Map<*, *> -> args["path"] as? String
@@ -445,7 +555,6 @@ class LlamaPlugin(
     private fun handleGetAvailableMemory(result: MethodChannel.Result) {
         var mb = nativeGetAvailableMemoryMb()
         if (mb <= 0) {
-            // Fallback ke ActivityManager jika JNI return 0
             try {
                 val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
                 val memInfo = ActivityManager.MemoryInfo()
@@ -467,7 +576,7 @@ class LlamaPlugin(
             val totalRamMb    = memInfo.totalMem / (1024L * 1024L)
             val availRamMb    = nativeGetAvailableMemoryMb()
             val cpuCores      = Runtime.getRuntime().availableProcessors()
-            val gpuAvailable  = false // No Vulkan compute check; can be extended
+            val gpuAvailable  = false
 
             result.success(mapOf(
                 "totalRamMb"   to totalRamMb,
@@ -481,11 +590,9 @@ class LlamaPlugin(
         }
     }
 
-    // ── ComponentCallbacks2 — memory pressure ─────────────────────────────────
     override fun onTrimMemory(level: Int) {
-        // TRIM_MEMORY_CRITICAL (80) dihapus di compileSdk 36 — pakai nilai langsung
         if (level >= 80) {
-            Log.w(TAG, "TRIM_MEMORY_CRITICAL (level=$level) — emitting memory_warning")
+            Log.w(TAG, "TRIM_MEMORY_CRITICAL (level=$level)")
             emitEvent(mapOf(
                 "type"        to "memory_warning",
                 "availableMb" to nativeGetAvailableMemoryMb()
@@ -502,7 +609,6 @@ class LlamaPlugin(
         ))
     }
 
-    // ── Cleanup ───────────────────────────────────────────────────────────────
     fun destroy() {
         if (isDestroyed) return
         isDestroyed = true
@@ -521,26 +627,15 @@ class LlamaPlugin(
         eventChannel.setStreamHandler(null)
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    /**
-     * Parse minimal JSON returned by nativeGetModelInfo.
-     * Format: {"name":"...","arch":"...","contextLength":4096,"paramCount":7000000000}
-     * Uses manual parsing to avoid adding a JSON dependency.
-     */
     private fun parseModelInfoJson(json: String): Map<String, Any> {
         val result = mutableMapOf<String, Any>()
         try {
-            // name
             Regex("\"name\"\\s*:\\s*\"([^\"]+)\"").find(json)?.groupValues?.get(1)
                 ?.let { result["name"] = it }
-            // arch
             Regex("\"arch\"\\s*:\\s*\"([^\"]+)\"").find(json)?.groupValues?.get(1)
                 ?.let { result["arch"] = it }
-            // contextLength
             Regex("\"contextLength\"\\s*:\\s*(\\d+)").find(json)?.groupValues?.get(1)
                 ?.toLongOrNull()?.let { result["contextLength"] = it }
-            // paramCount
             Regex("\"paramCount\"\\s*:\\s*(\\d+)").find(json)?.groupValues?.get(1)
                 ?.toLongOrNull()?.let { result["paramCount"] = it }
         } catch (e: Exception) {

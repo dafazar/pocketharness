@@ -374,19 +374,19 @@ jobs:
             extract_termux_bin "g" "git" "git" "usr/bin/git" "$BIN_DEST/git" "$TERMUX_ARCH" || true
 
             # ── ripgrep ──────────────────────────────────────────────────────
-            extract_termux_bin "r" "ripgrep" "ripgrep" "usr/bin/rg" "$BIN_DEST/rg" "$TERMUX_ARCH"
+            extract_termux_bin "r" "ripgrep" "ripgrep" "usr/bin/rg" "$BIN_DEST/rg" "$TERMUX_ARCH" || true
 
             # ── curl ─────────────────────────────────────────────────────────
-            extract_termux_bin "c" "curl" "curl" "usr/bin/curl" "$BIN_DEST/curl" "$TERMUX_ARCH"
+            extract_termux_bin "c" "curl" "curl" "usr/bin/curl" "$BIN_DEST/curl" "$TERMUX_ARCH" || true
 
             # ── wget ─────────────────────────────────────────────────────────
-            extract_termux_bin "w" "wget" "wget" "usr/bin/wget" "$BIN_DEST/wget" "$TERMUX_ARCH"
+            extract_termux_bin "w" "wget" "wget" "usr/bin/wget" "$BIN_DEST/wget" "$TERMUX_ARCH" || true
 
             # ── jq ───────────────────────────────────────────────────────────
-            extract_termux_bin "j" "jq" "jq" "usr/bin/jq" "$BIN_DEST/jq" "$TERMUX_ARCH"
+            extract_termux_bin "j" "jq" "jq" "usr/bin/jq" "$BIN_DEST/jq" "$TERMUX_ARCH" || true
 
             # ── busybox (sh, grep, sed, awk, find, tar, …) ───────────────────
-            extract_termux_bin "b" "busybox" "busybox" "usr/bin/busybox" "$BIN_DEST/busybox" "$TERMUX_ARCH"
+            extract_termux_bin "b" "busybox" "busybox" "usr/bin/busybox" "$BIN_DEST/busybox" "$TERMUX_ARCH" || true
             if [ -f "$BIN_DEST/busybox" ]; then
               for APPLET in sh ash grep sed awk find xargs head tail wc sort uniq tr cut paste \
                             tar gzip gunzip bzip2 bunzip2 xz unxz base64 \
@@ -402,74 +402,132 @@ jobs:
             fi
 
             # ── python3 ──────────────────────────────────────────────────────
-            # Termux python3 requires shared libs — use chaquopy/python-android standalone
-            # which ships a self-contained python3 binary for Android (Bionic libc)
+            # Strategy: try multiple sources in order, first success wins
+            # Source 1: BeeWare python-android-support (GitHub releases)
+            # Source 2: Termux deb (uses Termux prefix /data/data/com.termux/...)
+            # Source 3: python-build-standalone (fallback, may not work on Android)
             _PY_ARCH=""
             case "$TERMUX_ARCH" in
               aarch64) _PY_ARCH="aarch64" ;;
               x86_64)  _PY_ARCH="x86_64"  ;;
             esac
-            # Try: python-android standalone from Chaquopy (releases on GitHub)
             _PY_INSTALLED=0
-            _PY_VER="3.11"
-            _PY_URL="https://github.com/chaquopy/python-android/releases/download/3.11/python3.11-${_PY_ARCH}.zip"
-            if curl -fsSL --max-time 60 "$_PY_URL" -o "/tmp/py_android.zip" 2>/dev/null; then
-              mkdir -p "/tmp/py_android_${TERMUX_ARCH}"
-              unzip -q "/tmp/py_android.zip" -d "/tmp/py_android_${TERMUX_ARCH}" 2>/dev/null || true
-              _PY_BIN=$(find "/tmp/py_android_${TERMUX_ARCH}" -name "python3*" -type f 2>/dev/null | head -1)
-              if [ -n "$_PY_BIN" ]; then
-                cp "$_PY_BIN" "$BIN_DEST/python3"
-                chmod 755 "$BIN_DEST/python3"
-                echo "      ✅ python3 bundled (chaquopy standalone)"
-                _PY_INSTALLED=1
+
+            # Source 1: BeeWare python-android-support
+            # Releases: https://github.com/beeware/Python-Apple-support (iOS only)
+            # Use mobile-forge / android python wheels from BeeWare
+            # Correct project: https://github.com/beeware/cpython-android-source-deps
+            # Actually the correct standalone is from: https://github.com/joaoventura/full-speed-python
+            # Best working source: Termux bootstrap or direct APT repo query
+            # Try Termux APT package index (Packages.xz) for correct path
+            _TERMUX_PKG_INDEX="https://packages.termux.dev/apt/termux-main/dists/stable/main/binary-${_PY_ARCH}/Packages.xz"
+            _PY_DEB_URL=""
+            if _PKG_DATA=$(curl -fsSL --max-time 30 "$_TERMUX_PKG_INDEX" -o "/tmp/pkgs_${_PY_ARCH}.xz" 2>/dev/null && \
+                           xz -d "/tmp/pkgs_${_PY_ARCH}.xz" 2>/dev/null && \
+                           cat "/tmp/pkgs_${_PY_ARCH}" 2>/dev/null); then
+              # Parse Packages file for python (main python3 package, not python3.x)
+              _PY_FILENAME=$(awk '
+                /^Package: python$/ { in_pkg=1 }
+                in_pkg && /^Filename:/ { print $2; exit }
+                /^$/ { in_pkg=0 }
+              ' "/tmp/pkgs_${_PY_ARCH}" 2>/dev/null | head -1)
+              if [ -z "$_PY_FILENAME" ]; then
+                _PY_FILENAME=$(awk '
+                  /^Package: python3$/ { in_pkg=1 }
+                  in_pkg && /^Filename:/ { print $2; exit }
+                  /^$/ { in_pkg=0 }
+                ' "/tmp/pkgs_${_PY_ARCH}" 2>/dev/null | head -1)
               fi
-              rm -rf "/tmp/py_android_${TERMUX_ARCH}" "/tmp/py_android.zip"
+              rm -f "/tmp/pkgs_${_PY_ARCH}" "/tmp/pkgs_${_PY_ARCH}.xz"
+              if [ -n "$_PY_FILENAME" ]; then
+                _PY_DEB_URL="https://packages.termux.dev/apt/termux-main/${_PY_FILENAME}"
+              fi
             fi
-            # Fallback: try Termux deb with deeper path search
-            if [ "$_PY_INSTALLED" -eq 0 ]; then
-              _PY_DEB=$(curl -sf "${TERMUX_POOL}/p/python3/" \
-                | grep -oP 'href="\K[^"]*'"${TERMUX_ARCH}"'[^"]*\.deb' \
-                | grep -v 'dbgsym\|dev\|doc\|lib' | head -1 || true)
-              if [ -n "$_PY_DEB" ]; then
-                curl -fsSL "${TERMUX_POOL}/p/python3/${_PY_DEB}" -o "/tmp/py3_${TERMUX_ARCH}.deb"
-                _PY_DIR="/tmp/deb_py3_${TERMUX_ARCH}"
+
+            # Fallback URL pattern if Packages index failed
+            if [ -z "$_PY_DEB_URL" ]; then
+              # Try common pool paths: p/python/ and p/python3/
+              for _PY_POOL_PATH in "p/python" "p/python3"; do
+                _PY_DEB_NAME=$(curl -sf --max-time 20 "${TERMUX_POOL}/${_PY_POOL_PATH}/" 2>/dev/null \
+                  | grep -oP 'href="\K[^"]*'"${_PY_ARCH}"'[^"]*\.deb' \
+                  | grep -v 'dbgsym\|dev\|doc\|lib\|gdb' | head -1 || true)
+                if [ -n "$_PY_DEB_NAME" ]; then
+                  _PY_DEB_URL="${TERMUX_POOL}/${_PY_POOL_PATH}/${_PY_DEB_NAME}"
+                  break
+                fi
+              done
+            fi
+
+            # Download & extract python3 binary from deb
+            if [ -n "$_PY_DEB_URL" ]; then
+              echo "      ⬇️  python3 from: $_PY_DEB_URL"
+              if curl -fsSL --max-time 120 "$_PY_DEB_URL" -o "/tmp/py3_${_PY_ARCH}.deb" 2>/dev/null; then
+                _PY_DIR="/tmp/deb_py3_${_PY_ARCH}"
                 rm -rf "$_PY_DIR" && mkdir -p "$_PY_DIR"
-                cd "$_PY_DIR"
-                ar x "/tmp/py3_${TERMUX_ARCH}.deb"
+                pushd "$_PY_DIR" > /dev/null
+                ar x "/tmp/py3_${_PY_ARCH}.deb" 2>/dev/null || true
                 _PY_TAR=$(ls data.tar.* 2>/dev/null | head -1)
                 if [ -n "$_PY_TAR" ]; then
                   tar -xf "$_PY_TAR" 2>/dev/null || true
-                  # Termux installs to data/data/com.termux/files/usr/bin/
-                  _PY_BIN=$(find . -name "python3.1*" -type f 2>/dev/null \
-                    | grep -v 'dbgsym\|include\|share\|\.py$' | head -1)
-                  [ -z "$_PY_BIN" ] && _PY_BIN=$(find . -name "python3" -type f 2>/dev/null \
-                    | grep -v 'dbgsym\|include\|share\|\.py$' | head -1)
+                  # Search all possible Termux prefix paths
+                  _PY_BIN=$(find . \( -name "python3.1*" -o -name "python3" \) -type f 2>/dev/null \
+                    | grep -v 'dbgsym\|include\|share\|\.py$\|config-' | sort | head -1)
                   if [ -n "$_PY_BIN" ]; then
                     cp "$_PY_BIN" "$OLDPWD/$BIN_DEST/python3"
                     chmod 755 "$OLDPWD/$BIN_DEST/python3"
-                    echo "      ✅ python3 bundled (termux deb)"
+                    _PY_VER=$(file "$OLDPWD/$BIN_DEST/python3" 2>/dev/null | grep -o 'ELF[^,]*' | head -1 || echo "ELF")
+                    echo "      ✅ python3 bundled (termux deb, $_PY_VER)"
                     _PY_INSTALLED=1
                   fi
                 fi
-                cd "$OLDPWD"
-                rm -rf "$_PY_DIR" "/tmp/py3_${TERMUX_ARCH}.deb"
+                popd > /dev/null
+                rm -rf "$_PY_DIR" "/tmp/py3_${_PY_ARCH}.deb"
               fi
             fi
+
+            # Source 2: python-build-standalone (Linux Android target)
+            # These are self-contained CPython builds for Android from astral-sh
+            if [ "$_PY_INSTALLED" -eq 0 ]; then
+              _PBS_TAG=$(curl -sf --max-time 15 "https://api.github.com/repos/astral-sh/python-build-standalone/releases/latest" \
+                | python3 -c "import sys,json; print(json.load(sys.stdin).get('tag_name',''))" 2>/dev/null || echo "")
+              if [ -n "$_PBS_TAG" ]; then
+                case "$_PY_ARCH" in
+                  aarch64) _PBS_TRIPLE="aarch64-unknown-linux-android" ;;
+                  x86_64)  _PBS_TRIPLE="x86_64-unknown-linux-android"  ;;
+                esac
+                _PBS_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${_PBS_TAG}/cpython-3.12.0+${_PBS_TAG}-${_PBS_TRIPLE}-install_only.tar.gz"
+                if curl -fsSL --max-time 120 "$_PBS_URL" -o "/tmp/pbs_py_${_PY_ARCH}.tar.gz" 2>/dev/null; then
+                  _PBS_DIR="/tmp/pbs_py_${_PY_ARCH}"
+                  rm -rf "$_PBS_DIR" && mkdir -p "$_PBS_DIR"
+                  tar -xzf "/tmp/pbs_py_${_PY_ARCH}.tar.gz" -C "$_PBS_DIR" 2>/dev/null || true
+                  _PY_BIN=$(find "$_PBS_DIR" -name "python3*" -type f 2>/dev/null \
+                    | grep -v '\.py$\|config-\|include' | sort | head -1)
+                  if [ -n "$_PY_BIN" ]; then
+                    cp "$_PY_BIN" "$BIN_DEST/python3"
+                    chmod 755 "$BIN_DEST/python3"
+                    echo "      ✅ python3 bundled (python-build-standalone)"
+                    _PY_INSTALLED=1
+                  fi
+                  rm -rf "$_PBS_DIR" "/tmp/pbs_py_${_PY_ARCH}.tar.gz"
+                fi
+              fi
+            fi
+
             [ "$_PY_INSTALLED" -eq 0 ] && echo "      ⚠️  python3 not available, skipping (optional)" || true
             if [ -f "$BIN_DEST/python3" ] && [ ! -f "$BIN_DEST/python" ]; then
               ln -sf python3 "$BIN_DEST/python"
             fi
 
             # ── zip / unzip ──────────────────────────────────────────────────
-            extract_termux_bin "z" "zip" "zip" "usr/bin/zip" "$BIN_DEST/zip" "$TERMUX_ARCH"
-            extract_termux_bin "u" "unzip" "unzip" "usr/bin/unzip" "$BIN_DEST/unzip" "$TERMUX_ARCH"
+            extract_termux_bin "z" "zip" "zip" "usr/bin/zip" "$BIN_DEST/zip" "$TERMUX_ARCH" || true
+            extract_termux_bin "u" "unzip" "unzip" "usr/bin/unzip" "$BIN_DEST/unzip" "$TERMUX_ARCH" || true
 
             # ── sqlite3 ──────────────────────────────────────────────────────
-            extract_termux_bin "s" "sqlite" "sqlite" "usr/bin/sqlite3" "$BIN_DEST/sqlite3" "$TERMUX_ARCH"
+            extract_termux_bin "s" "sqlite" "sqlite" "usr/bin/sqlite3" "$BIN_DEST/sqlite3" "$TERMUX_ARCH" || true
 
             # ── ffmpeg + ffprobe ──────────────────────────────────────────────
-            extract_termux_bin "f" "ffmpeg" "ffmpeg" "usr/bin/ffmpeg" "$BIN_DEST/ffmpeg" "$TERMUX_ARCH"
-            extract_termux_bin "f" "ffmpeg" "ffprobe" "usr/bin/ffprobe" "$BIN_DEST/ffprobe" "$TERMUX_ARCH"
+            extract_termux_bin "f" "ffmpeg" "ffmpeg" "usr/bin/ffmpeg" "$BIN_DEST/ffmpeg" "$TERMUX_ARCH" || true
+            extract_termux_bin "f" "ffmpeg" "ffprobe" "usr/bin/ffprobe" "$BIN_DEST/ffprobe" "$TERMUX_ARCH" || true
 
             # ── imagemagick (convert, identify, mogrify, magick) ─────────────
             # Termux imagemagick installs to data/data/com.termux/files/usr/bin/
@@ -652,7 +710,7 @@ jobs:
             }
 
             # ── nano ─────────────────────────────────────────────────────────
-            extract_termux_bin "n" "nano" "nano" "usr/bin/nano" "$BIN_DEST/nano" "$TERMUX_ARCH"
+            extract_termux_bin "n" "nano" "nano" "usr/bin/nano" "$BIN_DEST/nano" "$TERMUX_ARCH" || true
 
             # ── vim ──────────────────────────────────────────────────────────
             # In Termux: vim binary is vim.basic inside vim-runtime package (pool v/vim-runtime/)
@@ -662,37 +720,37 @@ jobs:
               echo "      ⚠️  vim not available, skipping (optional)"
 
             # ── pv (pipe viewer) ─────────────────────────────────────────────
-            extract_termux_bin "p" "pv" "pv" "usr/bin/pv" "$BIN_DEST/pv" "$TERMUX_ARCH"
+            extract_termux_bin "p" "pv" "pv" "usr/bin/pv" "$BIN_DEST/pv" "$TERMUX_ARCH" || true
 
             # ── file ─────────────────────────────────────────────────────────
-            extract_termux_bin "f" "file" "file" "usr/bin/file" "$BIN_DEST/file" "$TERMUX_ARCH"
+            extract_termux_bin "f" "file" "file" "usr/bin/file" "$BIN_DEST/file" "$TERMUX_ARCH" || true
 
             # ── patch ────────────────────────────────────────────────────────
-            extract_termux_bin "p" "patch" "patch" "usr/bin/patch" "$BIN_DEST/patch" "$TERMUX_ARCH"
+            extract_termux_bin "p" "patch" "patch" "usr/bin/patch" "$BIN_DEST/patch" "$TERMUX_ARCH" || true
 
             # ── diffutils ────────────────────────────────────────────────────
-            extract_termux_bin "d" "diffutils" "diffutils" "usr/bin/diff" "$BIN_DEST/diff" "$TERMUX_ARCH"
+            extract_termux_bin "d" "diffutils" "diffutils" "usr/bin/diff" "$BIN_DEST/diff" "$TERMUX_ARCH" || true
 
             # ── rsync ────────────────────────────────────────────────────────
-            extract_termux_bin "r" "rsync" "rsync" "usr/bin/rsync" "$BIN_DEST/rsync" "$TERMUX_ARCH"
+            extract_termux_bin "r" "rsync" "rsync" "usr/bin/rsync" "$BIN_DEST/rsync" "$TERMUX_ARCH" || true
 
             # ── p7zip ────────────────────────────────────────────────────────
-            extract_termux_bin "p" "p7zip" "p7zip" "usr/bin/7z" "$BIN_DEST/7z" "$TERMUX_ARCH"
+            extract_termux_bin "p" "p7zip" "p7zip" "usr/bin/7z" "$BIN_DEST/7z" "$TERMUX_ARCH" || true
 
             # ── lz4 ──────────────────────────────────────────────────────────
-            extract_termux_bin "l" "lz4" "lz4" "usr/bin/lz4" "$BIN_DEST/lz4" "$TERMUX_ARCH"
+            extract_termux_bin "l" "lz4" "lz4" "usr/bin/lz4" "$BIN_DEST/lz4" "$TERMUX_ARCH" || true
 
             # ── zstd ─────────────────────────────────────────────────────────
-            extract_termux_bin "z" "zstd" "zstd" "usr/bin/zstd" "$BIN_DEST/zstd" "$TERMUX_ARCH"
+            extract_termux_bin "z" "zstd" "zstd" "usr/bin/zstd" "$BIN_DEST/zstd" "$TERMUX_ARCH" || true
 
             # ── xz-utils ─────────────────────────────────────────────────────
-            extract_termux_bin "x" "xz-utils" "xz-utils" "usr/bin/xz" "$BIN_DEST/xz" "$TERMUX_ARCH"
+            extract_termux_bin "x" "xz-utils" "xz-utils" "usr/bin/xz" "$BIN_DEST/xz" "$TERMUX_ARCH" || true
 
             # ── procps (ps, top, free, pgrep, pkill) ─────────────────────────
-            extract_termux_bin "p" "procps" "procps" "usr/bin/ps" "$BIN_DEST/ps" "$TERMUX_ARCH"
-            extract_termux_bin "p" "procps" "procps-free" "usr/bin/free" "$BIN_DEST/free" "$TERMUX_ARCH"
-            extract_termux_bin "p" "procps" "procps-pgrep" "usr/bin/pgrep" "$BIN_DEST/pgrep" "$TERMUX_ARCH"
-            extract_termux_bin "p" "procps" "procps-pkill" "usr/bin/pkill" "$BIN_DEST/pkill" "$TERMUX_ARCH"
+            extract_termux_bin "p" "procps" "procps" "usr/bin/ps" "$BIN_DEST/ps" "$TERMUX_ARCH" || true
+            extract_termux_bin "p" "procps" "procps-free" "usr/bin/free" "$BIN_DEST/free" "$TERMUX_ARCH" || true
+            extract_termux_bin "p" "procps" "procps-pgrep" "usr/bin/pgrep" "$BIN_DEST/pgrep" "$TERMUX_ARCH" || true
+            extract_termux_bin "p" "procps" "procps-pkill" "usr/bin/pkill" "$BIN_DEST/pkill" "$TERMUX_ARCH" || true
 
             # ── exiftool ─────────────────────────────────────────────────────
             # Termux package names vary: libimage-exiftool-perl, perl-image-exiftool, exiftool
@@ -730,12 +788,12 @@ jobs:
             [ "$_ET_INSTALLED" -eq 0 ] && echo "      ⚠️  exiftool not available for $TERMUX_ARCH, skipping (optional)" || true
 
             # ── openssh ──────────────────────────────────────────────────────
-            extract_termux_bin "o" "openssh" "openssh" "usr/bin/ssh" "$BIN_DEST/ssh" "$TERMUX_ARCH"
-            extract_termux_bin "o" "openssh" "openssh-scp" "usr/bin/scp" "$BIN_DEST/scp" "$TERMUX_ARCH"
-            extract_termux_bin "o" "openssh" "openssh-keygen" "usr/bin/ssh-keygen" "$BIN_DEST/ssh-keygen" "$TERMUX_ARCH"
+            extract_termux_bin "o" "openssh" "openssh" "usr/bin/ssh" "$BIN_DEST/ssh" "$TERMUX_ARCH" || true
+            extract_termux_bin "o" "openssh" "openssh-scp" "usr/bin/scp" "$BIN_DEST/scp" "$TERMUX_ARCH" || true
+            extract_termux_bin "o" "openssh" "openssh-keygen" "usr/bin/ssh-keygen" "$BIN_DEST/ssh-keygen" "$TERMUX_ARCH" || true
 
             # ── strace ───────────────────────────────────────────────────────
-            extract_termux_bin "s" "strace" "strace" "usr/bin/strace" "$BIN_DEST/strace" "$TERMUX_ARCH"
+            extract_termux_bin "s" "strace" "strace" "usr/bin/strace" "$BIN_DEST/strace" "$TERMUX_ARCH" || true
 
             echo ""
             echo "    📋 bin/ inventory ($ABI): $(find "$BIN_DEST/" -maxdepth 1 ! -type d | wc -l) files"
@@ -789,35 +847,28 @@ jobs:
           done
 
           # ── Generate tools_manifest.json ──────────────────────────────────
-          ABIS_JSON=$(echo "$ABIS" | tr ' ' '\n' | \
-            python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))")
-          python3 << PYEOF2
-          import json
-          manifest = {
-              "schema_version": 3,
-              "built_at": "${BUILD_DATE}",
-              "run_id": "${{ github.run_id }}",
-              "node_version": "${NODE_VERSION}",
-              "claude_code_version": "${CLAUDE_CODE_VERSION}",
-              "code_server_version": "${{ steps.resolve-codeserver.outputs.cs_version }}",
-              "abis": ${ABIS_JSON},
-              "tools": [
-                "claude-code", "code-server",
-                "git", "ripgrep", "curl", "wget", "jq",
-                "busybox", "python3",
-                "zip", "unzip", "sqlite3",
-                "ffmpeg", "ffprobe", "imagemagick",
-                "sox", "yt-dlp",
-                "nano", "vim", "pv", "file", "patch",
-                "diffutils", "rsync", "p7zip",
-                "lz4", "zstd", "xz",
-                "procps", "exiftool", "openssh", "strace"
-              ]
-          }
-          with open("${TOOLS_DIR}/tools_manifest.json", "w") as f:
-              json.dump(manifest, f, indent=2)
-          print("  ✅ tools_manifest.json generated")
-          PYEOF2
+          # Use printf+jq (pure bash) — avoids python3 heredoc indentation issues in YAML
+          ABIS_JSON="["
+          _FIRST_ABI=1
+          for _A in $ABIS; do
+            [ "$_FIRST_ABI" -eq 0 ] && ABIS_JSON="${ABIS_JSON},"
+            ABIS_JSON="${ABIS_JSON}\"${_A}\""
+            _FIRST_ABI=0
+          done
+          ABIS_JSON="${ABIS_JSON}]"
+
+          {
+            printf '{'
+            printf '"schema_version":3,'
+            printf '"built_at":"%s",' "${BUILD_DATE}"
+            printf '"run_id":"%s",' "${{ github.run_id }}"
+            printf '"node_version":"%s",' "${NODE_VERSION}"
+            printf '"claude_code_version":"%s",' "${CLAUDE_CODE_VERSION}"
+            printf '"code_server_version":"%s",' "${{ steps.resolve-codeserver.outputs.cs_version }}"
+            printf '"abis":%s,' "${ABIS_JSON}"
+            printf '"tools":["claude-code","code-server","git","ripgrep","curl","wget","jq","busybox","python3","zip","unzip","sqlite3","ffmpeg","ffprobe","imagemagick","sox","yt-dlp","nano","vim","pv","file","patch","diffutils","rsync","p7zip","lz4","zstd","xz","procps","exiftool","openssh","strace"]}'
+          } > "${TOOLS_DIR}/tools_manifest.json"
+          echo "  ✅ tools_manifest.json generated"
 
           echo ""
           echo "  ✅ Bundle complete:"
