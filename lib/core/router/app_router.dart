@@ -38,6 +38,7 @@ import 'package:kanmongo/shared/widgets/wallpaper_menu_shell.dart';
 // SESSION 03 — flat-path screens (query-param aware)
 import 'package:kanmongo/features/claude_code/claude_code_screen.dart';
 import 'package:kanmongo/features/vscode/vscode_screen.dart';
+import 'package:kanmongo/features/tools/tools_dashboard_screen.dart';
 
 class KmRoutes {
   static const login           = '/auth/login';
@@ -71,6 +72,7 @@ class KmRoutes {
   static const agent           = '/agent';
   static const claudeCode      = '/claude-code';
   static const vsCode          = '/vscode';
+  static const toolsDashboard  = '/settings/tools-dashboard';
   static const privacy         = '/privacy';
 }
 
@@ -135,6 +137,8 @@ final GoRouter appRouter = GoRouter(
         GoRoute(path: '/settings/ai-params',      pageBuilder: (c, s) => _slide(const AiInferenceParamsScreen())),
         // /settings/ai-inference → halaman fine-tuning parameter inferensi (suhu, top-p, dll)
         GoRoute(path: '/settings/ai-inference',   pageBuilder: (c, s) => _fade(const AiInferenceParamsScreen())),
+        // /settings/tools-dashboard → dashboard semua bundled CLI tools
+        GoRoute(path: '/settings/tools-dashboard', pageBuilder: (c, s) => _slide(const ToolsDashboardScreen())),
         // ──────────────────────────────────────────────────────────────────
       ],
     ),

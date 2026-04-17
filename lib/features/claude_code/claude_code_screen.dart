@@ -79,9 +79,12 @@ class _ClaudeCodeTerminalScreenState extends ConsumerState<ClaudeCodeTerminalScr
 
   Future<void> _checkStatus() async {
     setState(() { _phase = _Phase.checking; _statusMsg = 'Memeriksa bundle tools...'; _progress = 0; });
+
+    // Always try to init — idempotent & fast if already extracted
     if (!ToolsService.instance.isReady) {
       try { await ToolsService.instance.initialize(); } catch (_) {}
     }
+
     if (!mounted) return;
     if (!ToolsService.instance.isReady) {
       setState(() { _phase = _Phase.noBundle; });

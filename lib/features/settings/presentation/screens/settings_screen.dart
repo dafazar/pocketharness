@@ -505,6 +505,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             Divider(color: kfc.borderSoft, height: 1, indent: 16, endIndent: 16),
 
+            // ── Developer Tools Dashboard ─────────────────────────────────
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.construction_rounded,
+                    color: Color(0xFF7C3AED), size: 20),
+              ),
+              title: const Text('Developer Tools'),
+              subtitle: const Text('Status & health semua CLI tools bundled'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(KmRoutes.toolsDashboard),
+            ),
+            Divider(color: kfc.borderSoft, height: 1, indent: 16, endIndent: 16),
+
             // ── Katalog Model ───────────────────────────────────────────────
             _navRow(
               kfc,

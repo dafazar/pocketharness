@@ -43,11 +43,19 @@ class _VscodeScreenState extends ConsumerState<VscodeScreen> {
 
   Future<void> _checkStatus() async {
     setState(() { _phase = _Phase.checking; _msg = 'Memeriksa bundle tools...'; _progress = 0; });
+
+    // Always try to init ToolsService first — it's idempotent and fast if already done
+    if (!ToolsService.instance.isReady) {
+      try {
+        await ToolsService.instance.initialize();
+      } catch (_) {}
+    }
+
     final status = await _svc.checkStatus();
     if (!mounted) return;
     switch (status) {
       case CodeServerStatus.notInstalled:
-        final hasBundle = ToolsService.instance.isReady || await _tryInitBundle();
+        final hasBundle = ToolsService.instance.isReady;
         setState(() {
           _phase = hasBundle ? _Phase.setupNeeded : _Phase.noBundle;
           _msg = hasBundle ? 'Bundle ditemukan. Siap setup.' : 'Bundle tools tidak ditemukan dalam APK.';
@@ -59,11 +67,6 @@ class _VscodeScreenState extends ConsumerState<VscodeScreen> {
       case CodeServerStatus.error:
         setState(() { _phase = _Phase.error; _errMsg = _svc.lastStartError ?? 'Kesalahan tidak diketahui.'; });
     }
-  }
-
-  Future<bool> _tryInitBundle() async {
-    try { await ToolsService.instance.initialize(); return ToolsService.instance.isReady; }
-    catch (_) { return false; }
   }
 
   Future<void> _runInstall() async {

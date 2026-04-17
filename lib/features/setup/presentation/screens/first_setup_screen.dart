@@ -65,7 +65,7 @@ class _FirstSetupScreenState extends State<FirstSetupScreen>
                   color: const Color(0xFF1E1E2E),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: const Color(0xFF7C3AED).withOpacity(0.4),
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
                     width: 1.5,
                   ),
                 ),
@@ -94,7 +94,7 @@ class _FirstSetupScreenState extends State<FirstSetupScreen>
                     snap.data ?? 'Mempersiapkan...',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.55),
+                      color: Colors.white.withValues(alpha: 0.55),
                       fontSize: 14,
                       height: 1.4,
                     ),
@@ -124,7 +124,7 @@ class _FirstSetupScreenState extends State<FirstSetupScreen>
                         Text(
                           '${(progress * 100).toInt()}%',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.4),
+                            color: Colors.white.withValues(alpha: 0.4),
                             fontSize: 12,
                           ),
                         ),
@@ -172,7 +172,7 @@ class _FirstSetupScreenState extends State<FirstSetupScreen>
                     snap.data ?? 'Terjadi kesalahan.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.55),
+                      color: Colors.white.withValues(alpha: 0.55),
                       fontSize: 13,
                       height: 1.5,
                     ),
@@ -187,7 +187,7 @@ class _FirstSetupScreenState extends State<FirstSetupScreen>
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white70,
                       side: BorderSide(
-                          color: Colors.white.withOpacity(0.2)),
+                          color: Colors.white.withValues(alpha: 0.2)),
                     ),
                     onPressed: () {
                       FirstSetupService.instance.skipSetup();

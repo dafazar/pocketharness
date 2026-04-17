@@ -35,7 +35,7 @@ class PremiumGate extends ConsumerWidget {
   }
 }
 
-// Stub untuk backward compatibility
+// PaywallBottomSheet — premium gate dinonaktifkan, tampilkan kosong
 class PaywallBottomSheet extends StatelessWidget {
   final String? featureLabel;
   const PaywallBottomSheet({super.key, this.featureLabel});

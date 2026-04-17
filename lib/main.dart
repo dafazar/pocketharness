@@ -39,6 +39,7 @@ import 'package:kanmongo/data/services/sfx_service.dart';
 import 'package:kanmongo/data/services/ai_source_settings_service.dart';
 import 'package:kanmongo/firebase_options.dart';
 import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:kanmongo/core/tools/native_tools_manager.dart';
 import 'package:kanmongo/data/services/first_setup_service.dart';
 
 void main() async {
@@ -48,7 +49,13 @@ void main() async {
   // Tidak blocking: UI akan subscribe ke statusStream via FirstSetupScreen.
   // Setelah tools ter-ekstrak, flag disimpan ke SharedPreferences agar
   // launch berikutnya langsung skip (< 1ms).
-  unawaited(FirstSetupService.instance.runIfNeeded());
+  // NativeToolsManager diakses via singleton — tidak perlu init eksplisit.
+  unawaited(FirstSetupService.instance.runIfNeeded().then((_) {
+    if (ToolsService.instance.isReady) {
+      debugPrint('[main] Tools ready — NativeToolsManager: '
+          '${NativeToolsManager.instance.presentTools.length} tools on disk');
+    }
+  }));
 
   // ── 1. Firebase ─────────────────────────────────────────────────────────────
   await Firebase.initializeApp(
