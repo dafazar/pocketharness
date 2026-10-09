@@ -83,7 +83,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   Future<void> _initDb() async {
     final dbPath = await getDatabasesPath();
     final keyService = SecureDbKeyService.instance;
-    final password   = keyService.hasKeys ? keyService.userKey : null;
+    await keyService.ensureKeys();
+    final password   = keyService.userKey;
 
     _db = await openDatabase(
       p.join(dbPath, 'notes.db'),

@@ -23,7 +23,8 @@ class DatabaseService {
     final dir    = await getApplicationDocumentsDirectory();
     final dbPath = join(dir.path, 'kanmongo_user.db');
     final keyService = SecureDbKeyService.instance;
-    final password   = keyService.hasKeys ? keyService.userKey : null;
+    await keyService.ensureKeys();
+    final password   = keyService.userKey;
 
     _userDb = await openDatabase(
       dbPath,

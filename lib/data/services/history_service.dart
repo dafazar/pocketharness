@@ -137,7 +137,8 @@ class HistoryService {
     final dir    = await getApplicationDocumentsDirectory();
     final dbPath = join(dir.path, 'km_history.db');
     final keyService = SecureDbKeyService.instance;
-    final password   = keyService.hasKeys ? keyService.userKey : null;
+    await keyService.ensureKeys();
+    final password   = keyService.userKey;
 
     _db = await openDatabase(
       dbPath,
