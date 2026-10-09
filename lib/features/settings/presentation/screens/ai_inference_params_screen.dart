@@ -1,7 +1,7 @@
 // lib/features/settings/presentation/screens/ai_inference_params_screen.dart
 // Screen dedicated untuk fine-tuning parameter inferensi AI ala PocketPal
 // Fitur: 3 Tab (Parameter | Preset | Coba Langsung) + live generate test
-// Sesi 8 — Final Polish KanMon GO (PocketPal Architecture)
+// Sesi 8 — Final Polish Pocket Harness (PocketPal Architecture)
 
 import 'dart:async';
 import 'dart:math';
@@ -10,11 +10,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/core/ai/inference_params_provider.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/core/ai/inference_params_provider.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODEL DATA: Preset Inferensi

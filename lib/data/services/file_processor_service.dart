@@ -1,6 +1,6 @@
 // lib/data/services/file_processor_service.dart
 //
-// KanMonAI — File Processor Service
+// PocketHarness — File Processor Service
 //
 // Reads and extracts content from all file types so they can be
 // sent to the AI for analysis or editing.
@@ -31,7 +31,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:xml/xml.dart';
 
-import 'package:kanmongo/data/services/terminal_service.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
 
 // ── Result model ──────────────────────────────────────────────────────────────
 

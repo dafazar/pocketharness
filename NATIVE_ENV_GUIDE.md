@@ -1,8 +1,8 @@
-# KanMonAI — Native Environment Guide
+# PocketHarness — Native Environment Guide
 
 ## Arsitektur
 
-KanMonAI menjalankan Claude Code CLI dan VS Code (code-server) secara **native**
+PocketHarness menjalankan Claude Code CLI dan VS Code (code-server) secara **native**
 di dalam APK, tanpa memerlukan app Termux eksternal.
 
 ## Cara Kerja

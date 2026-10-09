@@ -1,5 +1,5 @@
 // lib/data/services/offline_ai_request_service.dart
-// KanMon GO — Offline HTTP AI Request Service (Session 6 Integration Layer)
+// Pocket Harness — Offline HTTP AI Request Service (Session 6 Integration Layer)
 //
 // HTTP client for local AI servers (Ollama / llama.cpp server mode).
 // Distinct from offline_ai_service.dart (which uses llama.cpp JNI directly).

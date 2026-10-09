@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kanmongo/core/auth/auth_service.dart';
-import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/core/theme/theme_provider.dart';
-import 'package:kanmongo/data/repositories/user_repository.dart';
-import 'package:kanmongo/shared/widgets/wallpaper_background.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/auth/auth_service.dart';
+import 'package:pocketharness/core/router/app_router.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/core/theme/theme_provider.dart';
+import 'package:pocketharness/data/repositories/user_repository.dart';
+import 'package:pocketharness/shared/widgets/wallpaper_background.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -73,7 +73,7 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 12),
                     Text(
                       isLoggedIn
-                          ? (user!.displayName ?? 'Pelajar KanMon GO')
+                          ? (user!.displayName ?? 'Pelajar Pocket Harness')
                           : 'Belum Masuk',
                       style: TextStyle(
                           color: KmColors.of(context).text,
@@ -132,7 +132,7 @@ class ProfileScreen extends ConsumerWidget {
 
                 const SizedBox(height: 8),
                 Center(
-                  child: Text('KanMon GO v2.1',
+                  child: Text('Pocket Harness v2.1',
                       style: TextStyle(
                           color: KmColors.of(context).textMuted,
                           fontSize: 11)),
@@ -209,7 +209,7 @@ class ProfileScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Keluar dari KanMon GO?'),
+        title: const Text('Keluar dari Pocket Harness?'),
         content:
             const Text('Progress yang tersinkronisasi tidak akan hilang.'),
         actions: [

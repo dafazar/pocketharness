@@ -1,9 +1,9 @@
-import 'package:kanmongo/data/services/ai_persona_service.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/sfx_service.dart';
-import 'package:kanmongo/core/sync/sync_service.dart';
+import 'package:pocketharness/data/services/ai_persona_service.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/sfx_service.dart';
+import 'package:pocketharness/core/sync/sync_service.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -12,19 +12,19 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/core/ai/inference_params_provider.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/core/router/app_router.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/offline_ai_service.dart';
+import 'package:pocketharness/core/ai/inference_params_provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kanmongo/core/theme/theme_provider.dart';
-import 'package:kanmongo/core/wallpaper/wallpaper_provider.dart';
-import 'package:kanmongo/data/services/tts_service.dart';
-import 'package:kanmongo/data/services/edge_tts_service.dart';
-import 'package:kanmongo/data/services/wallpaper_service.dart';
-import 'package:kanmongo/shared/widgets/wallpaper_background.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/theme_provider.dart';
+import 'package:pocketharness/core/wallpaper/wallpaper_provider.dart';
+import 'package:pocketharness/data/services/tts_service.dart';
+import 'package:pocketharness/data/services/edge_tts_service.dart';
+import 'package:pocketharness/data/services/wallpaper_service.dart';
+import 'package:pocketharness/shared/widgets/wallpaper_background.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -685,7 +685,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _group(kfc, [
             _infoRow(kfc, label: 'Versi Aplikasi', value: '1.0.0'),
             Divider(color: kfc.borderSoft, height: 1, indent: 16, endIndent: 16),
-            _infoRow(kfc, label: 'Developer', value: 'KanMon GO Team'),
+            _infoRow(kfc, label: 'Developer', value: 'Pocket Harness Team'),
             Divider(color: kfc.borderSoft, height: 1, indent: 16, endIndent: 16),
             _infoRow(kfc, label: 'Mode Warna', value: 'Hitam & Putih'),
             Divider(color: kfc.borderSoft, height: 1, indent: 16, endIndent: 16),

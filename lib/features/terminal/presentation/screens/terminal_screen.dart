@@ -1,5 +1,5 @@
 // lib/features/terminal/presentation/screens/terminal_screen.dart
-// KanMon GO — Terminal Screen (Full Shell Emulator)
+// Pocket Harness — Terminal Screen (Full Shell Emulator)
 // =============================================================================
 
 import 'dart:async';
@@ -9,10 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/file_processor_service.dart';
 
 // ── Terminal entry ────────────────────────────────────────────────────────────
 enum TermType { prompt, output, error, ai, download, system, info }
@@ -87,7 +87,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
 
     final hasTermux = _svc.hasTermux;
     _push(TermEntry(TermType.info,
-      'KanMon Terminal\n'
+      'Pocket Harness Terminal\n'
       '${hasTermux ? "✅ Termux terdeteksi — semua tool tersedia!" : "ℹ️  Mode Android shell (/system/bin)"}\n'
       'Shell: ${_svc.shellInfo}\n'
       'Ketik help untuk daftar perintah | /ai untuk mode AI\n'));
@@ -273,7 +273,7 @@ class _TerminalState extends ConsumerState<TerminalScreen>
         'CWD: ${_svc.cwdRelative}\nFiles: $fl\n'
         'Shell: ${_svc.shellInfo}\n'
         '${hasTermux ? "Termux tersedia — bisa gunakan apt/pkg, git, python, npm, dll.\n" : ""}'
-        '${hasTermux ? "Claude Code tersedia — gunakan kanmon-claude untuk AI coding agent.\n" : ""}'
+        '${hasTermux ? "Claude Code tersedia — gunakan pocketharness-claude untuk AI coding agent.\n" : ""}'
         'Format perintah dalam ```sh code block```. Jawab Bahasa Indonesia.';
 
     _push(const TermEntry(TermType.ai, ''));

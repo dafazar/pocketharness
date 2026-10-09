@@ -1,5 +1,5 @@
 // lib/data/services/claude_code_installer.dart
-// KanMonAI — Claude Code CLI Installer (Native, tanpa Termux)
+// PocketHarness — Claude Code CLI Installer (Native, tanpa Termux)
 //
 // Arsitektur baru:
 //   • Tools sudah di-bundle ke APK via CI (assets/tools/)
@@ -11,7 +11,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
 
 enum ClaudeInstallStep {
   checkingBundle,    // cek apakah tools sudah di-extract
@@ -230,7 +230,7 @@ class ClaudeCodeInstaller {
         : '';
     return '${cdPart}'
         'ANTHROPIC_BASE_URL=http://localhost:$serverPort '
-        'ANTHROPIC_API_KEY=kanmon-local-llama '
+        'ANTHROPIC_API_KEY=pocketharness-local-llama '
         'CLAUDE_HOME=${ToolsService.instance.toolsRoot}/.kanmon/claude '
         '$launcher';
   }

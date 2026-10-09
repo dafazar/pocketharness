@@ -1,5 +1,5 @@
 // lib/data/services/offline_ai_service.dart
-// KanMon GO — Offline AI Service
+// Pocket Harness — Offline AI Service
 //
 // FIX v7 — Architecture Overhaul: "Unlimited Message" Guarantees
 // =============================================================================
@@ -47,10 +47,10 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/core/ai/native_event_dispatcher.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/core/ai/llama_context.dart';
+import 'package:pocketharness/core/ai/native_event_dispatcher.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
 
 class OfflineAiService {
   OfflineAiService._() {
@@ -58,7 +58,7 @@ class OfflineAiService {
   }
   static final OfflineAiService instance = OfflineAiService._();
 
-  static const _methodCh = MethodChannel('com.kanmongo.llama/engine');
+  static const _methodCh = MethodChannel('com.pocketharness.llama/engine');
   // EventChannel sekarang dikelola oleh NativeEventDispatcher (shared singleton)
 
   static const _keyForceOffline = 'offline_ai_force_offline';

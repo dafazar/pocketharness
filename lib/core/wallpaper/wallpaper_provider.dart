@@ -1,11 +1,11 @@
 // lib/core/wallpaper/wallpaper_provider.dart
 //
-// KanMon GO — WallpaperProvider (Riverpod)
+// Pocket Harness — WallpaperProvider (Riverpod)
 // Provider global untuk state wallpaper — reaktif di seluruh app.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/data/services/wallpaper_service.dart';
+import 'package:pocketharness/data/services/wallpaper_service.dart';
 
 class WallpaperNotifier extends Notifier<WallpaperConfig> {
   @override

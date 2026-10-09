@@ -1,5 +1,5 @@
 // lib/data/models/ai_catalog_model.dart
-// KanMon GO — AI Model Catalog Data
+// Pocket Harness — AI Model Catalog Data
 // Daftar lengkap model AI yang bisa dijalankan di Android
 // =============================================================================
 

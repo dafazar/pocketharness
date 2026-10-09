@@ -1,6 +1,6 @@
 // lib/data/services/permission_service.dart
 //
-// KanMonAI — PermissionService + StoragePermissionHelper
+// PocketHarness — PermissionService + StoragePermissionHelper
 //
 // Handles ALL Android permission variants:
 //   API ≤ 28  → READ_EXTERNAL_STORAGE (legacy)
@@ -28,8 +28,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _kPermOnboardingDone = 'kmg.perm.onboarding_done';
 
 // MethodChannels registered in MainActivity.kt (Session 1)
-const _kDeviceInfoChannel  = MethodChannel('kanmongo/device_info');
-const _kStoragePermChannel = MethodChannel('kanmongo/storage_permission');
+const _kDeviceInfoChannel  = MethodChannel('pocketharness/device_info');
+const _kStoragePermChannel = MethodChannel('pocketharness/storage_permission');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEVICE INFO HELPER
@@ -90,7 +90,7 @@ List<PermissionItem> buildPermissionList() {
       title: 'Notifications',
       subtitle: 'Daily study reminders',
       reason:
-          'KanMon GO sends daily reminders so you stay consistent with studying. '
+          'Pocket Harness sends daily reminders so you stay consistent with studying. '
           'You can disable them any time in Settings.',
       icon: Icons.notifications_rounded,
       color: Color(0xFF6366F1),
@@ -440,10 +440,10 @@ class StoragePermissionHelper {
         ),
         content: const Text(
           'To import AI model files (GGUF) from your Downloads folder or '
-          'any location on your device, KanMon GO needs the '
+          'any location on your device, Pocket Harness needs the '
           '"Allow access to all files" permission.\n\n'
           'Tap "Open Settings" below, then enable '
-          '"Allow access to all files" for KanMon GO.',
+          '"Allow access to all files" for Pocket Harness.',
           style: TextStyle(fontSize: 14, height: 1.5),
         ),
         actions: [

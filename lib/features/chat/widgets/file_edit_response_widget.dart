@@ -1,8 +1,8 @@
 // lib/features/chat/widgets/file_edit_response_widget.dart
-// KanMonAI — File Edit Response Widget (Enhanced v2.0) [EDITED]
+// PocketHarness — File Edit Response Widget (Enhanced v2.0) [EDITED]
 //
 // PERUBAHAN dari v1.0:
-//   • Save path → /storage/emulated/0/Download/ompre/  (bukan KanMonAI)
+//   • Save path → /storage/emulated/0/Download/ompre/  (bukan PocketHarness)
 //   • Bubble animasi muncul setelah AI selesai edit file (ScaleTransition elasticOut)
 //   • Tombol Simpan ke Download/ompre + Salin + Bagikan
 //   • State: idle → saving → saved (dengan path info) / error (retry)
@@ -17,8 +17,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA CLASS

@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'llama_context.dart';
 
-export 'package:kanmongo/features/chat/providers/chat_session_provider.dart'
+export 'package:pocketharness/features/chat/providers/chat_session_provider.dart'
     show chatSessionProvider, ChatSessionNotifier;
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 // lib/core/sync/sync_service.dart
-// KanMon GO — Sync Service (Fixed)
+// Pocket Harness — Sync Service (Fixed)
 //
 // PERUBAHAN dari versi sebelumnya:
 //   ✅ Connectivity().checkConnectivity() sekarang return List<ConnectivityResult>
@@ -11,7 +11,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/data/repositories/user_repository.dart';
+import 'package:pocketharness/data/repositories/user_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SyncService {

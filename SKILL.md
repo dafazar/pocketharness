@@ -2,7 +2,7 @@
 name: kanmongo-feature-dev
 description: >
   Gunakan skill ini untuk SEMUA tugas edit, tambah fitur, debug, atau refactor
-  di project KanMon GO (Flutter). Trigger ketika user menyebut: kanmongo,
+  di project Pocket Harness (Flutter). Trigger ketika user menyebut: kanmongo,
   kanmon go, tambah fitur, edit screen, buat screen baru, perbaiki bug,
   LlamaService, chat screen, agent screen, riverpod provider, GoRouter,
   KmColors, ai_service, database_service, history_service, ChatMessage,
@@ -19,7 +19,7 @@ compatibility:
   version: "2.1.0+2"
 ---
 
-# KanMon GO — Skill Pengembangan Fitur (Super Komprehensif)
+# Pocket Harness — Skill Pengembangan Fitur (Super Komprehensif)
 
 ## ⚡ Prinsip Hemat Token
 1. **Skill ini = pengganti analisa ulang** — jangan `view` file yang sudah terdokumentasi di sini
@@ -40,7 +40,7 @@ compatibility:
 | DB Konten | SQLite read-only asset (`assets/database/km_content.db`) |
 | DB User | SQLite runtime `kanmongo_user.db` via `DatabaseService` (terenkripsi) |
 | Chat History | SQLite via `HistoryService` + Hive boxes (chat_history, model_cache, ai_settings) |
-| AI Native | llama.cpp JNI → `libkanmongo_llama.so` via `MethodChannel` |
+| AI Native | llama.cpp JNI → `libpocketharness_llama.so` via `MethodChannel` |
 | AI Arsitektur | PocketPal style: `LlamaService` + Riverpod providers |
 | AI Mode | Offline (llama.cpp) / Online (Puter.js) / BulkApi (Groq/Gemini/Claude/OpenRouter) |
 | Tema | 4 pack: AMOLED(default), Dark, Light, Sakura. Warna via `KmColors.of(context)` |
@@ -148,7 +148,7 @@ android/app/src/main/
 │   ├── llama_jni.cpp
 │   ├── llama_stub.cpp
 │   └── CMakeLists.txt
-└── kotlin/com/kanmongo/app/
+└── kotlin/com/pocketharness/app/
     ├── MainActivity.kt
     ├── LlamaPlugin.kt
     ├── NativeEnvPlugin.kt             ← chmodExecutable via Java File.setExecutable
@@ -197,7 +197,7 @@ android/app/src/main/
 ## 🔑 API Publik — NativeToolsManager ⭐ NEW
 
 ```dart
-import 'package:kanmongo/core/tools/native_tools_manager.dart';
+import 'package:pocketharness/core/tools/native_tools_manager.dart';
 
 // Singleton
 NativeToolsManager.instance
@@ -246,7 +246,7 @@ debug:    exiftool, strace
 ## 🔑 API Publik — ToolsService
 
 ```dart
-import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
 
 ToolsService.instance
 
@@ -288,7 +288,7 @@ String?                 nativeToolPath(name)
 ## 🔑 API Publik — LlamaService
 
 ```dart
-import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
 
 LlamaService.instance
 
@@ -316,8 +316,8 @@ Stream<double>      loadProgressStream
 
 **⚠️ KONFLIK NAMA — DUA ChatMessage:**
 ```dart
-import 'package:kanmongo/core/ai/llama_context.dart' as llama_ctx;
-import 'package:kanmongo/data/models/chat_models.dart' as chat_models;
+import 'package:pocketharness/core/ai/llama_context.dart' as llama_ctx;
+import 'package:pocketharness/data/models/chat_models.dart' as chat_models;
 // → llama_ctx.ChatMessage untuk generateStream()
 // → chat_models.ChatMessage untuk UI / HistoryService
 ```
@@ -327,7 +327,7 @@ import 'package:kanmongo/data/models/chat_models.dart' as chat_models;
 ## 🔑 API Publik — HistoryService
 
 ```dart
-import 'package:kanmongo/data/services/history_service.dart';
+import 'package:pocketharness/data/services/history_service.dart';
 
 Future<void>              saveChatSession(ChatSession)
 Future<List<ChatSession>> loadAllChatSessions({int limit = 50})
@@ -481,8 +481,8 @@ Router (`app_router.dart`) memakai:
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/shared/widgets/back_handler.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/shared/widgets/back_handler.dart';
 
 class NamaScreen extends ConsumerWidget {
   const NamaScreen({super.key});
@@ -506,8 +506,8 @@ class NamaScreen extends ConsumerWidget {
 
 ### B. Gunakan NativeTool di screen
 ```dart
-import 'package:kanmongo/core/tools/native_tools_manager.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:pocketharness/core/tools/native_tools_manager.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
 
 // Cek apakah tool tersedia
 if (NativeToolsManager.instance.has('git')) {
@@ -522,7 +522,7 @@ if (ToolsService.instance.isReady) {
 
 ### C. Provider Tools di Widget
 ```dart
-import 'package:kanmongo/core/tools/tools_provider.dart';
+import 'package:pocketharness/core/tools/tools_provider.dart';
 
 // Dalam ConsumerWidget
 final isReady = ref.watch(toolsReadyProvider);

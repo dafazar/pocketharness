@@ -1,5 +1,5 @@
 // lib/data/services/claude_code_file_context.dart
-// KanMonAI — File Context Builder for Claude Code
+// PocketHarness — File Context Builder for Claude Code
 //
 // Prepares attached files as context for Claude Code:
 //   • Text files: copied to workDir + inline content in preamble

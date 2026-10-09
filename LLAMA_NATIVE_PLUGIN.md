@@ -1,15 +1,15 @@
-# KanMon GO — Kotlin Native Plugin (llama.cpp JNI)
+# Pocket Harness — Kotlin Native Plugin (llama.cpp JNI)
 
 ## Arsitektur
 
 ```
 Flutter Dart
     │
-    ├── MethodChannel "com.kanmongo.llama/engine"
+    ├── MethodChannel "com.pocketharness.llama/engine"
     │       loadModel / loadModelWithParams / startGeneration / stopGeneration
     │       freeModel / isModelLoaded / getModelInfo / getTokensPerSecond
     │
-    └── EventChannel "com.kanmongo.llama/stream"
+    └── EventChannel "com.pocketharness.llama/stream"
             {"type":"token","text":"...","done":false}   ← per token
             {"type":"token","text":"","done":true}        ← selesai
             {"type":"error","code":"...","message":"..."}
@@ -19,7 +19,7 @@ Flutter Dart
             │  SingleThreadExecutor (background thread)
             │  Handler → main thread → EventSink
             │
-        JNI (libkanmongo_llama.so)
+        JNI (libpocketharness_llama.so)
             │
         android/app/src/main/cpp/
             ├── CMakeLists.txt
@@ -137,7 +137,7 @@ Berdasarkan nama file model:
 |-------|--------|
 | `llama.h: No such file` | Jalankan `bash scripts/setup_llama.sh` |
 | `llama_kv_self_*` undeclared | Cek `llama_jni.cpp` — harus pakai Memory V2 API |
-| `libkanmongo_llama.so not found` | Pastikan `externalNativeBuild { cmake {...} }` di `build.gradle` |
+| `libpocketharness_llama.so not found` | Pastikan `externalNativeBuild { cmake {...} }` di `build.gradle` |
 | "Model belum loaded" | Panggil `OfflineAiService.instance.initActiveModel()` |
 | RAM tidak cukup | Gunakan model lebih kecil (Q4_K_M 1B) atau tutup app lain |
 | Output kacau / repetisi | Chat template tidak sesuai — cek nama file model |
@@ -152,7 +152,7 @@ android/app/src/main/
 │   ├── llama_jni.cpp        ← JNI bridge (Memory V2 API only)
 │   ├── llama_stub.cpp       ← stub fallback
 │   └── llama.cpp/           ← source llama.cpp (gitignored)
-└── kotlin/com/kanmongo/app/
+└── kotlin/com/pocketharness/app/
     ├── MainActivity.kt
     └── LlamaPlugin.kt       ← Kotlin bridge + ForegroundService
 

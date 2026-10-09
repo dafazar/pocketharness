@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kanmongo/core/auth/auth_service.dart';
-import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/data/repositories/user_repository.dart';
+import 'package:pocketharness/core/auth/auth_service.dart';
+import 'package:pocketharness/core/router/app_router.dart';
+import 'package:pocketharness/data/repositories/user_repository.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -55,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text('KanMon GO',
+                Text('Pocket Harness',
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
                       color: cs.onSurface)),
                 const SizedBox(height: 4),

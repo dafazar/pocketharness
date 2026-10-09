@@ -1,6 +1,6 @@
 // lib/core/theme/app_theme_service.dart
 //
-// KanMon GO — AppThemeService (Singleton)
+// Pocket Harness — AppThemeService (Singleton)
 // Memuat config dari assets/theme/theme_config_original.json
 // Pack: hanya ORIGINAL.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -8,8 +8,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/core/theme/theme_provider.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/core/theme/theme_provider.dart';
 
 // ── Helper parse warna hex ────────────────────────────────────────────────────
 Color _hexColor(String hex) {

@@ -1,6 +1,6 @@
 // lib/data/services/sfx_service.dart
 //
-// KanMon GO — SfxService
+// Pocket Harness — SfxService
 // Memutar sound effect dari assets/sounds/ menggunakan audioplayers.
 // Singleton ringan dengan pool AudioPlayer agar tidak saling menabrak.
 //

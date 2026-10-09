@@ -1,5 +1,5 @@
 // lib/core/ai/native_event_dispatcher.dart
-// KanMon GO — NativeEventDispatcher
+// Pocket Harness — NativeEventDispatcher
 //
 // Singleton yang memiliki SATU EventChannel subscription ke native llama.cpp.
 // Baik LlamaService maupun OfflineAiService mendaftar handler-nya di sini,
@@ -23,7 +23,7 @@ class NativeEventDispatcher {
   NativeEventDispatcher._() { _init(); }
 
   // ── EventChannel ──────────────────────────────────────────────────────────
-  static const _eventCh = EventChannel('com.kanmongo.llama/stream');
+  static const _eventCh = EventChannel('com.pocketharness.llama/stream');
 
   // ── Registered handlers ────────────────────────────────────────────────────
   void Function(Map<dynamic, dynamic>)? _llamaServiceHandler;

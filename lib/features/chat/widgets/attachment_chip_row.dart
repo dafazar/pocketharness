@@ -1,5 +1,5 @@
 // lib/features/chat/widgets/attachment_chip_row.dart
-// KanMonAI — Attachment Chip Row (SESI 6B-i)
+// PocketHarness — Attachment Chip Row (SESI 6B-i)
 //
 // Fitur:
 //   • AnimatedList: slide-in dari kanan (250ms easeOut)
@@ -15,8 +15,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/models/chat_models.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/models/chat_models.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AttachmentChipRow

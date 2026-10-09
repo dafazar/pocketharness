@@ -1,6 +1,6 @@
 // lib/data/services/termux_bridge.dart
 //
-// KanMon GO — TermuxBridge (Sesi 7A Bagian 1)
+// Pocket Harness — TermuxBridge (Sesi 7A Bagian 1)
 // Jembatan Dart ↔ Native Android untuk integrasi Termux.
 //
 // Arsitektur:

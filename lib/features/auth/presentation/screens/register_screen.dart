@@ -1,5 +1,5 @@
 // lib/features/auth/presentation/screens/register_screen.dart
-// KanMon GO — Register Screen
+// Pocket Harness — Register Screen
 // Semua metode pendaftaran wajib verifikasi OTP/email sebelum masuk
 // =============================================================================
 
@@ -9,10 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kanmongo/core/auth/auth_service.dart';
-import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/data/repositories/user_repository.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/auth/auth_service.dart';
+import 'package:pocketharness/core/router/app_router.dart';
+import 'package:pocketharness/data/repositories/user_repository.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // REGISTER SCREEN SHELL
@@ -87,7 +87,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
                       color: cs.onSurface)),
                 const SizedBox(height: 4),
-                Text('Daftar untuk mulai menggunakan KanMon GO',
+                Text('Daftar untuk mulai menggunakan Pocket Harness',
                   style: TextStyle(fontSize: 13.5,
                       color: cs.onSurface.withValues(alpha: 0.55))),
               ],
@@ -469,7 +469,7 @@ class _EmailTabState extends ConsumerState<_EmailTab> {
                       color: cs.onSurface)),
                 const SizedBox(height: 10),
                 _VerifStep(num: '1', text: 'Buka aplikasi email di HP kamu'),
-                _VerifStep(num: '2', text: 'Cari email dari KanMon GO atau Firebase'),
+                _VerifStep(num: '2', text: 'Cari email dari Pocket Harness atau Firebase'),
                 _VerifStep(num: '3', text: 'Klik link "Verify Email" di dalam email'),
                 _VerifStep(num: '4', text: 'Kembali ke sini dan klik tombol di bawah'),
               ],

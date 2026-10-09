@@ -86,7 +86,7 @@
 
     <application
         android:name="${applicationName}"
-        android:label="KanMon GO"
+        android:label="Pocket Harness"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:enableOnBackInvokedCallback="false"
@@ -132,7 +132,7 @@
         </provider>
 
         <service
-            android:name="com.kanmongo.app.LlamaGenerationService"
+            android:name="com.pocketharness.app.LlamaGenerationService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

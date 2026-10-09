@@ -1,5 +1,5 @@
 // lib/features/chat/widgets/attachment_preview.dart
-// KanMonAI — Attachment Preview Widget (Sesi 2)
+// PocketHarness — Attachment Preview Widget (Sesi 2)
 // Merender setiap jenis attachment secara berbeda
 // =============================================================================
 
@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:open_file/open_file.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/models/chat_models.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class AttachmentPreview extends StatelessWidget {
   final ChatAttachment attachment;

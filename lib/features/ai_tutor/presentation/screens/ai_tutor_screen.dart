@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
-import 'package:kanmongo/data/services/ai_persona_service.dart';
-import 'package:kanmongo/data/services/export_service.dart';
-import 'package:kanmongo/data/services/kanmonai_system_prompt.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart';
+import 'package:pocketharness/data/services/file_processor_service.dart';
+import 'package:pocketharness/data/services/ai_persona_service.dart';
+import 'package:pocketharness/data/services/export_service.dart';
+import 'package:pocketharness/data/services/pocketharness_system_prompt.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_file/open_file.dart';
@@ -22,7 +22,7 @@ import '../../../../data/services/sfx_service.dart';
 import '../../../../shared/widgets/back_handler.dart';
 import '../../../../shared/widgets/km_widgets.dart';
 import '../../../../shared/widgets/ai_source_picker.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ── Models ────────────────────────────────────
 
@@ -512,8 +512,8 @@ class _AiTutorScreenState extends ConsumerState<AiTutorScreen> {
     // Gunakan persona aktif dari AiPersonaService
     final personaPrompt = AiPersonaService.instance.buildSystemPrompt(subject: subject);
     if (personaPrompt.isNotEmpty) return personaPrompt;
-    // Fallback: KanMonAI identity + tutor context
-    return '$kKanMonAIShortSystemPrompt\n\n'
+    // Fallback: PocketHarness identity + tutor context
+    return '$kPocketHarnessShortSystemPrompt\n\n'
         'Kepribadianmu sebagai tutor:\n'
         '- Hangat, antusias, dan mendukung semangat belajar\n'
         '- Memberikan contoh praktis dan relatable\n'

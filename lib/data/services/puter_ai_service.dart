@@ -1,5 +1,5 @@
 // lib/data/services/puter_ai_service.dart
-// KanMon GO — Puter.js AI Service
+// Pocket Harness — Puter.js AI Service
 //
 // Mengelola integrasi dengan Puter.js untuk AI online:
 //   - Claude (Anthropic)

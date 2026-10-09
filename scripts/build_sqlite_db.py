@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-KanMon GO — SQLite Database Builder  v2.0
+Pocket Harness — SQLite Database Builder  v2.0
 ==========================================
 Membaca semua JSON dari assets/data/ dan menghasilkan assets/database/km_content.db
 
@@ -463,7 +463,7 @@ def build(force=False, dry_run=False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Build KanMon GO SQLite database v2")
+    parser = argparse.ArgumentParser(description="Build Pocket Harness SQLite database v2")
     parser.add_argument("--force",   action="store_true", help="Rebuild dari awal")
     parser.add_argument("--dry-run", action="store_true", help="Cek saja, tidak tulis")
     args = parser.parse_args()

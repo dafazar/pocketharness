@@ -1,12 +1,12 @@
 // lib/features/settings/presentation/screens/ai_persona_screen.dart
-// KanMon GO — AI Persona & Parameter Tuning Screen
+// Pocket Harness — AI Persona & Parameter Tuning Screen
 // =============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai_persona_service.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/ai_persona_service.dart';
 import 'package:uuid/uuid.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class AiPersonaScreen extends StatefulWidget {
   const AiPersonaScreen({super.key});

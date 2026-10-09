@@ -1,5 +1,5 @@
 // lib/features/auth/presentation/screens/forgot_password_screen.dart
-// KanMon GO — Forgot Password Screen
+// Pocket Harness — Forgot Password Screen
 // Tab 1: Reset via Email (link reset dikirim ke email)
 // Tab 2: Reset via No. HP (OTP SMS → ganti password baru)
 // =============================================================================
@@ -10,9 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kanmongo/core/auth/auth_service.dart';
-import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/auth/auth_service.dart';
+import 'package:pocketharness/core/router/app_router.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SHELL
@@ -349,7 +349,7 @@ class _EmailResetTabState extends ConsumerState<_EmailResetTab> {
                 _Step(num: '1',
                     text: 'Buka aplikasi email di HP kamu'),
                 _Step(num: '2',
-                    text: 'Cari email dari Firebase / KanMon GO'),
+                    text: 'Cari email dari Firebase / Pocket Harness'),
                 _Step(num: '3',
                     text: 'Klik tombol "Reset Password" di dalam email'),
                 _Step(num: '4',

@@ -1,6 +1,6 @@
-// android/app/src/main/kotlin/com/kanmongo/app/MainActivity.kt
+// android/app/src/main/kotlin/com/pocketharness/app/MainActivity.kt
 //
-// MainActivity for KanMonAI
+// MainActivity for PocketHarness
 //
 // Registers:
 //   ✅ LlamaPlugin          — GGUF offline inference (MethodChannel + EventChannel)
@@ -8,7 +8,7 @@
 //   ✅ device_info channel  — getSdkInt() used by Dart permission logic
 //   ✅ storage_permission   — requestManageExternalStorage() for model import
 
-package com.kanmongo.app
+package com.pocketharness.app
 
 import android.content.Intent
 import android.net.Uri
@@ -22,8 +22,8 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
 
     companion object {
-        private const val CHANNEL_DEVICE_INFO  = "kanmongo/device_info"
-        private const val CHANNEL_STORAGE_PERM = "kanmongo/storage_permission"
+        private const val CHANNEL_DEVICE_INFO  = "pocketharness/device_info"
+        private const val CHANNEL_STORAGE_PERM = "pocketharness/storage_permission"
     }
 
     private var llamaPlugin: LlamaPlugin? = null

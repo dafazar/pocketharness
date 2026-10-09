@@ -1,5 +1,5 @@
 // lib/features/settings/presentation/screens/bulk_api_settings_screen.dart
-// KanMon GO — Bulk API Key Settings Screen
+// Pocket Harness — Bulk API Key Settings Screen
 // =============================================================================
 
 import 'dart:convert';
@@ -7,11 +7,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
+import 'package:pocketharness/data/services/ai_source_settings_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class BulkApiSettingsScreen extends StatefulWidget {
   const BulkApiSettingsScreen({super.key});

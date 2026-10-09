@@ -1,5 +1,5 @@
 // lib/features/chat/widgets/file_output_card.dart
-// KanMonAI — Smart File Output Card
+// PocketHarness — Smart File Output Card
 //
 // Displays a list of SmartFileOutput items extracted from AI responses.
 // Each item can be saved to Download/ompre/, copied, or shared.
@@ -13,9 +13,9 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/smart_file_output_service.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/smart_file_output_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN CARD

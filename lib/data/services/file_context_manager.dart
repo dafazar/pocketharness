@@ -1,5 +1,5 @@
 // lib/data/services/file_context_manager.dart
-// KanMon GO — File Context Manager
+// Pocket Harness — File Context Manager
 // Manages user-uploaded files + AI-generated files in chat
 // =============================================================================
 

@@ -1,5 +1,5 @@
 // lib/data/services/web_research_service.dart
-// KanMonAI — Web Research Service
+// PocketHarness — Web Research Service
 // Sesi 5A: Implementasi lengkap (bukan stub)
 //   - ResearchSource: model + copyWith + toMap + fromMap
 //   - ResearchResult: model dengan fetchedCount + isEmpty getter

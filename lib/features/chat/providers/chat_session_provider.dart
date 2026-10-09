@@ -1,14 +1,14 @@
 // lib/features/chat/providers/chat_session_provider.dart
-// KanMonAI — Chat Session Provider (Sesi 1)
+// PocketHarness — Chat Session Provider (Sesi 1)
 // Riverpod state management untuk active chat session + history list
 // =============================================================================
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/data/services/ai_service.dart' show AiMode;
-import 'package:kanmongo/data/services/history_service.dart';
+import 'package:pocketharness/data/models/chat_models.dart';
+import 'package:pocketharness/data/services/ai_service.dart' show AiMode;
+import 'package:pocketharness/data/services/history_service.dart';
 
 // ── Provider pilihan sumber AI ─────────────────────────────────────────────────
 final aiSourceProvider       = StateProvider<AiSourceChoice?>((ref) => null);

@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# KanMon GO — GitHub Actions Build Workflow (MERGED v3)
+# Pocket Harness — GitHub Actions Build Workflow (MERGED v3)
 # ══════════════════════════════════════════════════════════════════════════════
 # Menggabungkan TERBAIK dari buildnew + buildold:
 #
@@ -32,7 +32,7 @@
 #   ✅ Host Node.js (x64 runner) dipakai untuk npm install, bukan ABI
 #   ✅ Android Node.js (Bionic) diambil dari Termux per ABI
 # ══════════════════════════════════════════════════════════════════════════════
-name: 🚀 Build KanMon GO
+name: 🚀 Build Pocket Harness
 
 "on":
   workflow_dispatch:
@@ -1062,7 +1062,7 @@ jobs:
           TAG="gf-latest-debug"
           gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" "build/app/outputs/flutter-apk/app-debug.apk" \
-            --title "KanMon GO Debug #${{ github.run_number }}" \
+            --title "Pocket Harness Debug #${{ github.run_number }}" \
             --notes "Debug build #${{ github.run_number }}" \
             --prerelease
 
@@ -1093,12 +1093,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          FNAME="KanMon GO-arm64-v${{ github.run_number }}.apk"
+          FNAME="PocketHarness-arm64-v${{ github.run_number }}.apk"
           cp "build/app/outputs/flutter-apk/app-release.apk" "$FNAME"
           TAG="gf-latest-arm64"
           gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" "$FNAME" \
-            --title "KanMon GO arm64 #${{ github.run_number }}" \
+            --title "Pocket Harness arm64 #${{ github.run_number }}" \
             --notes "arm64 release build #${{ github.run_number }}"
 
       - name: "✂️ Build APK Split per ABI"
@@ -1125,14 +1125,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" "KanMon GO-arm64-v${{ github.run_number }}.apk"
-          cp "build/app/outputs/flutter-apk/app-x86_64-release.apk"    "KanMon GO-x86_64-v${{ github.run_number }}.apk"
+          cp "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" "PocketHarness-arm64-v${{ github.run_number }}.apk"
+          cp "build/app/outputs/flutter-apk/app-x86_64-release.apk"    "PocketHarness-x86_64-v${{ github.run_number }}.apk"
           TAG="gf-latest-split"
           gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" \
-            "KanMon GO-arm64-v${{ github.run_number }}.apk" \
-            "KanMon GO-x86_64-v${{ github.run_number }}.apk" \
-            --title "KanMon GO Split APK #${{ github.run_number }}" \
+            "PocketHarness-arm64-v${{ github.run_number }}.apk" \
+            "PocketHarness-x86_64-v${{ github.run_number }}.apk" \
+            --title "Pocket Harness Split APK #${{ github.run_number }}" \
             --notes "Split per ABI build #${{ github.run_number }}"
 
       - name: "📦 Build AAB"
@@ -1160,12 +1160,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          FNAME="KanMon GO-playstore-v${{ github.run_number }}.aab"
+          FNAME="PocketHarness-playstore-v${{ github.run_number }}.aab"
           cp "build/app/outputs/bundle/release/app-release.aab" "$FNAME"
           TAG="gf-latest-aab"
           gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" "$FNAME" \
-            --title "KanMon GO AAB #${{ github.run_number }}" \
+            --title "Pocket Harness AAB #${{ github.run_number }}" \
             --notes "AAB Play Store build #${{ github.run_number }}"
 
       - name: "🗑️ Remove keystore"
@@ -1176,7 +1176,7 @@ jobs:
         if: always()
         run: |
           echo "════════════════════════════════════════════════"
-          echo "  KanMon GO — Build Summary"
+          echo "  Pocket Harness — Build Summary"
           echo "  Target      : ${{ github.event_name == 'push' && 'apk-release' || github.event.inputs.build_target }}"
           echo "  Channel     : ${{ github.event.inputs.flutter_channel || 'stable' }}"
           echo "  Run #       : ${{ github.run_number }}"
@@ -1269,11 +1269,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd build/ios/iphoneos
-          zip -r "KanMon GO-ios-nosign-v${{ github.run_number }}.zip" Runner.app
+          zip -r "PocketHarness-ios-nosign-v${{ github.run_number }}.zip" Runner.app
           TAG="gf-latest-ios-nosign"
           gh release delete "$TAG" --yes 2>/dev/null || true
-          gh release create "$TAG" "KanMon GO-ios-nosign-v${{ github.run_number }}.zip" \
-            --title "KanMon GO iOS no-sign #${{ github.run_number }}" \
+          gh release create "$TAG" "PocketHarness-ios-nosign-v${{ github.run_number }}.zip" \
+            --title "Pocket Harness iOS no-sign #${{ github.run_number }}" \
             --notes "iOS no-sign build #${{ github.run_number }}" \
             --prerelease
 
@@ -1291,12 +1291,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           IPA=$(find build/ios/ipa -name "*.ipa" | head -1)
-          FNAME="KanMon GO-v${{ github.run_number }}.ipa"
+          FNAME="PocketHarness-v${{ github.run_number }}.ipa"
           cp "$IPA" "$FNAME"
           TAG="gf-latest-ios"
           gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" "$FNAME" \
-            --title "KanMon GO iOS #${{ github.run_number }}" \
+            --title "Pocket Harness iOS #${{ github.run_number }}" \
             --notes "iOS IPA build #${{ github.run_number }}"
 
       - name: "🗑️ Remove keychain"

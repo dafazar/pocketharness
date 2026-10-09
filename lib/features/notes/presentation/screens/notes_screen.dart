@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/core/theme/app_theme.dart';
+import 'package:pocketharness/core/theme/app_theme.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import 'package:kanmongo/core/security/secure_db_key_service.dart';
+import 'package:pocketharness/core/security/secure_db_key_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/shared/widgets/screen_theme_banner.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/shared/widgets/view_toggle.dart';
-import 'package:kanmongo/core/theme/theme_provider.dart';
-import 'package:kanmongo/core/theme/app_theme_service.dart';
-import 'package:kanmongo/shared/widgets/wallpaper_background.dart';
-import 'package:kanmongo/shared/widgets/back_handler.dart';
-import 'package:kanmongo/features/notes/data/note_model.dart';
+import 'package:pocketharness/shared/widgets/screen_theme_banner.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/shared/widgets/view_toggle.dart';
+import 'package:pocketharness/core/theme/theme_provider.dart';
+import 'package:pocketharness/core/theme/app_theme_service.dart';
+import 'package:pocketharness/shared/widgets/wallpaper_background.dart';
+import 'package:pocketharness/shared/widgets/back_handler.dart';
+import 'package:pocketharness/features/notes/data/note_model.dart';
 
 // ─── Xiaomi-style note card colors ──────────────────────────────────────────
 // Note: KmColors.of(context) cannot be used in top-level const lists.

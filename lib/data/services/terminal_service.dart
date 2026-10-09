@@ -1,5 +1,5 @@
 // lib/data/services/terminal_service.dart
-// KanMon GO — Terminal Service (Full Shell Engine)
+// Pocket Harness — Terminal Service (Full Shell Engine)
 //
 // Arsitektur:
 //   • Persistent shell session via stdin/stdout pipe
@@ -16,9 +16,9 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'termux_bridge.dart';
-import 'package:kanmongo/data/services/llama_http_server.dart';
-import 'package:kanmongo/data/services/claude_code_installer.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:pocketharness/data/services/llama_http_server.dart';
+import 'package:pocketharness/data/services/claude_code_installer.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
 
 // ── Output dari satu perintah ─────────────────────────────────────────────────
 class CommandResult {
@@ -261,8 +261,8 @@ class TerminalService {
       'TERM':     'xterm-256color',
       'LANG':     'en_US.UTF-8',
       'SHELL':    _shellBin,
-      'USER':     'kanmon',
-      'LOGNAME':  'kanmon',
+      'USER':     'pocketharness',
+      'LOGNAME':  'pocketharness',
       'PWD':      _cwd.path,
       if (_termuxAvailable && _termuxPrefix != null) ...{
         'PREFIX':   _termuxPrefix!,
@@ -557,7 +557,7 @@ class TerminalService {
         return await _handleClaudeStatus();
 
       case 'llama-server':
-      case 'kanmon-server':
+      case 'pocketharness-server':
         return await _handleLlamaServer(args);
 
       default:       return null; // lanjut ke Process.run
@@ -652,7 +652,7 @@ class TerminalService {
       final type   = isDir ? 'd' : '-';
       final perm   = isDir ? 'rwxr-xr-x' : 'rw-r--r--';
       final disp   = isDir ? '\x1b[1;34m$name/\x1b[0m' : name;
-      sb.writeln('$type$perm  1 kanmon  $size  $disp');
+      sb.writeln('$type$perm  1 pocketharness  $size  $disp');
     }
     return sb.toString().trim();
   }
@@ -899,7 +899,7 @@ class TerminalService {
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 30);
       final req  = await client.getUrl(Uri.parse(url));
-      req.headers.set('User-Agent', 'KanMonGO/1.0');
+      req.headers.set('User-Agent', 'PocketHarness/1.0');
       final resp = await req.close();
 
       if (resp.statusCode != 200) {
@@ -951,12 +951,12 @@ class TerminalService {
     if (!_termuxAvailable || _termuxPrefix == null) {
       final subCmd = args.isNotEmpty ? args[0] : '';
       return '❌ Perintah "$pkgMgr $subCmd" tidak tersedia.\n\n'
-          '📱 KanMon Terminal berjalan di mode Android Shell (/system/bin).\n'
+          '📱 Pocket Harness Terminal berjalan di mode Android Shell (/system/bin).\n'
           '   Mode ini TIDAK mendukung apt/pkg/dnf/yum karena Android\n'
           '   bukan distribusi Linux biasa — tidak ada package manager bawaan.\n\n'
           '✅ Solusi: Install Termux dari F-Droid\n'
           '   https://f-droid.org/packages/com.termux/\n\n'
-          'Setelah Termux terinstall & buka sekali, KanMon akan otomatis\n'
+          'Setelah Termux terinstall & buka sekali, Pocket Harness akan otomatis\n'
           'mendeteksi Termux dan perintah berikut akan tersedia:\n'
           '  pkg install ffmpeg       # media tools\n'
           '  pkg install python       # Python 3\n'
@@ -1236,7 +1236,7 @@ class TerminalService {
 
   // ── Help text ─────────────────────────────────────────────────────────────
   String _helpText() => '''
-KanMon Terminal — Shell Commands
+Pocket Harness Terminal — Shell Commands
 ${_termuxAvailable ? "✅ Termux terdeteksi — semua tool Termux tersedia!\n" : "⚠️  Termux tidak terdeteksi — install Termux untuk fitur penuh\n"}
 BUILT-IN (selalu tersedia):
   ls [-la]          List file dengan warna
@@ -1293,7 +1293,7 @@ AI COMMANDS:
   /download <url>    Download dengan progress
   install-claude    Install Claude Code CLI
   claude-status     Check Claude Code status
-  kanmon-claude     Launch Claude Code (after install)
+  pocketharness-claude     Launch Claude Code (after install)
 ''';
 }
 

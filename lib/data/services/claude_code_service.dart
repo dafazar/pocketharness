@@ -1,5 +1,5 @@
 // lib/data/services/claude_code_service.dart
-// KanMonAI — Claude Code CLI Process Manager
+// PocketHarness — Claude Code CLI Process Manager
 //
 // Manages the Claude Code CLI process lifecycle:
 //   • Detects active AI source (Online/BulkApi/Offline) automatically
@@ -13,12 +13,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:kanmongo/data/services/claude_code_installer.dart';
-import 'package:kanmongo/data/services/llama_http_server.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:pocketharness/data/services/claude_code_installer.dart';
+import 'package:pocketharness/data/services/llama_http_server.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
 
 // ── Session State ─────────────────────────────────────────────────────────────
 
@@ -278,7 +278,7 @@ class ClaudeCodeService {
       return {
         ...baseEnv,
         'ANTHROPIC_BASE_URL': puter.baseUrl,
-        'ANTHROPIC_API_KEY':  puter.apiKey.isNotEmpty ? puter.apiKey : 'kanmon-online',
+        'ANTHROPIC_API_KEY':  puter.apiKey.isNotEmpty ? puter.apiKey : 'pocketharness-online',
         'ANTHROPIC_MODEL':    puter.selectedModelId,
       };
     }
@@ -317,7 +317,7 @@ class ClaudeCodeService {
     return {
       ...baseEnv,
       'ANTHROPIC_BASE_URL': 'http://localhost:${LlamaHttpServer.instance.port}',
-      'ANTHROPIC_API_KEY':  'kanmon-local-llama',
+      'ANTHROPIC_API_KEY':  'pocketharness-local-llama',
       'ANTHROPIC_MODEL':    'local',
     };
   }

@@ -1,5 +1,5 @@
 // lib/features/chat/widgets/chat_history_drawer.dart
-// KanMonAI — Chat History Drawer
+// PocketHarness — Chat History Drawer
 // Fix D-003 (Pagination), D-005 (Confirm+deleteAll), E-005 (Empty State), E-009 (Search)
 // =============================================================================
 
@@ -9,10 +9,10 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/history_service.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/models/chat_models.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/history_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ChatHistoryDrawer

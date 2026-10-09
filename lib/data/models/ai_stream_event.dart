@@ -1,5 +1,5 @@
 // lib/data/models/ai_stream_event.dart
-// KanMon GO — Streaming Event Types
+// Pocket Harness — Streaming Event Types
 // Events emitted during streaming to update UI in real-time
 // =============================================================================
 

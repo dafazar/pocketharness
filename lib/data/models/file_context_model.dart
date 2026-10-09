@@ -1,5 +1,5 @@
 // lib/data/models/file_context_model.dart
-// KanMon GO — File Context for AI
+// Pocket Harness — File Context for AI
 // Represents files being edited/discussed in chat
 // =============================================================================
 

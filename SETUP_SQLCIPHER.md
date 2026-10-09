@@ -1,6 +1,6 @@
 # 🔐 Setup SQLCipher + DB Key dari Firebase Server
 
-Panduan ini menjelaskan cara mengamankan database KanMon GO
+Panduan ini menjelaskan cara mengamankan database Pocket Harness
 agar encryption key tidak pernah ada di dalam APK.
 
 ---
@@ -140,7 +140,7 @@ Ubah urutan inisialisasi agar fetch key dilakukan setelah login:
 // Di dalam auth_service.dart atau splash_screen.dart,
 // setelah user berhasil login, tambahkan:
 
-import 'package:kanmongo/core/security/secure_db_key_service.dart';
+import 'package:pocketharness/core/security/secure_db_key_service.dart';
 
 // Setelah login berhasil:
 await SecureDbKeyService.instance.fetchKeysWithRetry();
@@ -167,9 +167,9 @@ if (user != null) {
 ```dart
 // lib/data/services/database_service.dart
 // Ganti:
-import 'package:kanmongo/core/database/content_database.dart';
+import 'package:pocketharness/core/database/content_database.dart';
 // Menjadi:
-import 'package:kanmongo/core/database/content_database_cipher.dart';
+import 'package:pocketharness/core/database/content_database_cipher.dart';
 ```
 
 ### Hapus keys saat logout:

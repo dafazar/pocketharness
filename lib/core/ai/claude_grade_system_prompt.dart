@@ -1,12 +1,12 @@
 // lib/core/ai/claude_grade_system_prompt.dart
-// KanMonAI — Claude-Grade System Prompt Enhancer v1.0 [NEW FILE]
+// PocketHarness — Claude-Grade System Prompt Enhancer v1.0 [NEW FILE]
 //
 // Menyediakan system prompt penyempurna yang diinjeksikan ke semua mode AI
 // (offline llama.cpp, bulk API, online API) agar menghasilkan kualitas
 // setara Claude 4.6 opus.
 //
 // PENGGUNAAN:
-//   import 'package:kanmongo/core/ai/claude_grade_system_prompt.dart';
+//   import 'package:pocketharness/core/ai/claude_grade_system_prompt.dart';
 //
 //   // Untuk model dengan context window besar (≥ 4096 tokens):
 //   final prompt = kClaudeGradeEnhancerPrompt;
@@ -95,7 +95,7 @@ Saat berjalan dalam mode offline (llama.cpp on-device):
 - Prioritaskan respons yang RINGKAS namun LENGKAP (hemat token)
 - Jangan ulangi pertanyaan user dalam jawaban
 - Langsung ke inti jawaban
-- Tandai output: `[KanMonAI | OFFLINE | on-device]`
+- Tandai output: `[PocketHarness | OFFLINE | on-device]`
 
 ### 10. SELF-CORRECTION PROTOCOL
 Jika kamu menyadari jawaban sebelumnya kurang tepat:

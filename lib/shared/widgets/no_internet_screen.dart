@@ -1,5 +1,5 @@
 // lib/shared/widgets/no_internet_screen.dart
-// KanMon GO — Internet Guard (Premium Edition)
+// Pocket Harness — Internet Guard (Premium Edition)
 //
 // FITUR:
 //   ✅ Desain premium dengan animasi sinyal
@@ -13,8 +13,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ── Provider (definisi TUNGGAL) ───────────────────────────────────────────────
 final connectivityProvider = StreamProvider<bool>((ref) async* {

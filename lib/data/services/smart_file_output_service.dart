@@ -1,5 +1,5 @@
 // lib/data/services/smart_file_output_service.dart
-// KanMonAI — Smart File Output Service
+// PocketHarness — Smart File Output Service
 //
 // Detects code blocks in AI responses and offers them as downloadable files.
 // Works without requiring file attachments — intent keywords in user message

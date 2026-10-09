@@ -1,5 +1,5 @@
 // lib/features/chat/widgets/message_bubble.dart
-// KanMonAI — Public MessageBubble Widget (Sesi 6A-i-3)
+// PocketHarness — Public MessageBubble Widget (Sesi 6A-i-3)
 //
 // Widget bubble percakapan untuk ChatMessage dari chat_models.dart.
 // Mengintegrasikan WaveDotLoading untuk state streaming awal (konten kosong)
@@ -16,14 +16,14 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/features/chat/widgets/attachment_preview.dart';
-import 'package:kanmongo/features/chat/widgets/code_block_widget.dart';
-import 'package:kanmongo/features/chat/widgets/file_edit_response_widget.dart';
-import 'package:kanmongo/features/chat/widgets/wave_dot_loading.dart';
-import 'package:kanmongo/features/chat/widgets/web_research_sources_card.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/models/chat_models.dart';
+import 'package:pocketharness/features/chat/widgets/attachment_preview.dart';
+import 'package:pocketharness/features/chat/widgets/code_block_widget.dart';
+import 'package:pocketharness/features/chat/widgets/file_edit_response_widget.dart';
+import 'package:pocketharness/features/chat/widgets/wave_dot_loading.dart';
+import 'package:pocketharness/features/chat/widgets/web_research_sources_card.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // =============================================================================
 // PUBLIC WIDGET: MessageBubble

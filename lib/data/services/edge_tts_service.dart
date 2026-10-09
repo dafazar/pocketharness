@@ -1,5 +1,5 @@
 // lib/data/services/edge_tts_service.dart
-// KanMon GO — Neural TTS Service
+// Pocket Harness — Neural TTS Service
 // Menggunakan Google Translate TTS (gratis, tidak perlu key) untuk semua suara
 // Yuki-san: pitch & rate di-tune khusus untuk suara oneesan natural
 // ─────────────────────────────────────────────────────────────────────────────

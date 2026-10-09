@@ -1,6 +1,6 @@
 // lib/data/services/wallpaper_service.dart
 //
-// KanMon GO — WallpaperService
+// Pocket Harness — WallpaperService
 // Menyimpan & memuat konfigurasi wallpaper (foto/video) dari SharedPreferences.
 // Wallpaper berlaku di semua layar menu utama, tidak aktif di dalam sesi soal.
 // ─────────────────────────────────────────────────────────────────────────────

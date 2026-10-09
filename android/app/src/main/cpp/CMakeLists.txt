@@ -1,11 +1,11 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# KanMon GO — Native llama.cpp Build
+# Pocket Harness — Native llama.cpp Build
 #
 # CMake minimum: 3.22.1  ← tersedia via sdkmanager, TIDAK perlu CMake 3.31!
 # NDK: 28.2.13676358     ← install via sdkmanager di CI
 #
 # CARA KERJA:
-#   Jika llama.cpp/ ada  → build libkanmongo_llama.so dengan llama.cpp penuh
+#   Jika llama.cpp/ ada  → build libpocketharness_llama.so dengan llama.cpp penuh
 #   Jika llama.cpp/ tidak ada → build stub (app tetap jalan, GGUF nonaktif)
 #
 # SETUP LOKAL:
@@ -16,7 +16,7 @@
 # ══════════════════════════════════════════════════════════════════════════════
 
 cmake_minimum_required(VERSION 3.22.1)
-project(kanmongo_llama CXX C)
+project(pocketharness_llama CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -51,7 +51,7 @@ if(EXISTS "${LLAMA_SRC}/CMakeLists.txt")
 
     add_subdirectory(${LLAMA_SRC} llama_build EXCLUDE_FROM_ALL)
 
-    add_library(kanmongo_llama SHARED llama_jni.cpp)
+    add_library(pocketharness_llama SHARED llama_jni.cpp)
 
     # ── Memory API: llama_jni.cpp uses Memory V2 unconditionally (b10350+) ────
     # llama_get_memory(ctx) + llama_memory_clear() are used directly.
@@ -59,13 +59,13 @@ if(EXISTS "${LLAMA_SRC}/CMakeLists.txt")
     # See: llama_jni.cpp line ~471: llama_memory_clear(llama_get_memory(ctx), true)
     message(STATUS "ℹ️  Memory API: unconditional Memory V2 (llama.cpp b10350+)")
 
-    target_include_directories(kanmongo_llama PRIVATE
+    target_include_directories(pocketharness_llama PRIVATE
         ${LLAMA_SRC}/include
         ${LLAMA_SRC}/ggml/include
         ${LLAMA_SRC}/common
     )
 
-    target_compile_options(kanmongo_llama PRIVATE
+    target_compile_options(pocketharness_llama PRIVATE
         -O3
         -DNDEBUG
         -ffast-math
@@ -76,7 +76,7 @@ if(EXISTS "${LLAMA_SRC}/CMakeLists.txt")
         -Wno-deprecated-declarations
     )
 
-    target_link_libraries(kanmongo_llama
+    target_link_libraries(pocketharness_llama
         PRIVATE
         llama
         android
@@ -85,7 +85,7 @@ if(EXISTS "${LLAMA_SRC}/CMakeLists.txt")
 
     # Strip debug symbols di release → kurangi ukuran .so ~50%
     if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
-        target_link_options(kanmongo_llama PRIVATE "LINKER:--strip-all")
+        target_link_options(pocketharness_llama PRIVATE "LINKER:--strip-all")
     endif()
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -98,7 +98,7 @@ else()
         "   → Untuk aktifkan GGUF: jalankan  bash scripts/setup_llama.sh\n"
     )
 
-    add_library(kanmongo_llama SHARED llama_stub.cpp)
-    target_link_libraries(kanmongo_llama PRIVATE android log)
+    add_library(pocketharness_llama SHARED llama_stub.cpp)
+    target_link_libraries(pocketharness_llama PRIVATE android log)
 
 endif()

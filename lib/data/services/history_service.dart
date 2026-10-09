@@ -1,5 +1,5 @@
 // lib/data/services/history_service.dart
-// KanMon GO — History Service
+// Pocket Harness — History Service
 // v3 (Sesi 1): Tambah kolom ai_mode, model_name, attachments_json, web_sources_json
 //              ke chat_messages. Tambah 5 method baru untuk ChatSession (chat_models).
 //   - saveChatSession / loadAllChatSessions / loadChatSession
@@ -11,8 +11,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import 'package:kanmongo/core/security/secure_db_key_service.dart';
-import 'package:kanmongo/data/models/chat_models.dart';
+import 'package:pocketharness/core/security/secure_db_key_service.dart';
+import 'package:pocketharness/data/models/chat_models.dart';
 
 // ── Models ────────────────────────────────────────────────────────────────────
 

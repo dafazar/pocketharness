@@ -1,5 +1,5 @@
 // lib/data/models/ai_source_config.dart
-// KanMon GO — Per-source AI configuration model
+// Pocket Harness — Per-source AI configuration model
 // Stores enable/disable state + all tunable parameters for Online, Bulk, Offline
 // =============================================================================
 
@@ -33,7 +33,7 @@ class OnlineAiConfig {
     this.apiKey                = '',
     this.selectedModel         = 'gpt-4o-mini',
     this.systemPrompt          = '',
-    this.personaName           = 'KanMon Assistant',
+    this.personaName           = 'Pocket Harness Assistant',
     this.temperature           = 0.7,
     this.maxTokens             = 2048,
     this.topP                  = 0.95,
@@ -56,7 +56,7 @@ class OnlineAiConfig {
     apiKey               : j['apiKey']               as String? ?? '',
     selectedModel        : j['selectedModel']         as String? ?? 'gpt-4o-mini',
     systemPrompt         : j['systemPrompt']          as String? ?? '',
-    personaName          : j['personaName']           as String? ?? 'KanMon Assistant',
+    personaName          : j['personaName']           as String? ?? 'Pocket Harness Assistant',
     temperature          : (j['temperature']          as num?)?.toDouble() ?? 0.7,
     maxTokens            : j['maxTokens']             as int?    ?? 2048,
     topP                 : (j['topP']                 as num?)?.toDouble() ?? 0.95,
@@ -188,7 +188,7 @@ class BulkAiConfig {
     this.streamEnabled        = true,
     this.markdownEnabled      = true,
     this.codeHighlightEnabled = true,
-    this.personaName          = 'KanMon Bulk Assistant',
+    this.personaName          = 'Pocket Harness Bulk Assistant',
     this.systemPrompt         = '',
     this.language             = 'auto',
     this.autoDetectLanguage   = true,
@@ -211,7 +211,7 @@ class BulkAiConfig {
     streamEnabled        : j['streamEnabled']        as bool?   ?? true,
     markdownEnabled      : j['markdownEnabled']      as bool?   ?? true,
     codeHighlightEnabled : j['codeHighlightEnabled'] as bool?   ?? true,
-    personaName          : j['personaName']          as String? ?? 'KanMon Bulk Assistant',
+    personaName          : j['personaName']          as String? ?? 'Pocket Harness Bulk Assistant',
     systemPrompt         : j['systemPrompt']         as String? ?? '',
     language             : j['language']             as String? ?? 'auto',
     autoDetectLanguage   : j['autoDetectLanguage']   as bool?   ?? true,
@@ -351,7 +351,7 @@ class OfflineAiConfig {
     this.ttsVoice             = 'id-ID-GadisNeural',
     this.ttsRate              = 0,
     this.ttsVolume            = 0,
-    this.personaName          = 'KanMon Offline Assistant',
+    this.personaName          = 'Pocket Harness Offline Assistant',
     this.systemPrompt         = '',
     this.chatTemplate         = 'auto',
   });
@@ -385,7 +385,7 @@ class OfflineAiConfig {
     ttsVoice             : j['ttsVoice']             as String? ?? 'id-ID-GadisNeural',
     ttsRate              : (j['ttsRate']             as num?)?.toDouble() ?? 0,
     ttsVolume            : (j['ttsVolume']           as num?)?.toDouble() ?? 0,
-    personaName          : j['personaName']          as String? ?? 'KanMon Offline Assistant',
+    personaName          : j['personaName']          as String? ?? 'Pocket Harness Offline Assistant',
     systemPrompt         : j['systemPrompt']         as String? ?? '',
     chatTemplate         : j['chatTemplate']         as String? ?? 'auto',
   );

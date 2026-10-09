@@ -1,5 +1,5 @@
 // lib/data/services/agent_service.dart
-// KanMon GO — AI Agent Orchestrator (ReAct loop)
+// Pocket Harness — AI Agent Orchestrator (ReAct loop)
 // =============================================================================
 
 import 'dart:convert';
@@ -8,17 +8,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/web_scraper_service.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/data/services/export_service.dart';
-import 'package:kanmongo/data/services/agent_memory_service.dart';
-import 'package:kanmongo/data/services/media_edit_service.dart';
-import 'package:kanmongo/data/services/tool_installer_service.dart';
-import 'package:kanmongo/data/services/history_service.dart';
-import 'package:kanmongo/data/services/kanmonai_system_prompt.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/offline_ai_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/web_scraper_service.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
+import 'package:pocketharness/data/services/export_service.dart';
+import 'package:pocketharness/data/services/agent_memory_service.dart';
+import 'package:pocketharness/data/services/media_edit_service.dart';
+import 'package:pocketharness/data/services/tool_installer_service.dart';
+import 'package:pocketharness/data/services/history_service.dart';
+import 'package:pocketharness/data/services/pocketharness_system_prompt.dart';
 
 // ── Tool result ───────────────────────────────────────────────────────────────
 class ToolResult {
@@ -77,7 +77,7 @@ class AgentConfig {
   final Map<String, String> apiKeys;
 
   const AgentConfig({
-    this.name = 'KanMon Agent',
+    this.name = 'Pocket Harness Agent',
     this.systemPrompt = '',
     this.maxSteps = 10,
     this.autoApproveTools = true,
@@ -115,7 +115,7 @@ class AgentConfig {
   };
 
   factory AgentConfig.fromJson(Map<String, dynamic> j) => AgentConfig(
-    name: j['name'] ?? 'KanMon Agent',
+    name: j['name'] ?? 'Pocket Harness Agent',
     systemPrompt: j['systemPrompt'] ?? '',
     maxSteps: j['maxSteps'] ?? 10,
     autoApproveTools: j['autoApproveTools'] ?? true,
@@ -1027,7 +1027,7 @@ Contoh:
       s.length > max ? '${s.substring(0, max)}\n... [terpotong]' : s;
 
   String _defaultSystemPrompt(AgentConfig cfg) =>
-      '$kKanMonAIShortSystemPrompt\n\n'
+      '$kPocketHarnessShortSystemPrompt\n\n'
       'Kamu sekarang berjalan sebagai ${cfg.name} — AI agent yang powerful dan otonom. '
       'Kamu bisa menggunakan berbagai tools untuk menyelesaikan task apapun. '
       'Selalu berpikir langkah-demi-langkah sebelum bertindak. '
@@ -1089,7 +1089,7 @@ Contoh:
           '  → Kirim file hasil ke user untuk diunduh/dilihat via Android share sheet.',
       'list_workspace':
           'list_workspace()\n'
-          '  → Tampilkan semua file di folder workspace KanMonAI.',
+          '  → Tampilkan semua file di folder workspace PocketHarness.',
     };
 
     return all.entries

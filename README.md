@@ -1,10 +1,10 @@
-# KanMon GO — Aplikasi Belajar Bahasa Jepang dengan AI
+# Pocket Harness — Aplikasi Belajar Bahasa Jepang dengan AI
 
 <p align="center">
-  <img src="assets/icons/logo/icon_theme_light.svg" width="96" alt="KanMon GO Logo"/>
+  <img src="assets/icons/logo/icon_theme_light.svg" width="96" alt="Pocket Harness Logo"/>
 </p>
 
-**KanMon GO** adalah aplikasi Android untuk belajar bahasa Jepang secara komprehensif,
+**Pocket Harness** adalah aplikasi Android untuk belajar bahasa Jepang secara komprehensif,
 dilengkapi AI offline (llama.cpp) dan online (Puter.js + Bulk API), quiz JLPT/JFT,
 flashcard FSRS-5, kanji, kosakata, grammar, dan banyak lagi.
 
@@ -76,7 +76,7 @@ Model GGUF berjalan langsung di device tanpa internet:
 
 ### GitHub Actions (Rekomendasi)
 
-Push ke `main` → Actions → **🚀 Build KanMon GO** otomatis berjalan.
+Push ke `main` → Actions → **🚀 Build Pocket Harness** otomatis berjalan.
 
 **Secrets yang diperlukan:**
 
@@ -90,8 +90,8 @@ Push ke `main` → Actions → **🚀 Build KanMon GO** otomatis berjalan.
 ### Build Lokal
 
 ```bash
-git clone https://github.com/USERNAME/KanMonAI.git
-cd KanMonAI
+git clone https://github.com/USERNAME/PocketHarness.git
+cd PocketHarness
 
 # Setup llama.cpp source
 bash scripts/setup_llama.sh
@@ -138,4 +138,4 @@ http, share_plus, file_picker        # Network & File
 
 ## 📜 Lisensi
 
-Proprietary — © 2026 KanMon GO. All rights reserved.
+Proprietary — © 2026 Pocket Harness. All rights reserved.

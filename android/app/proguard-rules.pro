@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# KanMon GO — ProGuard Rules
+# Pocket Harness — ProGuard Rules
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ── Flutter core ──────────────────────────────────────────────────────────────
@@ -13,16 +13,16 @@
 -dontwarn io.flutter.**
 
 # ── App classes ───────────────────────────────────────────────────────────────
--keep class com.kanmongo.app.** { *; }
+-keep class com.pocketharness.app.** { *; }
 
 # ── LlamaPlugin JNI Bridge — WAJIB agar R8 tidak obfuscate ──────────────────
 # Tanpa ini: GetMethodID("onToken") / "onError" return null di release → crash
--keep class com.kanmongo.app.LlamaPlugin { *; }
+-keep class com.pocketharness.app.LlamaPlugin { *; }
 
--keepclassmembers class com.kanmongo.app.LlamaPlugin$* {
+-keepclassmembers class com.pocketharness.app.LlamaPlugin$* {
     public *;
 }
--keepclasseswithmembernames class com.kanmongo.app.LlamaPlugin {
+-keepclasseswithmembernames class com.pocketharness.app.LlamaPlugin {
     native <methods>;
 }
 
@@ -182,17 +182,17 @@
 -dontwarn com.example.process_run.**
 
 # ── LlamaPlugin JNI Bridge — WAJIB agar R8 tidak obfuscate ──────────────────
--keep class com.kanmongo.app.LlamaPlugin { *; }
+-keep class com.pocketharness.app.LlamaPlugin { *; }
 
 # emitEventFromNative is called from C++ via JNI reflection (GetMethodID).
--keepclassmembers class com.kanmongo.app.LlamaPlugin {
+-keepclassmembers class com.pocketharness.app.LlamaPlugin {
     public void emitEventFromNative(java.lang.String, java.lang.String, int, int, int, long, long, double, java.lang.String, int);
 }
 
 # External (JNI) native method declarations — keep all
--keepclasseswithmembernames class com.kanmongo.app.LlamaPlugin {
+-keepclasseswithmembernames class com.pocketharness.app.LlamaPlugin {
     native <methods>;
 }
 
 # ForegroundService — must be kept so Android can instantiate it by class name
--keep class com.kanmongo.app.LlamaGenerationService { *; }
+-keep class com.pocketharness.app.LlamaGenerationService { *; }

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-KanMon GO — AES-256-GCM Encrypted JSON Build Script  v3.0
+Pocket Harness — AES-256-GCM Encrypted JSON Build Script  v3.0
 ==========================================================
 Menggabungkan semua JSON dari assets/data/ menjadi chunk terenkripsi
 di assets/enc/ dengan nama file teracak (sha256-based).
@@ -246,7 +246,7 @@ def build_chunks(data_root: Path) -> dict:
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
-    ap = argparse.ArgumentParser(description="KanMon GO AES-256-GCM Build Script v3")
+    ap = argparse.ArgumentParser(description="Pocket Harness AES-256-GCM Build Script v3")
     ap.add_argument("--kf-s0",   default="",    help="KM_S0: 32-char hex (first half of key)")
     ap.add_argument("--kf-s1",   default="",    help="KM_S1: 32-char hex (second half of key)")
     ap.add_argument("--force",   action="store_true", help="Rebuild ulang meski file sudah ada")
@@ -261,7 +261,7 @@ def main():
 
     print()
     print("╔══════════════════════════════════════════════════════════════╗")
-    print("║   KanMon GO  —  AES-256-GCM Encrypted JSON Build  v3.0     ║")
+    print("║   Pocket Harness  —  AES-256-GCM Encrypted JSON Build  v3.0     ║")
     print("╚══════════════════════════════════════════════════════════════╝")
     print(f"  CI mode : {is_ci}")
     print(f"  Force   : {args.force}")

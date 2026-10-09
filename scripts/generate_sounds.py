@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-KanMon GO — Sound Effect Generator
+Pocket Harness — Sound Effect Generator
 Menghasilkan semua SFX yang dibutuhkan sebagai WAV 44100Hz 16-bit mono.
 """
 
@@ -297,7 +297,7 @@ def make_app_start():
 # ─────────────────────────────────────────────────────────────────────────────
 # Run semua
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n🎵 Generating KanMon GO Sound Effects...\n")
+print("\n🎵 Generating Pocket Harness Sound Effects...\n")
 make_correct()
 make_wrong()
 make_perfect()

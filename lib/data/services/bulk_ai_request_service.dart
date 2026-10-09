@@ -1,5 +1,5 @@
 // lib/data/services/bulk_ai_request_service.dart
-// KanMon GO — Bulk AI HTTP Request Service (Session 6 Integration Layer)
+// Pocket Harness — Bulk AI HTTP Request Service (Session 6 Integration Layer)
 //
 // HTTP client that routes requests to the active Bulk API provider endpoint.
 // Adapts BulkAiConfig (existing) for the Session 6 unified request pipeline.
@@ -171,7 +171,7 @@ class BulkAiRequestService {
   Map<String, String> _buildHeaders() => {
     HttpHeaders.contentTypeHeader: 'application/json',
     HttpHeaders.authorizationHeader: 'Bearer $apiKey',
-    'User-Agent': 'KanMonAI/1.0',
+    'User-Agent': 'PocketHarness/1.0',
   };
 
   String _extractContent(Map<String, dynamic> data) {

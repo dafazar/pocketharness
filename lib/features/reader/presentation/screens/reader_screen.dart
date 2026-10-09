@@ -1,5 +1,5 @@
 // lib/features/reader/presentation/screens/reader_screen.dart
-// KanMon GO — Reader Screen
+// Pocket Harness — Reader Screen
 //
 // ✅ Furigana REAL — lookup via Jisho API (jisho.org/api/v1/search/words)
 //    dengan in-memory cache agar tidak hit API berulang untuk kanji yang sama.

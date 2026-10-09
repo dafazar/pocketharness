@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kanmongo/data/services/first_setup_service.dart';
+import 'package:pocketharness/data/services/first_setup_service.dart';
 
 /// Wrapper widget yang menampilkan progress setup pertama kali sebelum
 /// menampilkan konten utama (child).
@@ -77,7 +77,7 @@ class _FirstSetupScreenState extends State<FirstSetupScreen>
               ),
               const SizedBox(height: 32),
               const Text(
-                'KanMon AI',
+                'Pocket Harness',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,

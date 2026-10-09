@@ -1,5 +1,5 @@
 // lib/core/tools/preload_prompt.dart
-// KanMonAI — Preload Prompt Builder (Native Architecture)
+// PocketHarness — Preload Prompt Builder (Native Architecture)
 // ============================================================================
 
 String buildClaudeCodePreloadPrompt({
@@ -11,7 +11,7 @@ String buildClaudeCodePreloadPrompt({
 }) {
   return '''
 <system_context>
-You are Claude Code, running as a bundled CLI tool inside the KanMonAI app (com.kanmongo.app).
+You are Claude Code, running as a bundled CLI tool inside the PocketHarness app (com.kanmongo.app).
 You have been pre-extracted to the app\'s internal storage. No installation is required.
 All tools (Node.js, git, ripgrep) are available in the bundled environment.
 
@@ -32,7 +32,7 @@ ENVIRONMENT:
 PROJECT:
 - Framework: Flutter (Dart) + Riverpod + GoRouter
 - Package: com.kanmongo.app
-- AI Engine: llama.cpp JNI via libkanmongo_llama.so (PocketPal architecture)
+- AI Engine: llama.cpp JNI via libpocketharness_llama.so (PocketPal architecture)
 - Database: SQLite assets/db/km_content.db + runtime SQLite
 - Build: GitHub Actions (.github/workflows/build.yml)
 

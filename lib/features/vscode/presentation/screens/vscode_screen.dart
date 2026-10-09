@@ -1,9 +1,9 @@
 // lib/features/vscode/presentation/screens/vscode_screen.dart
-// KanMon GO — VS Code Screen (Zero Stub)
+// Pocket Harness — VS Code Screen (Zero Stub)
 // Tidak memuat service apapun. Hanya menampilkan UI placeholder.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
 
 class VsCodeScreen extends ConsumerWidget {
   const VsCodeScreen({super.key});

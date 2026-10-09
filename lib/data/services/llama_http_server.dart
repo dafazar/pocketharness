@@ -1,5 +1,5 @@
 // lib/data/services/llama_http_server.dart
-// KanMon GO — LlamaHttpServer (OpenAI-Compatible HTTP Bridge)
+// Pocket Harness — LlamaHttpServer (OpenAI-Compatible HTTP Bridge)
 //
 // Menyediakan endpoint HTTP yang kompatibel dengan OpenAI API:
 //   • POST /v1/chat/completions — streaming SSE dan non-streaming
@@ -12,8 +12,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CLASS: LlamaHttpServer
@@ -152,7 +152,7 @@ class LlamaHttpServer {
           'id':       'local',
           'object':   'model',
           'created':  0,
-          'owned_by': 'kanmon',
+          'owned_by': 'pocketharness',
         }
       ],
     });
@@ -179,7 +179,7 @@ class LlamaHttpServer {
     if (!LlamaService.instance.isModelLoaded) {
       _sendJson(req.response, 503, {
         'error': {
-          'message': 'No model loaded. Please load a model in KanMonAI settings.',
+          'message': 'No model loaded. Please load a model in PocketHarness settings.',
           'type':    'model_not_loaded',
           'code':    503,
         },

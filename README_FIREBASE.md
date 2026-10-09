@@ -1,6 +1,6 @@
-# 🔥 KanMon GO — Panduan Instalasi Firebase
+# 🔥 Pocket Harness — Panduan Instalasi Firebase
 
-Dokumen ini menjelaskan langkah-langkah mengintegrasikan Firebase ke KanMon GO.
+Dokumen ini menjelaskan langkah-langkah mengintegrasikan Firebase ke Pocket Harness.
 
 ---
 
@@ -96,7 +96,7 @@ Salin SHA-1 → Firebase Console → Project Settings → Android app → Add fi
 
 ### STEP 6 — Setup RevenueCat (Membership)
 
-1. Daftar di https://app.revenuecat.com → buat project **KanMon GO**
+1. Daftar di https://app.revenuecat.com → buat project **Pocket Harness**
 2. Buat **Entitlement**: `premium`
 3. Buat **Products**: `kanmongo_premium_monthly`, `kanmongo_premium_yearly`, `kanmongo_lifetime`
 4. Salin API Key → edit `lib/core/membership/membership_service.dart`:

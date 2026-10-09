@@ -72,8 +72,8 @@ void _isolateEntryPoint(SendPort mainSendPort) {
   // Inisialisasi MethodChannel di sisi isolate untuk llama.cpp JNI
   // Catatan: MethodChannel di isolate memerlukan BackgroundIsolateBinaryMessenger
   // yang tersedia sejak Flutter 3.7+
-  const MethodChannel methodChannel = MethodChannel('com.kanmongo.llama/engine');
-  const EventChannel eventChannel = EventChannel('com.kanmongo.llama/stream');
+  const MethodChannel methodChannel = MethodChannel('com.pocketharness.llama/engine');
+  const EventChannel eventChannel = EventChannel('com.pocketharness.llama/stream');
 
   receivePort.listen((dynamic message) async {
     if (message is! IsolateMessage) return;

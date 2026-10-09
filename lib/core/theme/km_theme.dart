@@ -1,4 +1,4 @@
-// lib/core/theme/km_theme.dart — updated for KanMon GO Premium
+// lib/core/theme/km_theme.dart — updated for Pocket Harness Premium
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'km_colors.dart';

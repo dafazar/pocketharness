@@ -1,5 +1,5 @@
 // lib/core/theme/app_theme.dart
-// KanMon GO — Professional Theme System
+// Pocket Harness — Professional Theme System
 // ─────────────────────────────────────────────────────────────────────────────
 // Typography: Nunito (UI) — bulat, ramah, terbaca — pair dengan Noto Sans JP
 // Spacing: 8pt grid — konsisten di seluruh app

@@ -1,5 +1,5 @@
 // functions/src/db_key.ts
-// KanMon GO — DB Key Service (Firestore Edition)
+// Pocket Harness — DB Key Service (Firestore Edition)
 //
 // PERUBAHAN ARSITEKTUR:
 //   ❌ SEBELUMNYA: key disimpan via CLI (firebase functions:config:set)

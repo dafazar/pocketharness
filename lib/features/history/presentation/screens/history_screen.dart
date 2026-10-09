@@ -1,14 +1,14 @@
 // lib/features/history/presentation/screens/history_screen.dart
-// KanMon GO — History Screen (AI App Edition)
+// Pocket Harness — History Screen (AI App Edition)
 // Sesi 3: Tambah TabBar 2 tab — "Chat" (ChatSession) & "Aktivitas" (AiHistoryEntry lama)
 // =============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/history_service.dart';
-import 'package:kanmongo/features/chat/chat_screen.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/models/chat_models.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/history_service.dart';
+import 'package:pocketharness/features/chat/chat_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});

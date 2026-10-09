@@ -1,4 +1,4 @@
-# ✅ KanMonAI Model Loading Fix - COMPLETE SOLUTION DELIVERED
+# ✅ PocketHarness Model Loading Fix - COMPLETE SOLUTION DELIVERED
 
 ## 📌 RINGKASAN MASALAH & SOLUSI
 
@@ -32,7 +32,7 @@ Tombol "Muat" → notifikasi error → "NativeLoadModel Returned 0 - model faile
 ### 💻 Code Files (3 files)
 | File | Lokasi | Fungsi |
 |------|--------|--------|
-| **LlamaPlugin_FIXED.kt** | `android/app/src/main/kotlin/com/kanmongo/app/` | Fixed Kotlin plugin dengan all validations |
+| **LlamaPlugin_FIXED.kt** | `android/app/src/main/kotlin/com/pocketharness/app/` | Fixed Kotlin plugin dengan all validations |
 | **llama_jni_CRITICAL_FIXES.cpp** | `android/app/src/main/cpp/` | Fixed C++ JNI untuk nativeLoadModel |
 | **llama_service_FIXED.dart** | `lib/services/` | Fixed Dart service dengan error handling |
 
@@ -42,7 +42,7 @@ Tombol "Muat" → notifikasi error → "NativeLoadModel Returned 0 - model faile
 
 ### **Opsi 1: Quick Fix (5 menit) - Hasil 60% kemungkinan berhasil**
 
-**Step 1:** Buka `android/app/src/main/kotlin/com/kanmongo/app/LlamaPlugin.kt`
+**Step 1:** Buka `android/app/src/main/kotlin/com/pocketharness/app/LlamaPlugin.kt`
 - Cari `init {` block
 - Tambahkan setelah `context.registerComponentCallbacks(this)`:
 ```kotlin

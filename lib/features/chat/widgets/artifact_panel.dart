@@ -1,5 +1,5 @@
 // lib/features/chat/widgets/artifact_panel.dart
-// KanMon GO — Artifact Panel (Claude-style code/file editor in chat)
+// Pocket Harness — Artifact Panel (Claude-style code/file editor in chat)
 //
 // Features:
 //   • Slides in from the right, persistent across messages
@@ -24,9 +24,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA MODEL

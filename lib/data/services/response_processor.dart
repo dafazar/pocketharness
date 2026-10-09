@@ -1,5 +1,5 @@
 // lib/data/services/response_processor.dart
-// KanMon GO — Response Post-Processor
+// Pocket Harness — Response Post-Processor
 // Extracts code blocks, artifacts, formats output for UI
 // =============================================================================
 

@@ -1,5 +1,5 @@
 // lib/data/services/ai_source_settings_service.dart
-// KanMon GO — Settings service for managing AI source configurations
+// Pocket Harness — Settings service for managing AI source configurations
 // Provides singleton access to load/save/switch between Online, Bulk, Offline configs
 // =============================================================================
 // FIX: Sinkronisasi dua arah dengan PuterAiService, BulkApiService, dan
@@ -10,11 +10,11 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/ai_source_config.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
+import 'package:pocketharness/data/services/offline_ai_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
 
 class AiSourceSettingsService {
   static AiSourceSettingsService? _instance;

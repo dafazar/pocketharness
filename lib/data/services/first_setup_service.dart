@@ -1,5 +1,5 @@
 // lib/data/services/first_setup_service.dart
-// KanMon GO — First Setup Service
+// Pocket Harness — First Setup Service
 //
 // Deteksi & ekstrak bundled CLI tools dari APK assets secara otomatis
 // saat pertama kali app dibuka. Setelah selesai, flag disimpan ke
@@ -11,7 +11,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
 
 enum SetupStatus { idle, extracting, ready, failed }
 

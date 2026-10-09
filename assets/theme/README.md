@@ -1,6 +1,6 @@
-# Theme Assets — KanMon GO
+# Theme Assets — Pocket Harness
 
-Direktori ini berisi PNG asset untuk tema visual KanMon GO.
+Direktori ini berisi PNG asset untuk tema visual Pocket Harness.
 
 ## Struktur
 
@@ -21,7 +21,7 @@ theme/
 
 ## AppThemePack
 
-Sejak v2.0.0, KanMon GO hanya menggunakan **1 pack tema: `original`**.
+Sejak v2.0.0, Pocket Harness hanya menggunakan **1 pack tema: `original`**.
 Pack lama (white, dark, sakura, amoled) sudah dihapus bersama `KmThemePack` enum.
 
 ```dart

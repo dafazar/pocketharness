@@ -1,12 +1,12 @@
 // lib/data/services/database_service.dart
-// KanMon GO — Database Service (AI App Edition)
+// Pocket Harness — Database Service (AI App Edition)
 // Hanya menyimpan data user: AI history, notes, riwayat
 // =============================================================================
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
-import 'package:kanmongo/core/security/secure_db_key_service.dart';
+import 'package:pocketharness/core/security/secure_db_key_service.dart';
 
 class DatabaseService {
   DatabaseService._();

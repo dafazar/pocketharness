@@ -1,5 +1,5 @@
 // lib/core/ai/llama_context.dart
-// Model data utama untuk arsitektur AI offline KanMon GO
+// Model data utama untuk arsitektur AI offline Pocket Harness
 // Berisi semua class, enum, dan model yang dibutuhkan oleh sistem LlamaContext
 
 import 'dart:math';

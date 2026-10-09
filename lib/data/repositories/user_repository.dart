@@ -1,5 +1,5 @@
 // lib/data/repositories/user_repository.dart
-// KanMon GO — User Repository (Fixed)
+// Pocket Harness — User Repository (Fixed)
 //
 // PERUBAHAN dari versi sebelumnya:
 //   ✅ _uid menggunakan null-safe check — tidak crash jika currentUser null

@@ -1,5 +1,5 @@
 // lib/features/chat/widgets/web_research_sources_card.dart
-// KanMonAI — Web Research Sources Card
+// PocketHarness — Web Research Sources Card
 // Sesi 5C-A: Widget kartu sumber web research
 //   - Header collapsible dengan AnimatedRotation
 //   - AnimatedCrossFade untuk expand/collapse daftar sumber

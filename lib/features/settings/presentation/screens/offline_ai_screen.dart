@@ -14,17 +14,17 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/core/ai/inference_params_provider.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/core/theme/theme_provider.dart';
-import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
-import 'package:kanmongo/shared/widgets/back_handler.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/core/ai/inference_params_provider.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/core/theme/theme_provider.dart';
+import 'package:pocketharness/core/router/app_router.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/offline_ai_service.dart';
+import 'package:pocketharness/data/services/ai_source_settings_service.dart';
+import 'package:pocketharness/shared/widgets/back_handler.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN UTAMA
@@ -277,7 +277,7 @@ class _OfflineAiScreenState extends ConsumerState<OfflineAiScreen> {
 
     // Simpan ke direktori sementara
     final tempDir = Directory.systemTemp;
-    final file = File('${tempDir.path}/kanmon_ai_settings.json');
+    final file = File('${tempDir.path}/pocketharness_ai_settings.json');
     await file.writeAsString(jsonStr);
 
     if (mounted) {

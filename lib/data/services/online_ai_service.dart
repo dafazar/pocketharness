@@ -1,5 +1,5 @@
 // lib/data/services/online_ai_service.dart
-// KanMon GO — Online AI Service (Puter.js + OpenAI-compatible endpoints)
+// Pocket Harness — Online AI Service (Puter.js + OpenAI-compatible endpoints)
 // Handles HTTP requests to online AI providers
 // =============================================================================
 
@@ -218,7 +218,7 @@ class OnlineAiService {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'User-Agent': 'KanMonAI/1.0',
+      'User-Agent': 'PocketHarness/1.0',
     };
 
     if (config.apiKey.isNotEmpty) {

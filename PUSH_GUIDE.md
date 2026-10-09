@@ -3,7 +3,7 @@
 ## Langkah 1 — Inisialisasi Git (jika belum ada repo)
 
 ```bash
-cd kanmonai_repo   # atau nama folder repo kamu
+cd pocketharness_repo   # atau nama folder repo kamu
 git init
 git remote add origin https://github.com/USERNAME/REPO_NAME.git
 ```
@@ -24,7 +24,7 @@ git add lib/data/services/offline_ai_service.dart
 git add lib/data/services/ai_service.dart
 git add lib/data/services/agent_service.dart
 git add lib/features/settings/presentation/screens/model_manager_screen.dart
-git add android/app/src/main/kotlin/com/kanmongo/app/LlamaPlugin.kt
+git add android/app/src/main/kotlin/com/pocketharness/app/LlamaPlugin.kt
 git add android/app/src/main/cpp/llama_jni.cpp
 git add CHANGELOG.md
 git add .gitignore

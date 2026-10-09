@@ -1,5 +1,5 @@
 // lib/features/agent/presentation/screens/agent_screen.dart
-// KanMon GO — AI Agent Screen (Claude-like UI)
+// Pocket Harness — AI Agent Screen (Claude-like UI)
 //
 // Fitur baru mirip Claude AI:
 //  • Sidebar riwayat task agent (Drawer kiri)
@@ -16,22 +16,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/agent_service.dart';
-import 'package:kanmongo/data/services/agent_memory_service.dart';
-import 'package:kanmongo/data/services/export_service.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/shared/widgets/ai_source_picker.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/agent_service.dart';
+import 'package:pocketharness/data/services/agent_memory_service.dart';
+import 'package:pocketharness/data/services/export_service.dart';
+import 'package:pocketharness/data/services/file_processor_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/shared/widgets/ai_source_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
-import 'package:kanmongo/shared/utils/top_snack.dart';
-import 'package:kanmongo/features/chat/widgets/file_output_card.dart';
-import 'package:kanmongo/data/services/smart_file_output_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
+import 'package:pocketharness/features/chat/widgets/file_output_card.dart';
+import 'package:pocketharness/data/services/smart_file_output_service.dart';
 
 // ── Task History Model ────────────────────────────────────────────────────────
 
@@ -1232,7 +1232,7 @@ class _AgentSettingsState extends State<AgentSettingsScreen> {
     'edit_media':         ('🎬', 'Edit Media', 'Edit gambar/video/audio via ffmpeg'),
     'check_install_tool': ('🔧', 'Install Tool', 'Cek & install tool sistem'),
     'send_file_to_user':  ('📎', 'Send File', 'Kirim file hasil ke user'),
-    'list_workspace':     ('🗂️', 'List Workspace', 'Tampilkan semua file di workspace KanMonAI'),
+    'list_workspace':     ('🗂️', 'List Workspace', 'Tampilkan semua file di workspace PocketHarness'),
   };
 
   @override
@@ -1252,7 +1252,7 @@ class _AgentSettingsState extends State<AgentSettingsScreen> {
 
   Future<void> _save() async {
     final updated = _cfg.copyWith(
-      name: _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : 'KanMon Agent',
+      name: _nameCtrl.text.trim().isNotEmpty ? _nameCtrl.text.trim() : 'Pocket Harness Agent',
       systemPrompt: _promptCtrl.text.trim(),
     );
     await _svc.saveConfig(updated);
@@ -1292,7 +1292,7 @@ class _AgentSettingsState extends State<AgentSettingsScreen> {
           ]),
           const SizedBox(height: 16),
           _Section(title: '🤖 Identitas Agent', isDark: isDark, c: c, children: [
-            _Field(label: 'Nama Agent', controller: _nameCtrl, hint: 'Contoh: KanMon Agent'),
+            _Field(label: 'Nama Agent', controller: _nameCtrl, hint: 'Contoh: Pocket Harness Agent'),
             const SizedBox(height: 12),
             _Field(label: 'System Prompt (opsional)', controller: _promptCtrl,
                 hint: 'Instruksi khusus untuk agent ini.\nKosongkan untuk gunakan default.',

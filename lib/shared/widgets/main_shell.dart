@@ -56,7 +56,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   Widget build(BuildContext context) {
     final c = KmColors.of(context);
     return ConfirmExitBack(
-      message: 'Keluar dari KanMon GO?',
+      message: 'Keluar dari Pocket Harness?',
       confirmLabel: 'Keluar',
       child: Scaffold(
         backgroundColor: c.bg,

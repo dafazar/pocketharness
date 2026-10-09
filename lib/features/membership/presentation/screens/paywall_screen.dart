@@ -7,7 +7,7 @@ class PaywallScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('KanMon GO Premium')),
+      appBar: AppBar(title: const Text('Pocket Harness Premium')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -23,7 +23,7 @@ class PaywallScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'KanMon GO saat ini menyediakan semua fitur secara gratis.\nNikmati belajar bahasa Jepang tanpa batas!',
+                'Pocket Harness saat ini menyediakan semua fitur secara gratis.\nNikmati belajar bahasa Jepang tanpa batas!',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 textAlign: TextAlign.center,
               ),

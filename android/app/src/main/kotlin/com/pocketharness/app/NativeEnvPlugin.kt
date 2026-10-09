@@ -1,6 +1,6 @@
-// android/app/src/main/kotlin/com/kanmongo/app/NativeEnvPlugin.kt
+// android/app/src/main/kotlin/com/pocketharness/app/NativeEnvPlugin.kt
 //
-// KanMonAI — NativeEnvPlugin (Sesi 3)
+// PocketHarness — NativeEnvPlugin (Sesi 3)
 // Kotlin bridge untuk menjalankan binary dari internal storage (bundled tools).
 // Digunakan sebagai fallback jika Termux tidak tersedia.
 //
@@ -11,7 +11,7 @@
 //   • fileExists       — cek apakah file ada
 // =============================================================================
 
-package com.kanmongo.app
+package com.pocketharness.app
 
 import android.content.Context
 import android.util.Log

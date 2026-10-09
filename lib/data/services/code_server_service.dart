@@ -1,5 +1,5 @@
 // lib/data/services/code_server_service.dart
-// KanMonAI — Code Server Service (Native, tanpa Termux)
+// PocketHarness — Code Server Service (Native, tanpa Termux)
 //
 // Mengelola lifecycle code-server (VS Code di browser):
 //   • Auto-init ToolsService saat pertama kali dipakai
@@ -14,7 +14,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
 
 // ── Install Step ──────────────────────────────────────────────────────────────
 enum CodeServerStep {

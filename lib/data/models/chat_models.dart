@@ -1,5 +1,5 @@
 // lib/data/models/chat_models.dart
-// KanMonAI — Chat Models
+// PocketHarness — Chat Models
 // Sesi 1: ChatAttachment, AiSourceChoice, ChatMessage, ChatSession
 // =============================================================================
 
@@ -9,10 +9,10 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
-import 'package:kanmongo/data/services/web_research_service.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
+import 'package:pocketharness/data/services/file_processor_service.dart';
+import 'package:pocketharness/data/services/web_research_service.dart';
 
 // ─── 1. enum AttachmentType ──────────────────────────────────────────────────
 

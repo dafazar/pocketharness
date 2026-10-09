@@ -1,5 +1,5 @@
 // lib/data/services/web_scraper_service.dart
-// KanMon GO — Web Scraper Service
+// Pocket Harness — Web Scraper Service
 // Ambil & parse konten dari internet untuk AI Agent
 // =============================================================================
 

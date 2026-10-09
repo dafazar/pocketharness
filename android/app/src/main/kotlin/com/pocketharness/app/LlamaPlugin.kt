@@ -1,4 +1,4 @@
-// LlamaPlugin.kt — KanMon GO (FIXED VERSION)
+// LlamaPlugin.kt — Pocket Harness (FIXED VERSION)
 // SESI 6: Native Android Bridge — Full Refactor
 // - New JNI API: nativeLoadModel with full params (context, gpu, batch, threads, flash, mlock, rope)
 // - New native declarations aligned with llama_jni.cpp Sesi 6
@@ -7,7 +7,7 @@
 // - ComponentCallbacks2 memory pressure monitoring
 // - Coroutine-based background execution
 // - 🆕 FIXES: registerPlugin() call, file validation, memory check, detailed error logging
-package com.kanmongo.app
+package com.pocketharness.app
 
 import android.app.ActivityManager
 import android.app.Notification
@@ -75,7 +75,7 @@ class LlamaGenerationService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "KanMon AI Generation",
+                "Pocket Harness Generation",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Active during AI response generation"
@@ -88,8 +88,8 @@ class LlamaGenerationService : Service() {
 
     private fun buildNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("KanMon AI")
-            .setContentText("KanMon AI sedang menghasilkan respons...")
+            .setContentTitle("Pocket Harness")
+            .setContentText("Pocket Harness sedang menghasilkan respons...")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
             .setProgress(0, 0, true) // indeterminate
@@ -108,11 +108,11 @@ class LlamaPlugin(
 
     companion object {
         private const val TAG = "LlamaPlugin"
-        private const val MCH = "com.kanmongo.llama/engine"
-        private const val ECH = "com.kanmongo.llama/stream"
+        private const val MCH = "com.pocketharness.llama/engine"
+        private const val ECH = "com.pocketharness.llama/stream"
 
         init {
-            System.loadLibrary("kanmongo_llama")
+            System.loadLibrary("pocketharness_llama")
         }
 
         fun register(messenger: BinaryMessenger, context: Context): LlamaPlugin =

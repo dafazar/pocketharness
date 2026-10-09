@@ -1,5 +1,5 @@
 // lib/features/home/presentation/screens/home_screen.dart
-// KanMon GO — Home Screen (AI App Edition)
+// Pocket Harness — Home Screen (AI App Edition)
 // =============================================================================
 
 import 'package:flutter/material.dart';
@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/theme/km_colors.dart';
 import '../../../../core/router/app_router.dart';
-import 'package:kanmongo/core/membership/premium_gate.dart';
+import 'package:pocketharness/core/membership/premium_gate.dart';
 
 // ── Menu items ────────────────────────────────────────────────────────────────
 class _MenuItem {

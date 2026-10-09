@@ -1,5 +1,5 @@
 // lib/data/services/model_manager_service.dart
-// KanMon GO — Model Manager Service (Arsitektur PocketPal)
+// Pocket Harness — Model Manager Service (Arsitektur PocketPal)
 //
 // Mengelola semua model AI offline berformat GGUF:
 //   - Scan model lokal di folder {appDir}/models/
@@ -21,8 +21,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KUNCI SharedPreferences

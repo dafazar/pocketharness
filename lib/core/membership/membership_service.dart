@@ -1,5 +1,5 @@
 // lib/core/membership/membership_service.dart
-// KanMon GO — Membership Service
+// Pocket Harness — Membership Service
 // Premium gate DINONAKTIFKAN — semua fitur gratis.
 // Untuk mengaktifkan RevenueCat, ganti implementasi di sini.
 // =============================================================================

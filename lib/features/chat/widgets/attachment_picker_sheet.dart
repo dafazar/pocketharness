@@ -1,6 +1,6 @@
 // lib/features/chat/widgets/attachment_picker_sheet.dart
 //
-// KanMonAI — Attachment Picker Sheet
+// PocketHarness — Attachment Picker Sheet
 // Bottom sheet with 8 file-type pickers for AI Chat.
 //
 // Permission strategy per Android API level:
@@ -32,11 +32,11 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/models/chat_models.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
-import 'package:kanmongo/data/services/permission_service.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/models/chat_models.dart';
+import 'package:pocketharness/data/services/file_processor_service.dart';
+import 'package:pocketharness/data/services/permission_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 // StoragePermissionHelper is defined in permission_service.dart (Session 2)
 
 // ── Public widget ─────────────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet> {
         title: const Text('Izin Diperlukan'),
         content: Text(
           'Izin "$permName" diperlukan.\n\n'
-          'Buka Pengaturan → Aplikasi → KanMonAI → Izin, '
+          'Buka Pengaturan → Aplikasi → PocketHarness → Izin, '
           'lalu aktifkan izin tersebut.',
         ),
         actions: [

@@ -1,5 +1,5 @@
 // lib/features/chat/widgets/code_block_widget.dart
-// KanMon GO — Code Block Widget (Sesi 4)
+// Pocket Harness — Code Block Widget (Sesi 4)
 //
 // Fitur:
 //   • Header: label bahasa + tombol Salin / Edit / Export / Jalankan
@@ -20,10 +20,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/features/chat/widgets/artifact_panel.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/features/chat/widgets/artifact_panel.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class CodeBlockWidget extends StatefulWidget {
   final String code;

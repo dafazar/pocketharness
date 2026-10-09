@@ -1,5 +1,5 @@
 // lib/core/lifecycle/app_lifecycle_service.dart
-// KanMon GO — App Lifecycle Service (Fixed)
+// Pocket Harness — App Lifecycle Service (Fixed)
 //
 // PERUBAHAN dari versi sebelumnya:
 //   ✅ _onResume() sekarang juga memanggil SecureDbKeyService.ensureKeys()
@@ -9,8 +9,8 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:kanmongo/core/security/secure_db_key_service.dart';
-import 'package:kanmongo/data/services/sfx_service.dart';
+import 'package:pocketharness/core/security/secure_db_key_service.dart';
+import 'package:pocketharness/data/services/sfx_service.dart';
 
 class AppLifecycleService extends WidgetsBindingObserver {
   AppLifecycleService._();

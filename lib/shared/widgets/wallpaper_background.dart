@@ -1,6 +1,6 @@
 // lib/shared/widgets/wallpaper_background.dart
 //
-// KanMon GO — WallpaperBackground
+// Pocket Harness — WallpaperBackground
 // Widget background wallpaper yang merender foto atau video secara looping
 // di belakang konten layar menu. Otomatis tidak aktif di layar sesi soal.
 //
@@ -20,8 +20,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
-import 'package:kanmongo/core/wallpaper/wallpaper_provider.dart';
-import 'package:kanmongo/data/services/wallpaper_service.dart';
+import 'package:pocketharness/core/wallpaper/wallpaper_provider.dart';
+import 'package:pocketharness/data/services/wallpaper_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WallpaperBackground  — widget utama

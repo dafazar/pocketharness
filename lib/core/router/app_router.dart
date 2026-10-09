@@ -1,44 +1,44 @@
 // lib/core/router/app_router.dart
-// KanMon GO — App Router (AI App Edition)
+// Pocket Harness — App Router (AI App Edition)
 // =============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:kanmongo/features/splash/presentation/screens/splash_screen.dart';
-import 'package:kanmongo/features/setup/presentation/screens/first_setup_screen.dart';
-import 'package:kanmongo/features/home/presentation/screens/home_screen.dart';
-import 'package:kanmongo/features/notes/presentation/screens/notes_screen.dart';
-import 'package:kanmongo/features/ebook/presentation/screens/ebook_screen.dart';
-import 'package:kanmongo/features/profile/presentation/screens/profile_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/settings_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/offline_ai_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/model_manager_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/ai_persona_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/ai_catalog_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/online_ai_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/bulk_api_settings_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/puter_setup_screen.dart';
-import 'package:kanmongo/features/settings/presentation/screens/ai_inference_params_screen.dart';
-import 'package:kanmongo/features/terminal/presentation/screens/terminal_screen.dart';
-import 'package:kanmongo/features/chat/chat_screen.dart';
-import 'package:kanmongo/features/agent/presentation/screens/agent_screen.dart';
-import 'package:kanmongo/features/media/presentation/screens/media_creator_screen.dart';
-import 'package:kanmongo/features/history/presentation/screens/history_screen.dart';
-import 'package:kanmongo/features/ocr/presentation/screens/ocr_screen.dart';
-import 'package:kanmongo/features/reader/presentation/screens/reader_screen.dart';
-import 'package:kanmongo/features/auth/presentation/screens/login_screen.dart';
-import 'package:kanmongo/features/auth/presentation/screens/register_screen.dart';
-import 'package:kanmongo/features/auth/presentation/screens/forgot_password_screen.dart';
-import 'package:kanmongo/features/membership/presentation/screens/paywall_screen.dart';
-import 'package:kanmongo/features/membership/presentation/screens/membership_status_screen.dart';
-import 'package:kanmongo/shared/widgets/main_scaffold.dart';
-import 'package:kanmongo/shared/widgets/wallpaper_menu_shell.dart';
+import 'package:pocketharness/features/splash/presentation/screens/splash_screen.dart';
+import 'package:pocketharness/features/setup/presentation/screens/first_setup_screen.dart';
+import 'package:pocketharness/features/home/presentation/screens/home_screen.dart';
+import 'package:pocketharness/features/notes/presentation/screens/notes_screen.dart';
+import 'package:pocketharness/features/ebook/presentation/screens/ebook_screen.dart';
+import 'package:pocketharness/features/profile/presentation/screens/profile_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/settings_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/offline_ai_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/model_manager_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/ai_persona_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/ai_catalog_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/online_ai_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/bulk_api_settings_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/puter_setup_screen.dart';
+import 'package:pocketharness/features/settings/presentation/screens/ai_inference_params_screen.dart';
+import 'package:pocketharness/features/terminal/presentation/screens/terminal_screen.dart';
+import 'package:pocketharness/features/chat/chat_screen.dart';
+import 'package:pocketharness/features/agent/presentation/screens/agent_screen.dart';
+import 'package:pocketharness/features/media/presentation/screens/media_creator_screen.dart';
+import 'package:pocketharness/features/history/presentation/screens/history_screen.dart';
+import 'package:pocketharness/features/ocr/presentation/screens/ocr_screen.dart';
+import 'package:pocketharness/features/reader/presentation/screens/reader_screen.dart';
+import 'package:pocketharness/features/auth/presentation/screens/login_screen.dart';
+import 'package:pocketharness/features/auth/presentation/screens/register_screen.dart';
+import 'package:pocketharness/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:pocketharness/features/membership/presentation/screens/paywall_screen.dart';
+import 'package:pocketharness/features/membership/presentation/screens/membership_status_screen.dart';
+import 'package:pocketharness/shared/widgets/main_scaffold.dart';
+import 'package:pocketharness/shared/widgets/wallpaper_menu_shell.dart';
 // SESSION 03 — flat-path screens (query-param aware)
-import 'package:kanmongo/features/claude_code/claude_code_screen.dart';
-import 'package:kanmongo/features/vscode/vscode_screen.dart';
-import 'package:kanmongo/features/tools/tools_dashboard_screen.dart';
+import 'package:pocketharness/features/claude_code/claude_code_screen.dart';
+import 'package:pocketharness/features/vscode/vscode_screen.dart';
+import 'package:pocketharness/features/tools/tools_dashboard_screen.dart';
 
 class KmRoutes {
   static const login           = '/auth/login';
@@ -208,8 +208,8 @@ final GoRouter appRouter = GoRouter(
         body: const SingleChildScrollView(
           padding: EdgeInsets.all(20),
           child: Text(
-            'Kebijakan Privasi KanMon GO\n\n'
-            'KanMon GO menghormati privasi pengguna. Data percakapan disimpan '
+            'Kebijakan Privasi Pocket Harness\n\n'
+            'Pocket Harness menghormati privasi pengguna. Data percakapan disimpan '
             'secara lokal di perangkat Anda dan tidak dikirim ke server tanpa izin.\n\n'
             'Untuk informasi lengkap, kunjungi: https://kanmongo.app/privacy',
             style: TextStyle(fontSize: 15, height: 1.6),

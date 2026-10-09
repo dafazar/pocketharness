@@ -1,30 +1,30 @@
 // lib/shared/widgets/ai_source_picker.dart
-// KanMon GO — AI Source Picker with enable/disable toggles and settings dialogs
+// Pocket Harness — AI Source Picker with enable/disable toggles and settings dialogs
 // =============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/ai_source_settings_service.dart';
 import '../../data/models/ai_source_config.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart'
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart'
     show kPuterModels, PuterAiModel, kPuterProviders;
-import 'package:kanmongo/data/services/bulk_api_service.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/models/chat_models.dart' show AiSourceChoice;
-import 'package:kanmongo/data/services/ai_service.dart' show AiMode;
-import 'package:kanmongo/features/chat/providers/chat_session_provider.dart'
+import 'package:pocketharness/data/services/offline_ai_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/data/models/chat_models.dart' show AiSourceChoice;
+import 'package:pocketharness/data/services/ai_service.dart' show AiMode;
+import 'package:pocketharness/features/chat/providers/chat_session_provider.dart'
     show aiSourceProvider;
 
 // ── Re-export untuk convenience ───────────────────────────────────────────────
-export 'package:kanmongo/features/chat/providers/chat_session_provider.dart'
+export 'package:pocketharness/features/chat/providers/chat_session_provider.dart'
     show aiSourceProvider;
-export 'package:kanmongo/data/models/chat_models.dart' show AiSourceChoice;
-export 'package:kanmongo/data/services/ai_service.dart' show AiMode;
+export 'package:pocketharness/data/models/chat_models.dart' show AiSourceChoice;
+export 'package:pocketharness/data/services/ai_service.dart' show AiMode;
 
 
 class AiSourcePicker extends StatefulWidget {
@@ -367,8 +367,8 @@ class _OnlineSettingsDialogState extends State<_OnlineSettingsDialog>
       'Kamu adalah Sensei bahasa Jepang yang sabar dan berpengalaman. '
       'Jelaskan konsep dengan contoh kalimat sederhana. Koreksi kesalahan '
       'dengan ramah. Jawab dalam bahasa Indonesia kecuali diminta lain.'),
-    ('KanMon Assistant', '🤖',
-      'Kamu adalah asisten AI KanMon yang cerdas dan ramah. '
+    ('Pocket Harness Assistant', '🤖',
+      'Kamu adalah asisten AI Pocket Harness yang cerdas dan ramah. '
       'Bantu user dengan apapun yang mereka butuhkan.'),
     ('Translator', '🌐',
       'Kamu adalah penerjemah profesional. Terjemahkan teks yang diberikan '
@@ -738,7 +738,7 @@ class _OnlineSettingsDialogState extends State<_OnlineSettingsDialog>
           controller: _personaNameCtrl,
           style: TextStyle(color: kfc.text, fontSize: 14),
           decoration: InputDecoration(
-            hintText: 'Nama AI, misal: KanMon Assistant',
+            hintText: 'Nama AI, misal: Pocket Harness Assistant',
             hintStyle: TextStyle(color: kfc.textMuted, fontSize: 12),
             border: InputBorder.none,
             prefixIcon: const Icon(Icons.badge_rounded, color: Colors.purple, size: 18),
@@ -1892,7 +1892,7 @@ class _BulkSettingsDialogState extends State<_BulkSettingsDialog>
         TextField(
           controller: _personaNameCtrl,
           decoration: InputDecoration(
-            hintText: 'Mis: KanMon Bulk Assistant',
+            hintText: 'Mis: Pocket Harness Bulk Assistant',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: cs.surfaceContainerHighest,
@@ -3028,7 +3028,7 @@ class _OfflineSettingsDialogState extends State<_OfflineSettingsDialog>
         TextField(
           controller: _personaNameCtrl,
           decoration: InputDecoration(
-            hintText: 'Mis: KanMon Offline Assistant',
+            hintText: 'Mis: Pocket Harness Offline Assistant',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: cs.surfaceContainerHighest,

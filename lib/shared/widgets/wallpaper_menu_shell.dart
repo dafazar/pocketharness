@@ -1,6 +1,6 @@
 // lib/shared/widgets/wallpaper_menu_shell.dart
 //
-// KanMon GO — WallpaperMenuShell
+// Pocket Harness — WallpaperMenuShell
 //
 // Shell transparan yang membungkus semua layar menu fitur
 // (Kana, Kanji, Vocab, Bunpou, Partikel, Writing, Flashcard, Notes, Mensetsu, Ebook).
@@ -18,7 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kanmongo/core/wallpaper/wallpaper_provider.dart';
+import 'package:pocketharness/core/wallpaper/wallpaper_provider.dart';
 import 'wallpaper_background.dart';
 
 class WallpaperMenuShell extends ConsumerWidget {

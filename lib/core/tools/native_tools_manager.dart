@@ -1,5 +1,5 @@
 // lib/core/tools/native_tools_manager.dart
-// KanMon AI — Native Tools Manager
+// Pocket Harness — Native Tools Manager
 //
 // Central registry & health monitor for ALL bundled CLI tools.
 // Setelah ToolsService.initialize() selesai, semua tool terdaftar di sini

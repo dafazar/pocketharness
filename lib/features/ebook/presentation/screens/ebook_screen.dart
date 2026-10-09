@@ -13,15 +13,15 @@ import 'package:video_player/video_player.dart';
 import 'package:archive/archive_io.dart';
 import 'package:xml/xml.dart' as xmlp;
 import 'dart:convert' show utf8;
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/shared/widgets/view_toggle.dart';
-import 'package:kanmongo/shared/widgets/screen_theme_banner.dart';
-import 'package:kanmongo/core/theme/theme_provider.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/shared/widgets/view_toggle.dart';
+import 'package:pocketharness/shared/widgets/screen_theme_banner.dart';
+import 'package:pocketharness/core/theme/theme_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:kanmongo/shared/widgets/wallpaper_background.dart';
-import 'package:kanmongo/shared/widgets/back_handler.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/shared/widgets/wallpaper_background.dart';
+import 'package:pocketharness/shared/widgets/back_handler.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 enum _FileType { pdf, pptx, docx, xlsx, audio, video, text, unknown }
 

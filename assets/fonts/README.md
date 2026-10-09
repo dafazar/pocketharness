@@ -1,4 +1,4 @@
-# Font Files — KanMon GO
+# Font Files — Pocket Harness
 
 Direktori ini memerlukan file font berikut (tidak di-commit ke repo karena ukuran besar).
 

@@ -1,10 +1,10 @@
 // lib/core/inference_manager.dart
-// KanMon GO — Inference Manager
+// Pocket Harness — Inference Manager
 // Wrapper tipis di atas OfflineAiService untuk backward compatibility.
 // Semua inference nyata dilakukan oleh OfflineAiService → LlamaPlugin.kt (JNI).
 // =============================================================================
 
-import 'package:kanmongo/data/services/offline_ai_service.dart';
+import 'package:pocketharness/data/services/offline_ai_service.dart';
 
 class InferenceManager {
   static final InferenceManager instance = InferenceManager._();

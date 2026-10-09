@@ -1,15 +1,15 @@
 // lib/features/settings/presentation/screens/puter_setup_screen.dart
-// KanMon GO — Setup Puter.js
+// Pocket Harness — Setup Puter.js
 // Konfigurasi API key, endpoint, parameter, dan test koneksi
 // =============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
+import 'package:pocketharness/data/services/ai_source_settings_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class PuterSetupScreen extends StatefulWidget {
   const PuterSetupScreen({super.key});
@@ -384,7 +384,7 @@ class _PuterSetupScreenState extends State<PuterSetupScreen> {
               child: Text(
                 'Puter.js adalah platform cloud open-source yang menyediakan '
                 'akses ke berbagai model AI premium. API key disimpan lokal di '
-                'perangkat kamu dan tidak dikirim ke server KanMon GO.',
+                'perangkat kamu dan tidak dikirim ke server Pocket Harness.',
                 style: TextStyle(color: kfc.textSub, fontSize: 12, height: 1.5),
               ),
             ),

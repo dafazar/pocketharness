@@ -1,5 +1,5 @@
 // lib/data/models/ai_request_model.dart
-// KanMon GO — AI Request/Response Models
+// Pocket Harness — AI Request/Response Models
 // Unified structures for all three AI sources
 // =============================================================================
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 enum KmThemePack { white, dark, amoled, sakura }
 
-/// Sistem warna KanMon GO — responsive terhadap tema aktif.
+/// Sistem warna Pocket Harness — responsive terhadap tema aktif.
 class KmColors extends ThemeExtension<KmColors> {
   final KmThemePack pack;
   final Color bg, card, surface, elevated;

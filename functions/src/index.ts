@@ -1,5 +1,5 @@
 // functions/src/index.ts
-// KanMon GO — Cloud Functions (Fixed)
+// Pocket Harness — Cloud Functions (Fixed)
 //
 // PERUBAHAN dari versi sebelumnya:
 //   ✅ Export getDbKey dari db_key.ts

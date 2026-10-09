@@ -1,5 +1,5 @@
 // lib/features/chat/chat_screen.dart
-// KanMon GO — AI Chat Screen (PocketPal Style Lengkap)
+// Pocket Harness — AI Chat Screen (PocketPal Style Lengkap)
 //
 // Fitur:
 //   • Offline AI via LlamaService (llama.cpp JNI, streaming token)
@@ -32,35 +32,35 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
-import 'package:kanmongo/core/ai/llama_context.dart' as llama_ctx;
-import 'package:kanmongo/core/ai/inference_params_provider.dart';
-import 'package:kanmongo/core/ai/llama_status_provider.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/models/chat_models.dart' as chat_models;
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/shared/widgets/ai_source_picker.dart';
-import 'package:kanmongo/shared/widgets/back_handler.dart';
-import 'package:kanmongo/features/settings/presentation/screens/model_manager_screen.dart';
-import 'package:kanmongo/features/chat/widgets/attachment_chip_row.dart';
-import 'package:kanmongo/features/chat/widgets/attachment_picker_sheet.dart';
-import 'package:kanmongo/features/chat/widgets/attachment_preview.dart';
-import 'package:kanmongo/features/chat/widgets/chat_history_drawer.dart';
-import 'package:kanmongo/features/chat/providers/chat_session_provider.dart';
-import 'package:kanmongo/features/chat/widgets/artifact_panel.dart';
-import 'package:kanmongo/features/chat/widgets/code_block_widget.dart';
-import 'package:kanmongo/features/chat/widgets/file_edit_response_widget.dart';
-import 'package:kanmongo/features/chat/widgets/file_output_card.dart';
-import 'package:kanmongo/data/models/chat_models.dart' as new_models;
-import 'package:kanmongo/data/services/history_service.dart';
-import 'package:kanmongo/features/chat/widgets/web_research_sources_card.dart';
-import 'package:kanmongo/data/services/web_research_service.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/data/services/smart_file_output_service.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/ai/llama_context.dart' as llama_ctx;
+import 'package:pocketharness/core/ai/inference_params_provider.dart';
+import 'package:pocketharness/core/ai/llama_status_provider.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/models/chat_models.dart' as chat_models;
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/shared/widgets/ai_source_picker.dart';
+import 'package:pocketharness/shared/widgets/back_handler.dart';
+import 'package:pocketharness/features/settings/presentation/screens/model_manager_screen.dart';
+import 'package:pocketharness/features/chat/widgets/attachment_chip_row.dart';
+import 'package:pocketharness/features/chat/widgets/attachment_picker_sheet.dart';
+import 'package:pocketharness/features/chat/widgets/attachment_preview.dart';
+import 'package:pocketharness/features/chat/widgets/chat_history_drawer.dart';
+import 'package:pocketharness/features/chat/providers/chat_session_provider.dart';
+import 'package:pocketharness/features/chat/widgets/artifact_panel.dart';
+import 'package:pocketharness/features/chat/widgets/code_block_widget.dart';
+import 'package:pocketharness/features/chat/widgets/file_edit_response_widget.dart';
+import 'package:pocketharness/features/chat/widgets/file_output_card.dart';
+import 'package:pocketharness/data/models/chat_models.dart' as new_models;
+import 'package:pocketharness/data/services/history_service.dart';
+import 'package:pocketharness/features/chat/widgets/web_research_sources_card.dart';
+import 'package:pocketharness/data/services/web_research_service.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
+import 'package:pocketharness/data/services/smart_file_output_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
@@ -2431,14 +2431,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       sb.writeln('[$waktu] $peran: ${m.content}');
       sb.writeln();
     }
-    await Share.share(sb.toString(), subject: 'Chat Export KanMon GO');
+    await Share.share(sb.toString(), subject: 'Chat Export Pocket Harness');
   }
 
   Future<void> _exportMd() async {
     final messages = ref.read(chatSessionProvider).messages;
     if (messages.isEmpty) return;
     final sb = StringBuffer();
-    sb.writeln('# Chat Export — KanMon GO\n');
+    sb.writeln('# Chat Export — Pocket Harness\n');
     for (final m in messages) {
       final peran  = m.role == 'user' ? '**Kamu**' : '**AI**';
       final waktu  = DateFormat('HH:mm').format(m.createdAt);
@@ -2446,7 +2446,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       sb.writeln('${m.content}\n');
       sb.writeln('---\n');
     }
-    await Share.share(sb.toString(), subject: 'Chat Export KanMon GO.md');
+    await Share.share(sb.toString(), subject: 'Chat Export Pocket Harness.md');
   }
 
   void _copyAll() {
@@ -3060,7 +3060,7 @@ class _EmptyStateChat extends StatelessWidget {
             Builder(builder: (ctx) {
               try {
                 return Image.asset(
-                  'assets/images/kanmonai_logo.png',
+                  'assets/images/pocketharness_logo.png',
                   width: 80,
                   height: 80,
                   errorBuilder: (_, __, ___) => Icon(

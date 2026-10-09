@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════════════════════
 # scripts/setup_llama.sh
-# KanMon GO — Setup llama.cpp source untuk native GGUF inference
+# Pocket Harness — Setup llama.cpp source untuk native GGUF inference
 #
 # CARA PAKAI:
 #   Lokal (Mac/Linux):

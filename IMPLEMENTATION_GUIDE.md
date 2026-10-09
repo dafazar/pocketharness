@@ -1,4 +1,4 @@
-# KanMonAI - QUICK IMPLEMENTATION GUIDE
+# PocketHarness - QUICK IMPLEMENTATION GUIDE
 ## Fix "NativeLoadModel Returned 0" Error
 
 ---
@@ -24,7 +24,7 @@ Ketika menekan tombol "Muat" model, muncul notifikasi error:
 ## ✅ SOLUSI - IMPLEMENT CHANGES
 
 ### **FILE 1: LlamaPlugin.kt** 
-**Lokasi:** `android/app/src/main/kotlin/com/kanmongo/app/LlamaPlugin.kt`
+**Lokasi:** `android/app/src/main/kotlin/com/pocketharness/app/LlamaPlugin.kt`
 
 **Changes Required:**
 
@@ -181,7 +181,7 @@ Replace atau enhance function dengan: `llama_service_FIXED.dart`
 
 ### 1. Build & Clean
 ```bash
-cd /path/to/kanmonai
+cd /path/to/pocketharness
 flutter clean
 flutter pub get
 flutter run -v
@@ -390,5 +390,5 @@ Before declaring "DONE":
 - [ ] Logcat shows SUCCESS messages
 - [ ] Model actually loads and can generate text
 
-**Once all checks pass, your KanMonAI should work perfectly! 🎉**
+**Once all checks pass, your PocketHarness should work perfectly! 🎉**
 

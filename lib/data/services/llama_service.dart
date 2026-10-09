@@ -1,5 +1,5 @@
 // lib/data/services/llama_service.dart
-// KanMon GO — LlamaService (Singleton)
+// Pocket Harness — LlamaService (Singleton)
 //
 // Mengelola lifecycle model AI offline (llama.cpp) melalui platform channel.
 // Singleton dengan semua member yang dibutuhkan:
@@ -29,8 +29,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/core/ai/native_event_dispatcher.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/core/ai/native_event_dispatcher.dart';
 
 class LlamaService {
   // ── Singleton ──────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ class LlamaService {
   LlamaService._();
 
   // ── Platform channels ──────────────────────────────────────────────────────
-  static const _platform     = MethodChannel('com.kanmongo.llama/engine');
+  static const _platform     = MethodChannel('com.pocketharness.llama/engine');
 
   // ── SharedPreferences keys ─────────────────────────────────────────────────
   static const _keyLastModelPath = 'llama_last_model_path';

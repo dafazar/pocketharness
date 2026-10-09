@@ -1,5 +1,5 @@
 // lib/features/splash/presentation/screens/splash_screen.dart
-// KanMon GO — Splash Screen (Fixed)
+// Pocket Harness — Splash Screen (Fixed)
 //
 // PERUBAHAN dari versi sebelumnya:
 //   ✅ Connectivity().checkConnectivity() return List<ConnectivityResult>
@@ -13,8 +13,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:pocketharness/core/router/app_router.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -80,7 +80,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           Text('Tidak Ada Internet'),
         ]),
         content: const Text(
-          'KanMon GO membutuhkan koneksi internet untuk fitur online.\n\n'
+          'Pocket Harness membutuhkan koneksi internet untuk fitur online.\n\n'
           'Kamu tetap bisa menggunakan AI Offline, E-Book lokal, dan fitur lainnya.',
           style: TextStyle(fontSize: 14, height: 1.5),
         ),
@@ -139,7 +139,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text('KanMon GO',
+                Text('Pocket Harness',
                   style: TextStyle(
                     fontSize: 30, fontWeight: FontWeight.bold,
                     color: KmColors.of(context).text, letterSpacing: -0.5,

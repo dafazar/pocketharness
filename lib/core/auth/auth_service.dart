@@ -1,5 +1,5 @@
 // lib/core/auth/auth_service.dart
-// KanMon GO — Auth Service (Fixed)
+// Pocket Harness — Auth Service (Fixed)
 //
 // PERUBAHAN dari versi sebelumnya:
 //   ✅ fetchDbKeys() dipanggil otomatis setelah setiap login berhasil
@@ -12,8 +12,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:kanmongo/core/security/secure_db_key_service.dart';
-import 'package:kanmongo/data/repositories/user_repository.dart';
+import 'package:pocketharness/core/security/secure_db_key_service.dart';
+import 'package:pocketharness/data/repositories/user_repository.dart';
 
 // ── Providers ────────────────────────────────────────────────────────────────
 

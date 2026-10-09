@@ -1,5 +1,5 @@
 // lib/features/tools/tools_dashboard_screen.dart
-// KanMon AI — Tools Dashboard Screen
+// Pocket Harness — Tools Dashboard Screen
 //
 // Menampilkan semua bundled CLI tools dengan status, versi, dan aksi.
 // Diakses dari Settings → Developer Tools.
@@ -9,10 +9,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
-import 'package:kanmongo/core/tools/native_tools_manager.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
+import 'package:pocketharness/core/tools/native_tools_manager.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 final _toolsHealthProvider =

@@ -1,5 +1,5 @@
 // lib/features/media/presentation/screens/media_creator_screen.dart
-// KanMon GO — Media Creator (Foto & Video dengan AI)
+// Pocket Harness — Media Creator (Foto & Video dengan AI)
 // Fitur:
 //   📷 Foto langsung dari kamera + AI analisis/edit
 //   🎬 Rekam video dengan kamera
@@ -18,13 +18,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:saver_gallery/saver_gallery.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
-import 'package:kanmongo/data/services/media_edit_service.dart';
-import 'package:kanmongo/data/services/tool_installer_service.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/file_processor_service.dart';
+import 'package:pocketharness/data/services/media_edit_service.dart';
+import 'package:pocketharness/data/services/tool_installer_service.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class MediaCreatorScreen extends ConsumerStatefulWidget {
   const MediaCreatorScreen({super.key});
@@ -191,11 +191,11 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
     if (mounted) setState(() { _saving = true; _saveMsg = null; });
 
     try {
-      final fileName = 'kanmon_${DateTime.now().millisecondsSinceEpoch}${file.path.contains('.') ? file.path.substring(file.path.lastIndexOf('.')) : ''}';
+      final fileName = 'pocketharness_${DateTime.now().millisecondsSinceEpoch}${file.path.contains('.') ? file.path.substring(file.path.lastIndexOf('.')) : ''}';
       final result = await SaverGallery.saveFile(
         filePath: file.path,
         fileName: fileName,
-        androidRelativePath: 'Pictures/KanMonGO',
+        androidRelativePath: 'Pictures/PocketHarness',
         skipIfExists: false,
       );
       if (result.isSuccess) {
@@ -804,14 +804,14 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
                           await SaverGallery.saveImage(bytes,
                             quality: 100,
                             fileName: p.basenameWithoutExtension(_editOutputPath!),
-                            androidRelativePath: 'Pictures/KanMonGO',
+                            androidRelativePath: 'Pictures/PocketHarness',
                             skipIfExists: false,
                           );
                         } else {
                           await SaverGallery.saveFile(
                             filePath: _editOutputPath!,
                             fileName: p.basename(_editOutputPath!),
-                            androidRelativePath: 'Movies/KanMonGO',
+                            androidRelativePath: 'Movies/PocketHarness',
                             skipIfExists: false,
                           );
                         }
@@ -952,7 +952,7 @@ class _MediaCreatorState extends ConsumerState<MediaCreatorScreen>
           ]),
         ]);
       case 'watermark':
-        params['text'] ??= 'KanMon GO';
+        params['text'] ??= 'Pocket Harness';
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Teks Watermark', style: TextStyle(color: c.textSub, fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),

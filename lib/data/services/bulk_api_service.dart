@@ -1,5 +1,5 @@
 // lib/data/services/bulk_api_service.dart
-// KanMon GO — Bulk API Key Manager
+// Pocket Harness — Bulk API Key Manager
 //
 // Mengelola banyak API key untuk berbagai provider AI (Claude, Groq, Gemini, dll)
 // dengan mode Fallback (auto-rotate saat limit) atau Select (pilih manual).
@@ -722,7 +722,7 @@ class BulkApiService {
     // OpenRouter needs additional headers
     if (key.provider == BulkApiProvider.openrouter) {
       headers['HTTP-Referer'] = 'https://kanmongo.app';
-      headers['X-Title'] = 'KanMon GO';
+      headers['X-Title'] = 'Pocket Harness';
     }
 
     final resp = await http.post(
@@ -1030,7 +1030,7 @@ class BulkApiService {
     };
     if (key.provider == BulkApiProvider.openrouter) {
       headers['HTTP-Referer'] = 'https://kanmongo.app';
-      headers['X-Title'] = 'KanMon GO';
+      headers['X-Title'] = 'Pocket Harness';
     }
 
     final body = jsonEncode({

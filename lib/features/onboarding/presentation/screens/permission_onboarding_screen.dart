@@ -1,6 +1,6 @@
 // lib/features/onboarding/presentation/screens/permission_onboarding_screen.dart
 //
-// KanMon GO — Layar Onboarding Izin
+// Pocket Harness — Layar Onboarding Izin
 // Ditampilkan satu kali saat pertama kali install/buka.
 // Menampilkan setiap izin satu per satu dengan penjelasan yang jelas.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -8,9 +8,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/permission_service.dart';
-import 'package:kanmongo/data/services/sfx_service.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/permission_service.dart';
+import 'package:pocketharness/data/services/sfx_service.dart';
 
 class PermissionOnboardingScreen extends StatefulWidget {
   /// Dipanggil setelah user selesai (lewati atau izinkan semua)

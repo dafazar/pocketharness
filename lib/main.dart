@@ -1,5 +1,5 @@
 // lib/main.dart
-// KanMon GO — Main Entry Point
+// Pocket Harness — Main Entry Point
 // =============================================================================
 
 import 'dart:io';
@@ -15,32 +15,32 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import 'package:kanmongo/core/router/app_router.dart';
-import 'package:kanmongo/core/theme/app_theme.dart';
-import 'package:kanmongo/core/theme/app_theme_service.dart';
-import 'package:kanmongo/core/theme/theme_provider.dart';
-import 'package:kanmongo/core/lifecycle/app_lifecycle_service.dart';
-import 'package:kanmongo/core/config/remote_config_service.dart';
-import 'package:kanmongo/core/security/secure_db_key_service.dart';
-import 'package:kanmongo/core/membership/membership_service.dart';
-import 'package:kanmongo/core/sync/sync_service.dart';
-import 'package:kanmongo/core/ai/inference_params_provider.dart';
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/data/repositories/user_repository.dart';
-import 'package:kanmongo/data/services/database_service.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/data/services/ai_persona_service.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/data/services/wallpaper_service.dart';
-import 'package:kanmongo/data/services/sfx_service.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
-import 'package:kanmongo/firebase_options.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
-import 'package:kanmongo/core/tools/native_tools_manager.dart';
-import 'package:kanmongo/data/services/first_setup_service.dart';
+import 'package:pocketharness/core/router/app_router.dart';
+import 'package:pocketharness/core/theme/app_theme.dart';
+import 'package:pocketharness/core/theme/app_theme_service.dart';
+import 'package:pocketharness/core/theme/theme_provider.dart';
+import 'package:pocketharness/core/lifecycle/app_lifecycle_service.dart';
+import 'package:pocketharness/core/config/remote_config_service.dart';
+import 'package:pocketharness/core/security/secure_db_key_service.dart';
+import 'package:pocketharness/core/membership/membership_service.dart';
+import 'package:pocketharness/core/sync/sync_service.dart';
+import 'package:pocketharness/core/ai/inference_params_provider.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/data/repositories/user_repository.dart';
+import 'package:pocketharness/data/services/database_service.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/offline_ai_service.dart';
+import 'package:pocketharness/data/services/ai_persona_service.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
+import 'package:pocketharness/data/services/wallpaper_service.dart';
+import 'package:pocketharness/data/services/sfx_service.dart';
+import 'package:pocketharness/data/services/ai_source_settings_service.dart';
+import 'package:pocketharness/firebase_options.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
+import 'package:pocketharness/core/tools/native_tools_manager.dart';
+import 'package:pocketharness/data/services/first_setup_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -266,7 +266,7 @@ void main() async {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],
-      child: const KanMonGOApp(),
+      child: const PocketHarnessApp(),
     ));
 
   }, (error, stack) {
@@ -276,13 +276,13 @@ void main() async {
 }
 
 // ── App root ──────────────────────────────────────────────────────────────────
-class KanMonGOApp extends StatefulWidget {
-  const KanMonGOApp({super.key});
+class PocketHarnessApp extends StatefulWidget {
+  const PocketHarnessApp({super.key});
   @override
-  State<KanMonGOApp> createState() => _KanMonGOAppState();
+  State<PocketHarnessApp> createState() => _PocketHarnessAppState();
 }
 
-class _KanMonGOAppState extends State<KanMonGOApp> {
+class _PocketHarnessAppState extends State<PocketHarnessApp> {
   @override
   void initState() {
     super.initState();
@@ -306,7 +306,7 @@ class _AppContent extends ConsumerWidget {
       AppThemeService.instance.switchPack(next);
     });
     return MaterialApp.router(
-      title: 'KanMon GO',
+      title: 'Pocket Harness',
       debugShowCheckedModeBanner: false,
       theme:     AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

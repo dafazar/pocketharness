@@ -99,7 +99,7 @@ child: FileEditResponseWidget(result: _pendingFileEditResult!),
 
 ```bash
 # 1. Navigate to project
-cd KanMonAI-fixed
+cd PocketHarness-fixed
 
 # 2. Clean and prepare
 flutter clean
@@ -157,7 +157,7 @@ flutter build appbundle --release
 All fixes are in these 2 files:
 
 ```
-KanMonAI-fixed/
+PocketHarness-fixed/
 ├── lib/
 │   ├── shared/widgets/
 │   │   └── ai_source_picker.dart          (2 fixes)

@@ -1,5 +1,5 @@
 // lib/data/services/agent_memory_service.dart
-// KanMon GO — Agent Memory Service
+// Pocket Harness — Agent Memory Service
 // Memori jangka panjang untuk AI Agent
 // =============================================================================
 

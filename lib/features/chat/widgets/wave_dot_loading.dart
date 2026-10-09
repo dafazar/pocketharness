@@ -1,8 +1,8 @@
 // lib/features/chat/widgets/wave_dot_loading.dart
-// KanMon GO — Wave Dot Loading Indicator (staggered 3-dot bounce)
+// Pocket Harness — Wave Dot Loading Indicator (staggered 3-dot bounce)
 
 import 'package:flutter/material.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
 
 class WaveDotLoading extends StatefulWidget {
   const WaveDotLoading({super.key});

@@ -1,5 +1,5 @@
 // lib/data/services/media_edit_service.dart
-// KanMon GO — Media Edit Service
+// Pocket Harness — Media Edit Service
 //
 // Edit gambar, video, dan audio menggunakan ffmpeg via TerminalService.
 // Semua operasi dieksekusi sebagai shell command di dalam workspace.
@@ -9,7 +9,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
 
 class MediaEditResult {
   final bool    success;
@@ -141,7 +141,7 @@ class MediaEditService {
 
       // ── Watermark teks ─────────────────────────────────────────────────
       case 'watermark':
-        final text     = p['text']     as String? ?? 'KanMon GO';
+        final text     = p['text']     as String? ?? 'Pocket Harness';
         final position = p['position'] as String? ?? 'bottomright';
         final (x, y) = switch (position.toLowerCase()) {
           'topleft'     => ('10',             '10'),
@@ -215,7 +215,7 @@ class MediaEditService {
 
     final dir  = await getExternalStorageDirectory() ??
                  await getApplicationDocumentsDirectory();
-    final outDir = Directory('${dir.path}/kanmon_media_output');
+    final outDir = Directory('${dir.path}/pocketharness_media_output');
     await outDir.create(recursive: true);
 
     final ext    = _resolveOutputExt(inputPath, operation, params);

@@ -1,4 +1,4 @@
-# KanMonAI - Model Loading Fix Guide
+# PocketHarness - Model Loading Fix Guide
 ## "NativeLoadModel Returned 0 - model failed to load"
 
 ---

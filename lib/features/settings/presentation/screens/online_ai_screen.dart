@@ -1,13 +1,13 @@
 // lib/features/settings/presentation/screens/online_ai_screen.dart
-// KanMon GO — AI Online (Puter.js)
+// Pocket Harness — AI Online (Puter.js)
 // Pilih model AI cloud: Claude, Gemini, Grok, GPT-4o, Llama, dll
 // =============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart';
+import 'package:pocketharness/data/services/ai_source_settings_service.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 class OnlineAiScreen extends StatefulWidget {
   const OnlineAiScreen({super.key});

@@ -1,5 +1,5 @@
 // lib/core/ai/intelligence_amplifier.dart
-// KanMonAI — Intelligence Amplifier Architecture v1.0 [NEW FILE]
+// PocketHarness — Intelligence Amplifier Architecture v1.0 [NEW FILE]
 //
 // TUJUAN:
 //   Meningkatkan kualitas respons semua mode AI (offline llama.cpp, bulk API,
@@ -40,7 +40,7 @@ enum TaskType {
 // INTELLIGENCE AMPLIFIER — Singleton
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Singleton yang memperkuat kecerdasan semua mode AI di KanMonAI.
+/// Singleton yang memperkuat kecerdasan semua mode AI di PocketHarness.
 /// Inject dengan [IntelligenceAmplifier.instance].
 class IntelligenceAmplifier {
   IntelligenceAmplifier._();
@@ -125,7 +125,7 @@ class IntelligenceAmplifier {
 ## INTELLIGENCE AMPLIFIER — $modeLabel
 ### Operational Mode: Claude-Grade Reasoning Protocol
 
-Kamu adalah KanMonAI dengan kemampuan penalaran tingkat tinggi setara model AI terdepan.
+Kamu adalah PocketHarness dengan kemampuan penalaran tingkat tinggi setara model AI terdepan.
 Terlepas dari model yang mendasarimu ($modeLabel), kamu WAJIB menggunakan strategi
 penalaran berikut untuk menghasilkan output berkualitas maksimal:
 

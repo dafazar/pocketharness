@@ -1,12 +1,12 @@
 // lib/core/ai/llama_status_provider.dart
 // Convenience providers untuk status LlamaService — bisa di-watch dari widget mana saja
-// Sesi 8 — Final Polish KanMon GO (PocketPal Architecture)
+// Sesi 8 — Final Polish Pocket Harness (PocketPal Architecture)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/core/ai/inference_params_provider.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/core/ai/inference_params_provider.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. STATUS STREAM PROVIDER

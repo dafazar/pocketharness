@@ -1,6 +1,6 @@
-// android/app/src/main/kotlin/com/kanmongo/app/TermuxBridgePlugin.kt
+// android/app/src/main/kotlin/com/pocketharness/app/TermuxBridgePlugin.kt
 //
-// KanMon GO — TermuxBridgePlugin (Sesi 7A Bagian 2)
+// Pocket Harness — TermuxBridgePlugin (Sesi 7A Bagian 2)
 // Native Android bridge untuk menjalankan perintah melalui Termux.
 //
 // Arsitektur:
@@ -18,7 +18,7 @@
 //   flutterEngine.plugins.add(TermuxBridgePlugin())
 // Do NOT call register() manually — that method no longer exists.
 // =============================================================================
-package com.kanmongo.app
+package com.pocketharness.app
 
 import android.app.Activity
 import android.content.Context
@@ -257,7 +257,7 @@ class TermuxBridgePlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 process.destroyForcibly()
             }
-            stderrBuilder.appendLine("[KanMon] Proses timeout setelah ${timeoutSeconds}s dan dihentikan paksa.")
+            stderrBuilder.appendLine("[Pocket Harness] Proses timeout setelah ${timeoutSeconds}s dan dihentikan paksa.")
         } else {
             exitCode = process.exitValue()
         }

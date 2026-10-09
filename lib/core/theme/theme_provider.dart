@@ -1,6 +1,6 @@
 // lib/core/theme/theme_provider.dart
 //
-// KanMon GO — ThemeNotifier + ThemePackNotifier
+// Pocket Harness — ThemeNotifier + ThemePackNotifier
 // Menyimpan & mengubah mode tema (gelap/terang).
 // Pack: hanya ORIGINAL (AMOLED Black + Red) — default dan satu-satunya.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // The throw is intentional and unreachable at runtime if main() is correct.
 final sharedPreferencesProvider = Provider<SharedPreferences>(
   (ref) => throw StateError(
-  '[KanMon] sharedPreferencesProvider must be overridden in ProviderScope. '
+  '[Pocket Harness] sharedPreferencesProvider must be overridden in ProviderScope. '
   'Check main.dart → runApp(ProviderScope(overrides: [...])).', 
 ),
 );

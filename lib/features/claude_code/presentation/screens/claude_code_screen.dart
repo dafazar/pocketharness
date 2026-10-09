@@ -1,9 +1,9 @@
 // lib/features/claude_code/presentation/screens/claude_code_screen.dart
-// KanMonAI — Claude Code Screen (Zero Stub)
+// PocketHarness — Claude Code Screen (Zero Stub)
 // Tidak memuat service apapun. Hanya menampilkan UI placeholder.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
 
 class ClaudeCodeScreen extends ConsumerWidget {
   const ClaudeCodeScreen({super.key});

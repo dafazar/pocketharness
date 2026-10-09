@@ -1,5 +1,5 @@
 // lib/data/services/ai_request_handler.dart
-// KanMon GO — Main AI Request Router + Unified Interface (Session 6)
+// Pocket Harness — Main AI Request Router + Unified Interface (Session 6)
 //
 // Routes requests to the active AI source (Online / Bulk / Offline HTTP).
 // Uses AiSourceSettingsService for config; wraps the three HTTP services.

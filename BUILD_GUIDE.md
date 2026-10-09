@@ -1,4 +1,4 @@
-# 🚀 KanMonAI Build & Deploy Guide
+# 🚀 PocketHarness Build & Deploy Guide
 
 **Last Updated:** April 8, 2026  
 **Version:** 2.1.0+2 (Fixed Release)  
@@ -123,7 +123,7 @@ export FIREBASE_CONFIG_PATH="path/to/google-services.json"
 keytool -genkey -v -keystore android/app/keystore.jks \
   -keyalg RSA -keysize 2048 -validity 10000 \
   -alias release -storepass YourPassword -keypass YourPassword \
-  -dname "CN=KanMon,O=YourOrg,L=City,S=State,C=ID"
+  -dname "CN=Pocket Harness,O=YourOrg,L=City,S=State,C=ID"
 ```
 
 ### Using Existing Keystore
@@ -143,7 +143,7 @@ export KEYSTORE_PATH="$(pwd)/android/app/keystore.jks"
 ### File: `.github/workflows/build.yml`
 
 ```yaml
-name: 🚀 Build KanMon GO
+name: 🚀 Build Pocket Harness
 
 on:
   push:
@@ -275,7 +275,7 @@ flutter build appbundle --release
 # Upload to: build/app/outputs/bundle/release/app-release.aab
 
 # 5. Set store listing
-# - Title: KanMon GO
+# - Title: Pocket Harness
 # - Description: [Your description]
 # - Screenshots: Upload 4-8 screenshots
 # - Videos: Optional trailer

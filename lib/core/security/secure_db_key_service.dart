@@ -1,5 +1,5 @@
 // lib/core/security/secure_db_key_service.dart
-// KanMon GO — Secure DB Key Service (FREE PLAN Edition)
+// Pocket Harness — Secure DB Key Service (FREE PLAN Edition)
 //
 // ARSITEKTUR BARU — Tanpa Cloud Functions (gratis, Spark Plan):
 //

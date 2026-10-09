@@ -1,4 +1,4 @@
-# 🔥 Panduan Setup Firebase Backend — KanMon GO (Free Tier)
+# 🔥 Panduan Setup Firebase Backend — Pocket Harness (Free Tier)
 
 ## Langkah 1 — Authentication
 
@@ -78,15 +78,15 @@ service cloud.firestore {
 cd kanmongo
 git init
 git add .
-git commit -m "KanMon GO — Firebase ready"
-git remote add origin https://github.com/USERNAME/kanmongo.git
+git commit -m "Pocket Harness — Firebase ready"
+git remote add origin https://github.com/USERNAME/pocketharness.git
 git push -u origin main
 
 # Atau trigger manual:
-# GitHub → Actions → 🚀 Build KanMon GO → Run workflow
+# GitHub → Actions → 🚀 Build Pocket Harness → Run workflow
 ```
 
-Lalu di GitHub → **Actions → 🚀 Build KanMon GO → Run workflow**
+Lalu di GitHub → **Actions → 🚀 Build Pocket Harness → Run workflow**
 
 ---
 

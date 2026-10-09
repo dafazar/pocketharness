@@ -21,7 +21,7 @@
 #include <jni.h>
 #include <android/log.h>
 
-#define LOG_TAG "KanMongoLlama"
+#define LOG_TAG "PocketHarnessLlama"
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
 
@@ -39,13 +39,13 @@ JNI_OnLoad(JavaVM* vm, void* reserved) {
 
 // ── registerPlugin ────────────────────────────────────────────────────────────
 extern "C" JNIEXPORT void JNICALL
-Java_com_kanmongo_app_LlamaPlugin_registerPlugin(JNIEnv* env, jobject thiz) {
+Java_com_pocketharness_app_LlamaPlugin_registerPlugin(JNIEnv* env, jobject thiz) {
     LOGI("registerPlugin (STUB) — no-op");
 }
 
 // ── nativeLoadModel ───────────────────────────────────────────────────────────
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_kanmongo_app_LlamaPlugin_nativeLoadModel(
+Java_com_pocketharness_app_LlamaPlugin_nativeLoadModel(
     JNIEnv* env, jobject thiz,
     jstring path, jint contextSize, jint gpuLayers,
     jint nBatch, jint nThreads, jboolean useFlashAttn,
@@ -57,7 +57,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeLoadModel(
 
 // ── nativeReleaseModel ────────────────────────────────────────────────────────
 extern "C" JNIEXPORT void JNICALL
-Java_com_kanmongo_app_LlamaPlugin_nativeReleaseModel(
+Java_com_pocketharness_app_LlamaPlugin_nativeReleaseModel(
     JNIEnv* env, jobject thiz, jlong modelHandle)
 {
     LOGI("nativeReleaseModel (STUB): no-op, handle=%lld", (long long)modelHandle);
@@ -65,7 +65,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeReleaseModel(
 
 // ── nativeGenerateTokens ──────────────────────────────────────────────────────
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
+Java_com_pocketharness_app_LlamaPlugin_nativeGenerateTokens(
     JNIEnv* env, jobject thiz,
     jlong modelHandle, jstring prompt,
     jfloat temp, jfloat topP, jint topK, jint maxTokens,
@@ -79,7 +79,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGenerateTokens(
 
 // ── nativeStopGeneration ──────────────────────────────────────────────────────
 extern "C" JNIEXPORT void JNICALL
-Java_com_kanmongo_app_LlamaPlugin_nativeStopGeneration(
+Java_com_pocketharness_app_LlamaPlugin_nativeStopGeneration(
     JNIEnv* env, jobject thiz, jlong modelHandle)
 {
     LOGI("nativeStopGeneration (STUB): no-op");
@@ -87,7 +87,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeStopGeneration(
 
 // ── nativeGetModelInfo ────────────────────────────────────────────────────────
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_kanmongo_app_LlamaPlugin_nativeGetModelInfo(
+Java_com_pocketharness_app_LlamaPlugin_nativeGetModelInfo(
     JNIEnv* env, jobject thiz, jstring path)
 {
     LOGI("nativeGetModelInfo (STUB): returning stub JSON");
@@ -99,7 +99,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetModelInfo(
 
 // ── nativeIsReady ─────────────────────────────────────────────────────────────
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_kanmongo_app_LlamaPlugin_nativeIsReady(
+Java_com_pocketharness_app_LlamaPlugin_nativeIsReady(
     JNIEnv* env, jobject thiz, jlong modelHandle)
 {
     return JNI_FALSE;
@@ -107,7 +107,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeIsReady(
 
 // ── nativeGetTokenCount ───────────────────────────────────────────────────────
 extern "C" JNIEXPORT jint JNICALL
-Java_com_kanmongo_app_LlamaPlugin_nativeGetTokenCount(
+Java_com_pocketharness_app_LlamaPlugin_nativeGetTokenCount(
     JNIEnv* env, jobject thiz, jlong modelHandle, jstring text)
 {
     return -1;
@@ -115,7 +115,7 @@ Java_com_kanmongo_app_LlamaPlugin_nativeGetTokenCount(
 
 // ── nativeGetAvailableMemoryMb ────────────────────────────────────────────────
 extern "C" JNIEXPORT jint JNICALL
-Java_com_kanmongo_app_LlamaPlugin_nativeGetAvailableMemoryMb(
+Java_com_pocketharness_app_LlamaPlugin_nativeGetAvailableMemoryMb(
     JNIEnv* env, jobject thiz)
 {
     return 0;

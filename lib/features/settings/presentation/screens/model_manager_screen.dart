@@ -1,5 +1,5 @@
 // lib/features/settings/presentation/screens/model_manager_screen.dart
-// KanMon GO — Model Manager Screen (Arsitektur PocketPal)
+// Pocket Harness — Model Manager Screen (Arsitektur PocketPal)
 //
 // Layar pengelolaan model AI offline dengan 3 tab:
 //   1. Model Lokal  — daftar model yang sudah ada di perangkat
@@ -18,15 +18,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/data/services/ai_source_settings_service.dart';
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/data/services/permission_service.dart';
-import 'package:kanmongo/shared/widgets/back_handler.dart';
-import 'package:kanmongo/shared/utils/top_snack.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/data/services/ai_source_settings_service.dart';
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/offline_ai_service.dart';
+import 'package:pocketharness/data/services/permission_service.dart';
+import 'package:pocketharness/shared/widgets/back_handler.dart';
+import 'package:pocketharness/shared/utils/top_snack.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREEN UTAMA

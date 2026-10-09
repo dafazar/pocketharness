@@ -1,5 +1,5 @@
 // lib/data/services/tool_installer_service.dart
-// KanMon GO — Tool Installer Service
+// Pocket Harness — Tool Installer Service
 //
 // Auto-detect & install system tools (ffmpeg, imagemagick, python, dll)
 // via Termux (pkg/apt) jika tersedia, atau lewat binary yang sudah dikompilasi.
@@ -7,8 +7,8 @@
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
 
 class ToolCheckResult {
   final bool    success;

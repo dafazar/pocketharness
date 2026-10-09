@@ -2,7 +2,7 @@
 // android/app/build.gradle
 //
 // ARSITEKTUR NATIVE (llama.cpp):
-//   Custom JNI: llama_jni.cpp → libkanmongo_llama.so
+//   Custom JNI: llama_jni.cpp → libpocketharness_llama.so
 //   Dart side : OfflineAiService → MethodChannel → LlamaPlugin.kt → JNI
 //
 //   Jika llama.cpp/ belum ada → llama_stub.cpp (app tetap jalan, GGUF nonaktif)
@@ -39,7 +39,7 @@ android {
         noCompress "task"
     }
 
-    namespace "com.kanmongo.app"
+    namespace "com.pocketharness.app"
     compileSdk 36
 
     // ── NDK version — wajib untuk llama_cpp_dart + speech_to_text ────────────

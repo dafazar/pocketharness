@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-convert_and_build.py — KanMon GO v3 Database Builder
+convert_and_build.py — Pocket Harness v3 Database Builder
 Mengkonversi format JSON asli KF ke format database kanmongo v3
 dan membangun km_content.db yang lengkap dengan semua data.
 

@@ -1,5 +1,5 @@
 // lib/features/ocr/presentation/screens/ocr_screen.dart
-// KanMon GO — OCR + AI Gemini Analysis
+// Pocket Harness — OCR + AI Gemini Analysis
 // Scan foto → ML Kit deteksi teks → Gemini jelaskan arti, cara baca, contoh
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -11,7 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-import 'package:kanmongo/data/services/ai_service.dart';
+import 'package:pocketharness/data/services/ai_service.dart';
 
 import '../../../../core/theme/km_colors.dart';
 import '../../../../data/services/sfx_service.dart';

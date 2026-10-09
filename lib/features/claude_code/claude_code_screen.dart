@@ -1,5 +1,5 @@
 // lib/features/claude_code/claude_code_screen.dart
-// KanMonAI — Claude Code Terminal Screen (Functional, Native)
+// PocketHarness — Claude Code Terminal Screen (Functional, Native)
 //
 // Architecture:
 //   • Cek ToolsService.isReady → jika tidak ada bundle → tampilkan info
@@ -13,10 +13,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
-import 'package:kanmongo/data/services/claude_code_installer.dart';
-import 'package:kanmongo/data/services/claude_code_service.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
+import 'package:pocketharness/data/services/claude_code_installer.dart';
+import 'package:pocketharness/data/services/claude_code_service.dart';
 
 enum _Phase { checking, noBundle, setupNeeded, installing, ready, running, error }
 

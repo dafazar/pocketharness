@@ -1,5 +1,5 @@
 // lib/data/services/ai_persona_service.dart
-// KanMon GO — AI Persona & System Prompt Service
+// Pocket Harness — AI Persona & System Prompt Service
 //
 // 3 fitur utama:
 //   1. PERSONA PRESETS   — karakter AI yang bisa dipilih
@@ -10,7 +10,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:kanmongo/data/services/kanmonai_system_prompt.dart';
+import 'package:pocketharness/data/services/pocketharness_system_prompt.dart';
 
 // ── Persona preset ────────────────────────────────────────────────────────────
 class AiPersona {
@@ -69,20 +69,20 @@ class AiPersona {
 // ── Built-in personas ─────────────────────────────────────────────────────────
 const List<AiPersona> kBuiltinPersonas = [
   AiPersona(
-    id: 'kanmonai',
-    name: 'KanMonAI',
+    id: 'pocketharness',
+    name: 'PocketHarness',
     emoji: '🤖',
-    description: 'KanMonAI — asisten AI full-capability (cloud + offline)',
-    systemPrompt: kKanMonAIShortSystemPrompt,
+    description: 'PocketHarness — asisten AI full-capability (cloud + offline)',
+    systemPrompt: kPocketHarnessShortSystemPrompt,
     temperature: 0.7,
     maxTokens: 2048,
   ),
   AiPersona(
-    id: 'kanmonai_full',
-    name: 'KanMonAI Full',
+    id: 'pocketharness_full',
+    name: 'PocketHarness Full',
     emoji: '⚡',
-    description: 'KanMonAI Full — system prompt lengkap 6 session (file, media, code, routing, offline)',
-    systemPrompt: kKanMonAIFullSystemPrompt,
+    description: 'PocketHarness Full — system prompt lengkap 6 session (file, media, code, routing, offline)',
+    systemPrompt: kPocketHarnessFullSystemPrompt,
     temperature: 0.7,
     maxTokens: 4096,
   ),
@@ -240,7 +240,7 @@ class AiPersonaService {
   static const _customPersonas  = 'km_custom_personas';
   static const _paramKey        = 'km_ai_params';
 
-  String              _activePersonaId = 'kanmonai';
+  String              _activePersonaId = 'pocketharness';
   List<AiPersona>     _customList      = [];
   AiParameterConfig   _params          = const AiParameterConfig();
 
@@ -267,7 +267,7 @@ class AiPersonaService {
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _activePersonaId = prefs.getString(_personaKey) ?? 'kanmonai';
+      _activePersonaId = prefs.getString(_personaKey) ?? 'pocketharness';
 
       final customRaw = prefs.getString(_customPersonas);
       if (customRaw != null) {
@@ -303,9 +303,9 @@ class AiPersonaService {
   Future<void> deleteCustomPersona(String id) async {
     _customList.removeWhere((p) => p.id == id);
     if (_activePersonaId == id) {
-      _activePersonaId = 'kanmonai';
+      _activePersonaId = 'pocketharness';
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_personaKey, 'kanmonai');
+      await prefs.setString(_personaKey, 'pocketharness');
     }
     await _persistCustom();
   }

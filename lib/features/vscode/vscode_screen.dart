@@ -1,5 +1,5 @@
 // lib/features/vscode/vscode_screen.dart
-// KanMonAI — VS Code Screen (Functional, Native)
+// PocketHarness — VS Code Screen (Functional, Native)
 //
 // Architecture:
 //   • Cek ToolsService.isReady + CodeServerService status
@@ -12,9 +12,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:kanmongo/core/theme/km_colors.dart';
-import 'package:kanmongo/core/tools/tools_service.dart';
-import 'package:kanmongo/data/services/code_server_service.dart';
+import 'package:pocketharness/core/theme/km_colors.dart';
+import 'package:pocketharness/core/tools/tools_service.dart';
+import 'package:pocketharness/data/services/code_server_service.dart';
 
 enum _Phase {
   checking, noBundle, setupNeeded, installing, startNeeded, starting, running, error

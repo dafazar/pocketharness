@@ -1,5 +1,5 @@
 // lib/data/services/ai_service.dart
-// KanMon GO — AI Service (Offline + Online/Puter.js)
+// Pocket Harness — AI Service (Offline + Online/Puter.js)
 //
 // Mode AI:
 //   1. Offline — model GGUF/TFLite lokal via LlamaService (llama.cpp JNI)
@@ -18,22 +18,22 @@ import 'dart:convert';
 import 'dart:math' show min;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:kanmongo/data/services/kanmonai_system_prompt.dart';
+import 'package:pocketharness/data/services/pocketharness_system_prompt.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:kanmongo/core/ai/llama_context.dart';
-import 'package:kanmongo/data/models/chat_models.dart' as cm;
-import 'package:kanmongo/data/services/llama_service.dart';
-import 'package:kanmongo/data/services/offline_ai_service.dart';
-import 'package:kanmongo/data/services/puter_ai_service.dart';
-import 'package:kanmongo/data/services/ai_persona_service.dart';
-import 'package:kanmongo/data/services/file_processor_service.dart';
-import 'package:kanmongo/data/services/model_manager_service.dart';
-import 'package:kanmongo/data/services/media_edit_service.dart';
-import 'package:kanmongo/data/services/tool_installer_service.dart';
-import 'package:kanmongo/data/services/bulk_api_service.dart';
-import 'package:kanmongo/data/services/terminal_service.dart';
-import 'package:kanmongo/data/services/web_research_service.dart';
+import 'package:pocketharness/core/ai/llama_context.dart';
+import 'package:pocketharness/data/models/chat_models.dart' as cm;
+import 'package:pocketharness/data/services/llama_service.dart';
+import 'package:pocketharness/data/services/offline_ai_service.dart';
+import 'package:pocketharness/data/services/puter_ai_service.dart';
+import 'package:pocketharness/data/services/ai_persona_service.dart';
+import 'package:pocketharness/data/services/file_processor_service.dart';
+import 'package:pocketharness/data/services/model_manager_service.dart';
+import 'package:pocketharness/data/services/media_edit_service.dart';
+import 'package:pocketharness/data/services/tool_installer_service.dart';
+import 'package:pocketharness/data/services/bulk_api_service.dart';
+import 'package:pocketharness/data/services/terminal_service.dart';
+import 'package:pocketharness/data/services/web_research_service.dart';
 
 // ── Adaptive Edit Pipeline Events ────────────────────────────────────────────
 
@@ -267,7 +267,7 @@ class AiService {
     debugPrint('[AiService] Warm-up complete — mode=$currentMode');
   }
 
-  static const _fallbackSystemPrompt = kKanMonAIShortSystemPrompt;
+  static const _fallbackSystemPrompt = kPocketHarnessShortSystemPrompt;
 
   static String get _defaultSystemPrompt =>
       AiPersonaService.instance.activePersona.systemPrompt.isNotEmpty

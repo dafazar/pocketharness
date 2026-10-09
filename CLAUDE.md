@@ -1,7 +1,7 @@
-# CLAUDE.md — KanMon GO Project Guide (v3.0)
+# CLAUDE.md — Pocket Harness Project Guide (v3.0)
 # Arsitektur PocketPal AI — Updated setelah migrasi Sesi 1–8
 
-Panduan teknis untuk Claude saat bekerja di codebase KanMon GO Flutter.
+Panduan teknis untuk Claude saat bekerja di codebase Pocket Harness Flutter.
 
 ---
 
@@ -14,7 +14,7 @@ Panduan teknis untuk Claude saat bekerja di codebase KanMon GO Flutter.
 | Navigasi | GoRouter |
 | Database konten | SQLite read-only asset (`assets/db/km_content.db`) |
 | Database user | SQLite runtime (user progress, catatan, dll) |
-| AI Native | llama.cpp JNI via `libkanmongo_llama.so` |
+| AI Native | llama.cpp JNI via `libpocketharness_llama.so` |
 | AI Architecture | PocketPal AI style (LlamaService + LlamaContext + Riverpod providers) |
 | Build CI/CD | GitHub Actions (`build.yml`) |
 | Default tema | AMOLED Black + Red (`AppThemePack.original`) |
@@ -69,7 +69,7 @@ android/app/src/main/
     llama_jni.cpp                     ← JNI bridge — Memory V2 API only (b10350+)
     llama_stub.cpp
     CMakeLists.txt
-  kotlin/com/kanmongo/app/
+  kotlin/com/pocketharness/app/
     LlamaPlugin.kt                    ← Kotlin bridge + ForegroundService
     LlamaForegroundService.kt         ← Mencegah Android kill proses saat inferensi
 
@@ -93,7 +93,7 @@ assets/
 // Cara pakai generateStream
 final stream = LlamaService.instance.generateStream(
   messages: [
-    ChatMessage.system('Kamu adalah asisten KanMon GO.'),
+    ChatMessage.system('Kamu adalah asisten Pocket Harness.'),
     ChatMessage.user(promptUser),
   ],
   config: ref.read(inferenceConfigProvider), // InferenceConfig dari provider
