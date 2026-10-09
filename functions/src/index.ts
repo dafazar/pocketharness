@@ -2,7 +2,6 @@
 // Pocket Harness — Cloud Functions (Fixed)
 //
 // PERUBAHAN dari versi sebelumnya:
-//   ✅ Export getDbKey dari db_key.ts
 //   ✅ onXpUpdate difix: emit List<ConnectivityResult> bukan single value
 //      (tidak ada perubahan di Cloud Functions, hanya penanda)
 //   ✅ Semua existing functions tetap berjalan
@@ -13,9 +12,6 @@ import * as admin from "firebase-admin";
 
 admin.initializeApp();
 const db = admin.firestore();
-
-// ── DB Key Service (BARU) ─────────────────────────────────────────────────────
-export { getDbKey } from "./db_key";
 
 // ── RevenueCat Webhook ────────────────────────────────────────────────────────
 export const revenuecatWebhook = functions.https.onRequest(async (req, res) => {
