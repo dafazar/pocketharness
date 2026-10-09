@@ -1,4 +1,4 @@
-# KanMon GO — Patch Notes: Offline AI Fix (V1 Architecture → V2)
+# Pocket Harness — Patch Notes: Offline AI Fix (V1 Architecture → V2)
 
 ## Masalah yang Diperbaiki
 
@@ -70,7 +70,7 @@ git commit -m "fix: offline AI tidak merespons — merge V1 stream arch ke V2"
 git push
 
 # 2. Build di GitHub Actions
-# Tab Actions → "🚀 Build KanMon GO" → Run workflow
+# Tab Actions → "🚀 Build Pocket Harness" → Run workflow
 # Target: apk-release-arm64 (default, paling cepat)
 ```
 

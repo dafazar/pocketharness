@@ -1,12 +1,10 @@
-# Pocket Harness — Aplikasi Belajar Bahasa Jepang dengan AI
+# Pocket Harness — Aplikasi AI Mobile
 
 <p align="center">
   <img src="assets/icons/logo/icon_theme_light.svg" width="96" alt="Pocket Harness Logo"/>
 </p>
 
-**Pocket Harness** adalah aplikasi Android untuk belajar bahasa Jepang secara komprehensif,
-dilengkapi AI offline (llama.cpp) dan online (Puter.js + Bulk API), quiz JLPT/JFT,
-flashcard FSRS-5, kanji, kosakata, grammar, dan banyak lagi.
+**Pocket Harness** adalah aplikasi AI mobile yang menggabungkan chat AI, AI agent, terminal, Claude Code, VS Code, dan alat bantu dokumen dalam satu aplikasi. Model dapat berjalan offline langsung di perangkat (llama.cpp) atau online lewat Puter.js dan provider API.
 
 ---
 
@@ -14,12 +12,15 @@ flashcard FSRS-5, kanji, kosakata, grammar, dan banyak lagi.
 
 | Kategori | Fitur |
 |----------|-------|
-| 🤖 **AI** | Offline AI (llama.cpp GGUF), Online AI (Puter.js 20+ model), Bulk API (Groq, Gemini, Claude, OpenRouter) |
-| 📚 **Konten** | Kanji N5–N1, Kosakata, Grammar (Bunpou), Partikel, Hiragana/Katakana |
-| 🎯 **Latihan** | Quiz JLPT & JFT, Flashcard FSRS-5, Writing stroke order, Mensetsu |
-| 🔬 **Tools** | OCR Scan (ML Kit), Reader (PDF/DOCX/TXT), E-Book, Notes, Terminal |
-| 📊 **Progress** | Skill Tree, Analytics heatmap 365 hari, XP & streak system |
-| ☁️ **Cloud** | Firebase Auth, Firestore sync, Remote Config, Crashlytics |
+| 🤖 **AI Chat** | Chat offline (llama.cpp, GGUF), online (Puter.js), dan provider API (Groq, Gemini, Claude, OpenRouter, Ollama) |
+| 🧠 **AI Agent** | Agent AI yang menjalankan tugas dengan alat bantu |
+| 💻 **Terminal & Claude Code** | Terminal bawaan dan instalasi Claude Code di perangkat |
+| 🧩 **VS Code** | VS Code di perangkat melalui code-server |
+| 📷 **OCR & Media** | Scan teks dari gambar (ML Kit) dan Media & AI |
+| 📚 **Dokumen** | Reader PDF, E-Book, dan Catatan |
+| 🎙️ **Suara** | Text-to-speech dan speech-to-text |
+| ☁️ **Cloud** | Firebase Auth, Cloud Firestore, Remote Config, Crashlytics |
+| 💎 **Membership** | Langganan via RevenueCat |
 
 ---
 
@@ -27,23 +28,22 @@ flashcard FSRS-5, kanji, kosakata, grammar, dan banyak lagi.
 
 ```
 lib/
-├── core/          → auth, config, router, theme, lifecycle, security
+├── core/          → ai, auth, config, router, security, sync, theme, membership, tools
 ├── data/
 │   ├── models/    → data models
 │   ├── repositories/ → data access layer
-│   └── services/  → business logic (singleton pattern)
-├── features/      → UI screens per fitur
-└── shared/
-    └── widgets/   → reusable widgets
+│   └── services/  → logika bisnis
+├── features/      → layar per fitur (chat, agent, terminal, claude_code, vscode, media, ...)
+└── shared/        → widget dan utilitas bersama
 ```
 
-**Stack:** Flutter · Dart · Riverpod · GoRouter · Firebase · SQLite · llama.cpp JNI
+**Stack:** Flutter · Dart · Riverpod · GoRouter · Firebase · SQLite (SQLCipher) · llama.cpp JNI
 
 ---
 
 ## 🤖 AI Offline (llama.cpp)
 
-Model GGUF berjalan langsung di device tanpa internet:
+Model GGUF berjalan langsung di perangkat tanpa internet:
 
 | Model | Ukuran | RAM Min | Rekomendasi |
 |-------|--------|---------|-------------|
@@ -53,30 +53,27 @@ Model GGUF berjalan langsung di device tanpa internet:
 | Phi-4 Mini 3.8B Q4_K_M | 2.5GB | 6GB | ⭐ High-end |
 
 **Setup:**
-1. Settings → Model Manager → Download atau Import GGUF
-2. Tap **Aktifkan** → model otomatis load
+1. Buka **Model Manager** → Download atau Import GGUF
+2. Tap **Aktifkan** → model otomatis dimuat
 3. Buka Chat → pilih source **Offline**
 
 ---
 
-## ☁️ AI Online & Bulk API
+## ☁️ AI Online & Provider API
 
 | Provider | Cara Setup |
 |----------|-----------|
-| Puter.js (20+ model) | Otomatis — tidak perlu API key |
-| Groq | Settings → Bulk API → masukkan key |
-| Gemini | Settings → Bulk API → masukkan key |
-| Anthropic Claude | Settings → Bulk API → masukkan key |
-| OpenRouter | Settings → Bulk API → masukkan key |
-| LM Studio / Ollama | Settings → Bulk API → custom endpoint |
+| Puter.js | Otomatis — tidak perlu API key |
+| Groq, Gemini, Claude, OpenRouter | Setelan → Bulk API → masukkan key |
+| Ollama / endpoint kustom | Setelan → Bulk API → isi endpoint |
 
 ---
 
 ## 🔨 Build
 
-### GitHub Actions (Rekomendasi)
+### GitHub Actions
 
-Push ke `main` → Actions → **🚀 Build Pocket Harness** otomatis berjalan.
+Buka tab **Actions** → **🚀 Build Pocket Harness** → **Run workflow**. Workflow ini berjalan manual.
 
 **Secrets yang diperlukan:**
 
@@ -90,48 +87,40 @@ Push ke `main` → Actions → **🚀 Build Pocket Harness** otomatis berjalan.
 ### Build Lokal
 
 ```bash
-git clone https://github.com/USERNAME/PocketHarness.git
-cd PocketHarness
+git clone https://github.com/USERNAME/pocketharness.git
+cd pocketharness
 
-# Setup llama.cpp source
+# Setup sumber llama.cpp
 bash scripts/setup_llama.sh
 
-# Install dependencies
+# Install dependensi
 flutter pub get
 
-# Generate SQLite DB konten
+# Generate database SQLite
 python3 scripts/build_sqlite_db.py
 
-# Run debug
+# Jalankan debug
 flutter run
 
-# Build release APK
+# Build APK release
 flutter build apk --release
 ```
 
 ---
 
-## 🐛 Build Error History
-
-| Build | Error | Fix |
-|-------|-------|-----|
-| #103 | `themePackProvider` ambiguous import (`theme_provider.dart` vs `theme_providers.dart`) | Delete `theme_providers.dart`, tambah `sharedPreferencesProvider` ke `theme_provider.dart`, hapus import di `main.dart` |
-| #104 | `llama_kv_self_clear` / `llama_kv_self_seq_rm` / `llama_kv_self_seq_add` undeclared | Migrate ke Memory V2 API — hapus `#ifdef` dual-branch di `llama_jni.cpp` |
-
----
-
-## 📦 Dependencies Utama
+## 📦 Dependensi Utama
 
 ```yaml
-flutter_riverpod, go_router          # State & Navigation
-firebase_core, firebase_auth         # Auth & Backend
-cloud_firestore, firebase_crashlytics
-sqflite, path_provider               # Local Database
-google_mlkit_text_recognition        # OCR
-syncfusion_flutter_pdfviewer         # PDF Viewer
-audioplayers, video_player, chewie   # Media
-purchases_flutter                    # RevenueCat (Membership)
-http, share_plus, file_picker        # Network & File
+flutter_riverpod, riverpod_annotation, go_router   # State & Navigation
+sqflite_sqlcipher                                  # Database terenkripsi
+firebase_core, firebase_auth, firebase_analytics   # Firebase
+firebase_crashlytics, firebase_remote_config       # Monitoring & konfigurasi
+cloud_firestore                                    # Cloud Firestore
+purchases_flutter                                  # RevenueCat (membership)
+google_mlkit_text_recognition                      # OCR
+syncfusion_flutter_pdfviewer                       # PDF viewer
+flutter_tts, speech_to_text                        # Suara
+audioplayers, video_player, file_picker, share_plus
 ```
 
 ---

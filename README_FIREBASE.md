@@ -21,10 +21,10 @@ Dokumen ini menjelaskan langkah-langkah mengintegrasikan Firebase ke Pocket Harn
 ### STEP 1 — Buat Firebase Project
 
 1. Buka https://console.firebase.google.com
-2. **Add project** → nama: `kanmongo-prod`
+2. **Add project** → nama bebas, misalnya `pocketharness-prod`
 3. Enable Google Analytics
 4. **Add Android app**:
-   - Package: `com.kanmongo.app`
+   - Package: sama dengan `applicationId` di `android/app/build.gradle`
    - Download `google-services.json`
    - **REPLACE** file `android/app/google-services.json` di repo kamu
 
@@ -89,7 +89,7 @@ Tambahkan parameter berikut di Remote Config:
 keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
 
 # Release keystore
-keytool -list -v -keystore kanmongo-key.jks -alias kanmongo
+keytool -list -v -keystore <path-ke-keystore-release> -alias <KEY_ALIAS>
 ```
 
 Salin SHA-1 → Firebase Console → Project Settings → Android app → Add fingerprint.
@@ -98,7 +98,7 @@ Salin SHA-1 → Firebase Console → Project Settings → Android app → Add fi
 
 1. Daftar di https://app.revenuecat.com → buat project **Pocket Harness**
 2. Buat **Entitlement**: `premium`
-3. Buat **Products**: `kanmongo_premium_monthly`, `kanmongo_premium_yearly`, `kanmongo_lifetime`
+3. Buat **Products** dengan ID pilihan Anda, misalnya `pocketharness_premium_monthly`, `pocketharness_premium_yearly`, `pocketharness_lifetime`
 4. Salin API Key → edit `lib/core/membership/membership_service.dart`:
 
 ```dart
@@ -109,7 +109,7 @@ const _rcIosKey     = 'appl_XXXXXXXXXXXXXXXXXXXXXXXX';  // ← ganti ini
 ### STEP 7 — Build & Deploy
 
 ```bash
-# Push ke GitHub → Actions otomatis build APK
+# Push ke GitHub, lalu jalankan workflow Build Pocket Harness secara manual di tab Actions
 git add .
 git commit -m "feat: Firebase integration"
 git push origin main
