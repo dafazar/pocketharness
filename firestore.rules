@@ -29,11 +29,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Server config (salt untuk derive DB key)
-    // Baca: hanya user yang sudah login (salt saja tidak cukup tanpa UID)
-    // Tulis: tidak ada — hanya admin via Firebase Console
+    // Server config (salt lama). Klien tidak membacanya lagi sejak versi kunci perangkat.
+    // JANGAN deploy blok ini sebelum versi migrasi tersebar ke semua user.
     match /_server_config/{docId} {
-      allow read:  if request.auth != null;
+      allow read:  if false;
       allow write: if false;
     }
 
